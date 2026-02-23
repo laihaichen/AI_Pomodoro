@@ -15,6 +15,7 @@ Resets:
     - -fortunevalue          → "1"  (默认吉，游戏还未开始)
     - -current_prompt_count  → "0"
     - -stage                 → "当前没有达到阶段性节点"
+    - -total_rest_time       → "0"
 """
 from __future__ import annotations
 
@@ -51,6 +52,7 @@ SNIPPETS: list[tuple[str, str, str]] = [
     ("8BD89037-57B3-4964-A204-3D2D1F1250FA", "-fortunevalue",          "1"),
     ("F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB", "-current_prompt_count",  "0"),
     ("DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3", "-stage",                 "当前没有达到阶段性节点"),
+    ("B3689D50-EEDD-42FC-A4E5-D19A70BA709B", "-total_rest_time",       "0"),
 ]
 
 # ── helpers ─────────────────────────────────────────────────────────────────
