@@ -16,7 +16,9 @@ import sys
 from pathlib import Path
 
 # ── import sibling script ───────────────────────────────────────────────────
-sys.path.insert(0, str(Path(__file__).parent))
+# Use a hardcoded absolute path so this works both in terminal AND when
+# Alfred pastes the code into a temp file (where __file__ would point to /tmp/).
+sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
 import update_stage  # noqa: E402
 
 # ── Alfred snippet config ───────────────────────────────────────────────────
