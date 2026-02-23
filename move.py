@@ -121,12 +121,17 @@ def main() -> int:
 
     # 4. Determine 吉凶 (fortune value)
     fortune = "-1" if interval_minutes > 15 else "1"
+    fortune_snippet = (
+        "超出15分钟，不合规，应判断为凶(-1)"
+        if interval_minutes > 15
+        else "未到15分钟，合规"
+    )
 
     # 5. Write interval + fortune to Alfred snippets
     interval_str = f"{interval_minutes:.1f}"
     try:
         write_snippet(INTERVAL_UID, INTERVAL_JSON, interval_str)
-        write_snippet(FORTUNE_UID,  FORTUNE_JSON,  fortune)
+        write_snippet(FORTUNE_UID,  FORTUNE_JSON,  fortune_snippet)
     except (RuntimeError, OSError) as exc:
         print(f"Write failed: {exc}", file=sys.stderr)
         return 1
