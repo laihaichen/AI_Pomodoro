@@ -27,10 +27,11 @@ import update_h  # noqa: E402
 
 # ── file paths ──────────────────────────────────────────────────────────────
 BASE = Path("/Users/haichenlai/Desktop/Prompt")
-PREV_TS_FILE = BASE / "prev_timestamp.txt"
-CURR_TS_FILE = BASE / "curr_timestamp.txt"
+PREV_TS_FILE  = BASE / "prev_timestamp.txt"
+CURR_TS_FILE  = BASE / "curr_timestamp.txt"
 PAUSE_TS_FILE = BASE / "pause_timestamp.txt"
-CONT_TS_FILE = BASE / "continue_timestamp.txt"
+CONT_TS_FILE  = BASE / "continue_timestamp.txt"
+FIRST_TS_FILE = BASE / "first_timestamp.txt"
 
 # ── Alfred snippet config ───────────────────────────────────────────────────
 PREFS = Path(
@@ -100,7 +101,8 @@ def main() -> int:
     write_ts(CURR_TS_FILE, now)
 
     if prev is None:
-        # First =move ever — no interval to compute yet
+        # First =move of the day — record as the first learning timestamp
+        write_ts(FIRST_TS_FILE, now)
         print("First =move recorded. No interval computed yet.")
         return 0
 

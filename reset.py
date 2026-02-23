@@ -16,6 +16,7 @@ Resets:
     - -current_prompt_count  → "0"
     - -stage                 → "当前没有达到阶段性节点"
     - -total_rest_time       → "0"
+    - -offset                → "0.0"
 """
 from __future__ import annotations
 
@@ -31,6 +32,7 @@ TIMESTAMP_FILES = [
     BASE / "curr_timestamp.txt",
     BASE / "pause_timestamp.txt",
     BASE / "continue_timestamp.txt",
+    BASE / "first_timestamp.txt",
     BASE / "h_value.txt",
     BASE / "penalized_rest_up_to.txt",
 ]
@@ -56,6 +58,7 @@ SNIPPETS: list[tuple[str, str, str]] = [
     ("DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3", "-stage",                 "当前没有达到阶段性节点"),
     ("B3689D50-EEDD-42FC-A4E5-D19A70BA709B", "-total_rest_time",       "0"),
     ("D3D8CE6B-3AE4-4A88-91A2-9D23E0804E2D", "-overtime-penalty-range", "{random:0..0}"),
+    ("E99CD789-4D10-4C17-9A3A-C5076BA33ADB", "-offset",                 "0.0"),
 ]
 
 # ── helpers ─────────────────────────────────────────────────────────────────
