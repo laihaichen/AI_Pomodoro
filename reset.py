@@ -9,10 +9,12 @@ Resets:
     - continue_timestamp.txt
 
   Alfred snippets (DB + JSON):
-    - -countcard      → "0"
-    - -violationcount → "0"
-    - -interval       → "0"
-    - -fortunevalue   → "1"  (默认吉，游戏还未开始)
+    - -countcard             → "0"
+    - -violationcount        → "0"
+    - -interval              → "0"
+    - -fortunevalue          → "1"  (默认吉，游戏还未开始)
+    - -current_prompt_count  → "0"
+    - -stage                 → "当前没有达到阶段性节点"
 """
 from __future__ import annotations
 
@@ -41,12 +43,14 @@ DB_FILE = Path(
 )
 SNIPPETS_DIR = PREFS / "snippets" / "学习时间追踪系统"
 
-# (UID, json_filename, reset_value)
+# (UID, snippet_name_prefix, reset_value)
 SNIPPETS: list[tuple[str, str, str]] = [
-    ("247CAEF6-57F5-4BCC-8D87-3E87CDDA1D0E", "-countcard",      "0"),
-    ("1076C34A-79DA-42CE-A75A-EF4C853B0C2F", "-violationcount", "0"),
-    ("0352B20F-33EE-44A0-B570-FAAF2FA1E8E8", "-interval",       "0"),
-    ("8BD89037-57B3-4964-A204-3D2D1F1250FA", "-fortunevalue",   "1"),
+    ("247CAEF6-57F5-4BCC-8D87-3E87CDDA1D0E", "-countcard",             "0"),
+    ("1076C34A-79DA-42CE-A75A-EF4C853B0C2F", "-violationcount",        "0"),
+    ("0352B20F-33EE-44A0-B570-FAAF2FA1E8E8", "-interval",              "0"),
+    ("8BD89037-57B3-4964-A204-3D2D1F1250FA", "-fortunevalue",          "1"),
+    ("F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB", "-current_prompt_count",  "0"),
+    ("DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3", "-stage",                 "当前没有达到阶段性节点"),
 ]
 
 # ── helpers ─────────────────────────────────────────────────────────────────
