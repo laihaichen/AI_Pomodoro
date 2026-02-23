@@ -163,7 +163,12 @@ def main() -> int:
 
     # ── milestone state machine ─────────────────────────────────────────────
     try:
-        if new_count % 18 == 0:
+        if not update_stage.is_milestone_difficulty():
+            # Explorer difficulty — milestone logic does not apply
+            update_stage.set_not_applicable()
+            print(f"ℹ️  探索者难度，阶段性节点不适用（-stage → 当前难度不适用）")
+
+        elif new_count % 18 == 0:
             # Landed exactly on a milestone (18, 36, 54, ...)
             update_stage.set_milestone()
             print(f"🎯 阶段性节点触发：第 {new_count} 条记录（{new_count // 18} × 18）")
@@ -172,6 +177,14 @@ def main() -> int:
             # One past a milestone (19, 37, 55, ...) — reset stage
             update_stage.reset_stage()
             print(f"🔄 阶段性节点已过，-stage 重置（第 {new_count} 条记录）")
+
+        else:
+            # Mid-game, no milestone event — but if stage was left as
+            # "not applicable" from a previous explorer-difficulty run,
+            # restore it to the default so it doesn't linger.
+            if update_stage.read_stage() == update_stage.STAGE_NOT_APPLICABLE:
+                update_stage.reset_stage()
+                print("ℹ️  难度已切换回 milestone 模式，-stage 已还原为默认值")
 
     except RuntimeError as exc:
         print(f"Stage update failed: {exc}", file=sys.stderr)

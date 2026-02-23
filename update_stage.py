@@ -26,11 +26,16 @@ DB_FILE = Path(
 )
 SNIPPETS_DIR = PREFS / "snippets" / "学习时间追踪系统"
 
-STAGE_UID = "DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3"
+STAGE_UID      = "DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3"
+DIFFICULTY_UID = "BDEE3C98-A4A1-4A2B-9046-18A12FD66083"
+
+# Difficulties that support milestone logic
+MILESTONE_DIFFICULTIES = {"平衡难度", "硬核难度"}
 
 # ── stage strings ───────────────────────────────────────────────────────────
 
-STAGE_DEFAULT = "当前没有达到阶段性节点"
+STAGE_DEFAULT        = "当前没有达到阶段性节点"
+STAGE_NOT_APPLICABLE = "当前难度不适用"
 
 STAGE_MILESTONE = (
     "当前已经达到阶段性节点\n"
@@ -78,6 +83,29 @@ def write_snippet(uid: str, value: str) -> None:
     )
 
 
+def read_stage() -> str:
+    """Return the current -stage snippet value, or empty string on failure."""
+    with sqlite3.connect(DB_FILE) as con:
+        row = con.execute(
+            "SELECT snippet FROM snippets WHERE uid = ?", (STAGE_UID,)
+        ).fetchone()
+    return row[0].strip() if row else ""
+
+
+def read_difficulty() -> str:
+    """Return the current -difficulty snippet value, or empty string on failure."""
+    with sqlite3.connect(DB_FILE) as con:
+        row = con.execute(
+            "SELECT snippet FROM snippets WHERE uid = ?", (DIFFICULTY_UID,)
+        ).fetchone()
+    return row[0].strip() if row else ""
+
+
+def is_milestone_difficulty() -> bool:
+    """Return True only when the selected difficulty supports milestone logic."""
+    return read_difficulty() in MILESTONE_DIFFICULTIES
+
+
 def set_milestone() -> None:
     write_snippet(STAGE_UID, STAGE_MILESTONE)
     print("✅ -stage → 阶段性节点 alert 已写入")
@@ -86,6 +114,11 @@ def set_milestone() -> None:
 def reset_stage() -> None:
     write_snippet(STAGE_UID, STAGE_DEFAULT)
     print("✅ -stage → 默认值（当前没有达到阶段性节点）已写入")
+
+
+def set_not_applicable() -> None:
+    write_snippet(STAGE_UID, STAGE_NOT_APPLICABLE)
+    print("✅ -stage → 当前难度不适用（探索者难度）已写入")
 
 
 # ── main (standalone usage) ─────────────────────────────────────────────────
