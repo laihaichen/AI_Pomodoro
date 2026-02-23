@@ -22,6 +22,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+import update_h  # noqa: E402
+
 # ── file paths ──────────────────────────────────────────────────────────────
 BASE = Path("/Users/haichenlai/Desktop/Prompt")
 PREV_TS_FILE = BASE / "prev_timestamp.txt"
@@ -119,7 +122,7 @@ def main() -> int:
     # 4. Determine 吉凶 (fortune value)
     fortune = "-1" if interval_minutes > 15 else "1"
 
-    # 5. Write to Alfred snippets
+    # 5. Write interval + fortune to Alfred snippets
     interval_str = f"{interval_minutes:.1f}"
     try:
         write_snippet(INTERVAL_UID, INTERVAL_JSON, interval_str)
@@ -128,11 +131,18 @@ def main() -> int:
         print(f"Write failed: {exc}", file=sys.stderr)
         return 1
 
-    # 6. Report
+    # 6. H penalty: interval > 20 min charges the excess
+    h_info = ""
+    if interval_minutes > 20:
+        delta = interval_minutes - 20
+        new_h = update_h.accumulate_h(delta)
+        h_info = f"  |  H += {delta:.1f} → H = {new_h:.1f}，range 已更新"
+
+    # 7. Report
     rest_info = f" (休息扣除 {rest_minutes:.1f} 分钟)" if rest_minutes > 0 else ""
     verdict   = "凶 (-1)" if fortune == "-1" else "吉 (+1)"
     print(
-        f"区间时间差：{interval_minutes:.1f} 分钟{rest_info}  →  {verdict}\n"
+        f"区间时间差：{interval_minutes:.1f} 分钟{rest_info}  →  {verdict}{h_info}\n"
         f"-interval = {interval_str}，-fortunevalue = {fortune}"
     )
     return 0

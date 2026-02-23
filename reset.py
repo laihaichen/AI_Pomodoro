@@ -31,6 +31,8 @@ TIMESTAMP_FILES = [
     BASE / "curr_timestamp.txt",
     BASE / "pause_timestamp.txt",
     BASE / "continue_timestamp.txt",
+    BASE / "h_value.txt",
+    BASE / "penalized_rest_up_to.txt",
 ]
 
 # ── Alfred snippet config ───────────────────────────────────────────────────
@@ -53,6 +55,7 @@ SNIPPETS: list[tuple[str, str, str]] = [
     ("F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB", "-current_prompt_count",  "0"),
     ("DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3", "-stage",                 "当前没有达到阶段性节点"),
     ("B3689D50-EEDD-42FC-A4E5-D19A70BA709B", "-total_rest_time",       "0"),
+    ("D3D8CE6B-3AE4-4A88-91A2-9D23E0804E2D", "-overtime-penalty-range", "{random:0..0}"),
 ]
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -116,6 +119,17 @@ def main() -> int:
     except (OSError, sqlite3.Error) as exc:
         print(f"  ✗ 写入失败：{exc}", file=sys.stderr)
         return 1
+
+    # Seed penalized_rest_up_to.txt with current max_rest_time
+    # so continue.py knows the correct baseline for rest penalty.
+    try:
+        sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+        import update_h as _uh
+        max_rest = _uh.read_max_rest()
+        _uh.write_penalized_rest(max_rest)
+        print(f"  ✓ penalized_rest_up_to → {max_rest:.1f} (= max_rest_time)")
+    except Exception as exc:
+        print(f"  ✗ penalized_rest_up_to 初始化失败：{exc}", file=sys.stderr)
 
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0

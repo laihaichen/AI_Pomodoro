@@ -8,6 +8,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+import update_h  # noqa: E402
+
 BASE = Path("/Users/haichenlai/Desktop/Prompt")
 CONT_TS_FILE  = BASE / "continue_timestamp.txt"
 PAUSE_TS_FILE = BASE / "pause_timestamp.txt"
@@ -98,9 +101,19 @@ def main() -> int:
         print(f"写入 -total_rest_time 失败：{exc}", file=sys.stderr)
         return 1
 
+    # 4. Check rest overtime penalty
+    h_info = ""
+    try:
+        new_h = update_h.check_rest_penalty(new_total)
+        max_rest = update_h.read_max_rest()
+        if new_total > max_rest:
+            h_info = f"  |  休息超限！H = {new_h:.1f}，range 已更新"
+    except Exception as exc:
+        h_info = f"  |  H 计算失败: {exc}"
+
     print(
         f"休息结束：本次休息 {rest_min:.1f} 分钟  |  "
-        f"今日累计休息 {new_total:.1f} 分钟"
+        f"今日累计休息 {new_total:.1f} 分钟{h_info}"
     )
     return 0
 
