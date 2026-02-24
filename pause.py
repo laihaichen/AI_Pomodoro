@@ -2,11 +2,11 @@
 """=pause handler — record the start of a rest period."""
 from __future__ import annotations
 
+import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
-BASE = Path("/Users/haichenlai/Desktop/Prompt")
-PAUSE_TS_FILE = BASE / "pause_timestamp.txt"
+sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+from config import PAUSE_TS_FILE  # noqa: E402
 
 
 def main() -> int:

@@ -3,19 +3,23 @@
 
 Resets:
   Files (cleared / emptied):
-    - prev_timestamp.txt
-    - curr_timestamp.txt
-    - pause_timestamp.txt
-    - continue_timestamp.txt
+    - data/prev_timestamp.txt
+    - data/curr_timestamp.txt
+    - data/pause_timestamp.txt
+    - data/continue_timestamp.txt
+    - data/first_timestamp.txt
+    - data/h_value.txt
+    - data/penalized_rest_up_to.txt
 
-  Alfred snippets (DB + JSON):
+  Alfred snippets (DB + JSON) — all SNIPPETS with resettable=True:
     - -countcard             → "0"
     - -violationcount        → "0"
     - -interval              → "0"
-    - -fortunevalue          → "1"  (默认吉，游戏还未开始)
+    - -fortunevalue          → "未到15分钟，合规"
     - -current_prompt_count  → "0"
     - -stage                 → "当前没有达到阶段性节点"
     - -total_rest_time       → "0"
+    - -overtime-penalty-range → "{random:0..0}"
     - -offset                → "0.0"
 """
 from __future__ import annotations
@@ -25,82 +29,56 @@ import sqlite3
 import sys
 from pathlib import Path
 
-# ── file paths ──────────────────────────────────────────────────────────────
-BASE = Path("/Users/haichenlai/Desktop/Prompt")
-TIMESTAMP_FILES = [
-    BASE / "prev_timestamp.txt",
-    BASE / "curr_timestamp.txt",
-    BASE / "pause_timestamp.txt",
-    BASE / "continue_timestamp.txt",
-    BASE / "first_timestamp.txt",
-    BASE / "h_value.txt",
-    BASE / "penalized_rest_up_to.txt",
-]
+sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+from config import DATA_DIR, DB_FILE, SNIPPETS, SNIPPETS_DIR  # noqa: E402
 
-# ── Alfred snippet config ───────────────────────────────────────────────────
-PREFS = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Alfred.alfredpreferences"
-)
-DB_FILE = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Databases/snippets.alfdb"
-)
-SNIPPETS_DIR = PREFS / "snippets" / "学习时间追踪系统"
-
-# (UID, snippet_name_prefix, reset_value)
-SNIPPETS: list[tuple[str, str, str]] = [
-    ("247CAEF6-57F5-4BCC-8D87-3E87CDDA1D0E", "-countcard",             "0"),
-    ("1076C34A-79DA-42CE-A75A-EF4C853B0C2F", "-violationcount",        "0"),
-    ("0352B20F-33EE-44A0-B570-FAAF2FA1E8E8", "-interval",              "0"),
-    ("8BD89037-57B3-4964-A204-3D2D1F1250FA", "-fortunevalue",          "未到15分钟，合规"),
-    ("F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB", "-current_prompt_count",  "0"),
-    ("DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3", "-stage",                 "当前没有达到阶段性节点"),
-    ("B3689D50-EEDD-42FC-A4E5-D19A70BA709B", "-total_rest_time",       "0"),
-    ("D3D8CE6B-3AE4-4A88-91A2-9D23E0804E2D", "-overtime-penalty-range", "{random:0..0}"),
-    ("E99CD789-4D10-4C17-9A3A-C5076BA33ADB", "-offset",                 "0.0"),
+# ── data files to clear on reset ─────────────────────────────────────────────
+DATA_FILES_TO_CLEAR = [
+    DATA_DIR / "prev_timestamp.txt",
+    DATA_DIR / "curr_timestamp.txt",
+    DATA_DIR / "pause_timestamp.txt",
+    DATA_DIR / "continue_timestamp.txt",
+    DATA_DIR / "first_timestamp.txt",
+    DATA_DIR / "h_value.txt",
+    DATA_DIR / "penalized_rest_up_to.txt",
 ]
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
 def reset_files() -> list[str]:
-    """Clear all timestamp files. Return list of status lines."""
+    """Clear all data files. Return list of status lines."""
     lines = []
-    for f in TIMESTAMP_FILES:
+    for f in DATA_FILES_TO_CLEAR:
         f.write_text("", encoding="utf-8")
         lines.append(f"  ✓ {f.name} → cleared")
     return lines
 
 
 def reset_snippets() -> list[str]:
-    """Reset all Alfred snippets to their default values. Return status lines."""
+    """Reset all resettable Alfred snippets to their default values."""
     lines = []
     errors = []
 
     with sqlite3.connect(DB_FILE) as con:
-        for uid, name, value in SNIPPETS:
-            # Update SQLite (what Alfred reads live)
-            con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, uid))
+        for snip in (s for s in SNIPPETS.values() if s.resettable):
+            con.execute(
+                "UPDATE snippets SET snippet = ? WHERE uid = ?",
+                (snip.default, snip.uid),
+            )
             if con.total_changes == 0:
-                errors.append(f"  ✗ {name}: UID not found in DB")
+                errors.append(f"  ✗ {snip.name}: UID not found in DB")
                 continue
 
-            # Update JSON (sync/backup)
-            matches = [
-                p for p in SNIPPETS_DIR.iterdir()
-                if p.name.startswith(f"{name} ") and p.suffix == ".json"
-            ]
-            if not matches:
-                errors.append(f"  ✗ {name}: JSON file not found")
+            if not snip.json_path.exists():
+                errors.append(f"  ✗ {snip.name}: JSON file not found")
                 continue
-            json_path = matches[0]
-            payload = json.loads(json_path.read_text(encoding="utf-8"))
-            payload["alfredsnippet"]["snippet"] = value
-            json_path.write_text(
+            payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
+            payload["alfredsnippet"]["snippet"] = snip.default
+            snip.json_path.write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            lines.append(f"  ✓ {name} → \"{value}\"")
+            lines.append(f"  ✓ {snip.name} → \"{snip.default}\"")
 
     lines.extend(errors)
     return lines
@@ -111,7 +89,7 @@ def reset_snippets() -> list[str]:
 def main() -> int:
     print("🔄 重置游戏状态...\n")
 
-    print("📄 时间戳文件：")
+    print("📄 数据文件：")
     for line in reset_files():
         print(line)
 
@@ -126,7 +104,6 @@ def main() -> int:
     # Seed penalized_rest_up_to.txt with current max_rest_time
     # so continue.py knows the correct baseline for rest penalty.
     try:
-        sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
         import update_h as _uh
         max_rest = _uh.read_max_rest()
         _uh.write_penalized_rest(max_rest)

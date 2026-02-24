@@ -9,7 +9,7 @@ H (超时惩罚数字) accumulates from two sources:
   H == 0  →  "{random:0..0}"   (no penalty, Alfred expands to 0)
   H >  0  →  "{random:1..2H}"  e.g. H=11 → "{random:1..22}"
 
-State files (in /Users/haichenlai/Desktop/Prompt/):
+State files (in data/):
   h_value.txt               : current H (float, minutes), default 0
   penalized_rest_up_to.txt  : total_rest already penalized (float, minutes),
                               initialised to max_rest_time on reset
@@ -18,25 +18,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from pathlib import Path
+import sys
 
-# ── paths ───────────────────────────────────────────────────────────────────
-BASE = Path("/Users/haichenlai/Desktop/Prompt")
-H_FILE                  = BASE / "h_value.txt"
-PENALIZED_REST_FILE     = BASE / "penalized_rest_up_to.txt"
-
-DB_FILE = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Databases/snippets.alfdb"
-)
-SNIPPETS_DIR = (
-    Path("/Users/haichenlai/Library/Application Support/Alfred"
-         "/Alfred.alfredpreferences")
-    / "snippets" / "学习时间追踪系统"
-)
-
-OVERTIME_RANGE_UID  = "D3D8CE6B-3AE4-4A88-91A2-9D23E0804E2D"
-MAX_REST_UID        = "D197E8BC-85F4-45D0-82D4-814FA0DCA629"
+sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+from config import DB_FILE, H_FILE, PENALIZED_REST_FILE, SNIPPETS  # noqa: E402
 
 
 # ── state helpers ────────────────────────────────────────────────────────────
@@ -59,7 +44,7 @@ def write_h(value: float) -> None:
 def read_penalized_rest() -> float:
     """Minutes of rest already charged to H. Initialised to max_rest on reset."""
     if not PENALIZED_REST_FILE.exists():
-        return read_max_rest()   # conservative: treat as if no penalty yet
+        return read_max_rest()
     text = PENALIZED_REST_FILE.read_text(encoding="utf-8").strip()
     try:
         return float(text) if text else read_max_rest()
@@ -73,9 +58,10 @@ def write_penalized_rest(value: float) -> None:
 
 def read_max_rest() -> float:
     """Read -max_rest_time snippet from SQLite."""
+    snip = SNIPPETS["max_rest_time"]
     with sqlite3.connect(DB_FILE) as con:
         row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (MAX_REST_UID,)
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
         ).fetchone()
     if row is None:
         return 0.0
@@ -89,29 +75,24 @@ def read_max_rest() -> float:
 
 def write_overtime_range(h: float) -> None:
     """Write the Alfred dynamic placeholder for -overtime-penalty-range."""
-    h_int = int(h)   # truncate — only whole minutes count
+    h_int = int(h)
     if h_int <= 0:
         range_str = "{random:0..0}"
     else:
         range_str = "{random:1.." + str(h_int * 2) + "}"
 
-    # SQLite
+    snip = SNIPPETS["overtime_penalty_range"]
+
     with sqlite3.connect(DB_FILE) as con:
         con.execute(
             "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (range_str, OVERTIME_RANGE_UID),
+            (range_str, snip.uid),
         )
 
-    # JSON
-    matches = [
-        p for p in SNIPPETS_DIR.iterdir()
-        if p.name.startswith("-overtime-penalty-range ") and p.suffix == ".json"
-    ]
-    if matches:
-        json_path = matches[0]
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
+    if snip.json_path.exists():
+        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
         payload["alfredsnippet"]["snippet"] = range_str
-        json_path.write_text(
+        snip.json_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
@@ -138,13 +119,11 @@ def check_rest_penalty(total_rest_minutes: float) -> float:
     excess = total_rest_minutes - penalized_up_to
     if excess <= 0:
         return read_h()
-    # Update watermark first, then accumulate
     write_penalized_rest(total_rest_minutes)
     return accumulate_h(excess)
 
 
 if __name__ == "__main__":
-    # Quick status dump
     h = read_h()
     p = read_penalized_rest()
     m = read_max_rest()

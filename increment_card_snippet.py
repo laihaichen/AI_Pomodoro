@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Increment the Alfred snippet counter.
+"""Increment the Alfred snippet counter for -countcard (宿命卡).
 
 Alfred maintains TWO sources of truth:
   1. JSON file  – the on-disk "preference" file (synced / backed up)
@@ -14,65 +14,50 @@ from __future__ import annotations
 import json
 import sqlite3
 import sys
-from pathlib import Path
 
-# ── paths ──────────────────────────────────────────────────────────────────
-PREFS = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Alfred.alfredpreferences"
-)
-SNIPPET_UID = "247CAEF6-57F5-4BCC-8D87-3E87CDDA1D0E"
-
-JSON_FILE = (
-    PREFS
-    / "snippets"
-    / "学习时间追踪系统"
-    / f"-countcard [{SNIPPET_UID}].json"
-)
-DB_FILE = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Databases/snippets.alfdb"
-)
+sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+from config import DB_FILE, SNIPPETS  # noqa: E402
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
-def read_current_from_db(uid: str) -> tuple[int, str]:
+def read_current_from_db() -> tuple[int, str]:
     """Return (current_int, raw_snippet_str) from SQLite, which Alfred reads."""
+    snip = SNIPPETS["countcard"]
     with sqlite3.connect(DB_FILE) as con:
         row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (uid,)
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
         ).fetchone()
     if row is None:
-        raise RuntimeError(f"UID {uid!r} not found in {DB_FILE}")
+        raise RuntimeError(f"UID {snip.uid!r} not found in {DB_FILE}")
     raw = row[0]
     try:
         return int(raw), raw
     except ValueError:
-        raise RuntimeError(
-            f"snippet field {raw!r} is not an integer string"
-        )
+        raise RuntimeError(f"snippet field {raw!r} is not an integer string")
 
 
-def write_to_db(uid: str, new_value: str) -> None:
+def write_to_db(new_value: str) -> None:
     """Update the SQLite cache – this is what Alfred reads live."""
+    snip = SNIPPETS["countcard"]
     with sqlite3.connect(DB_FILE) as con:
         con.execute(
             "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (new_value, uid),
+            (new_value, snip.uid),
         )
         if con.total_changes == 0:
             raise RuntimeError(
-                f"UPDATE matched 0 rows for uid={uid!r}; "
+                f"UPDATE matched 0 rows for uid={snip.uid!r}; "
                 "was the snippet deleted from Alfred?"
             )
 
 
 def write_to_json(new_value: str) -> None:
     """Keep the JSON file in sync (for sync/backup consistency)."""
-    payload = json.loads(JSON_FILE.read_text(encoding="utf-8"))
+    json_path = SNIPPETS["countcard"].json_path
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
     payload["alfredsnippet"]["snippet"] = new_value
-    JSON_FILE.write_text(
+    json_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
@@ -81,14 +66,14 @@ def write_to_json(new_value: str) -> None:
 # ── main ───────────────────────────────────────────────────────────────────
 
 def main() -> int:
-    # Validate paths
-    for p in (JSON_FILE, DB_FILE):
+    snip = SNIPPETS["countcard"]
+    for p in (snip.json_path, DB_FILE):
         if not p.exists():
             print(f"File not found: {p}", file=sys.stderr)
             return 1
 
     try:
-        current, _ = read_current_from_db(SNIPPET_UID)
+        current, _ = read_current_from_db()
     except RuntimeError as exc:
         print(exc, file=sys.stderr)
         return 1
@@ -96,9 +81,7 @@ def main() -> int:
     new_value = str(current + 1)
 
     try:
-        # 1. Update SQLite first (this is what Alfred reads live)
-        write_to_db(SNIPPET_UID, new_value)
-        # 2. Update JSON to keep preference file in sync
+        write_to_db(new_value)
         write_to_json(new_value)
     except (RuntimeError, OSError) as exc:
         print(f"Write failed: {exc}", file=sys.stderr)

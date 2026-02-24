@@ -23,32 +23,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+from config import (  # noqa: E402
+    CONT_TS_FILE, CURR_TS_FILE, DB_FILE, FIRST_TS_FILE,
+    PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,
+)
 import update_h  # noqa: E402
 
-# ── file paths ──────────────────────────────────────────────────────────────
-BASE = Path("/Users/haichenlai/Desktop/Prompt")
-PREV_TS_FILE  = BASE / "prev_timestamp.txt"
-CURR_TS_FILE  = BASE / "curr_timestamp.txt"
-PAUSE_TS_FILE = BASE / "pause_timestamp.txt"
-CONT_TS_FILE  = BASE / "continue_timestamp.txt"
-FIRST_TS_FILE = BASE / "first_timestamp.txt"
-
-# ── Alfred snippet config ───────────────────────────────────────────────────
-PREFS = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Alfred.alfredpreferences"
-)
-DB_FILE = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Databases/snippets.alfdb"
-)
-SNIPPETS_DIR = PREFS / "snippets" / "学习时间追踪系统"
-
-INTERVAL_UID = "0352B20F-33EE-44A0-B570-FAAF2FA1E8E8"
-FORTUNE_UID  = "8BD89037-57B3-4964-A204-3D2D1F1250FA"
-
-INTERVAL_JSON = SNIPPETS_DIR / f"-interval [{INTERVAL_UID}].json"
-FORTUNE_JSON  = SNIPPETS_DIR / f"-fortunevalue [{FORTUNE_UID}].json"
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -70,23 +50,19 @@ def write_ts(path: Path, dt: datetime) -> None:
     path.write_text(dt.isoformat(), encoding="utf-8")
 
 
-def write_snippet_db(uid: str, value: str) -> None:
+def write_snippet(key: str, value: str) -> None:
+    """Update both SQLite (live) and JSON (sync/backup) for the given snippet key."""
+    snip = SNIPPETS[key]
     with sqlite3.connect(DB_FILE) as con:
-        con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, uid))
+        con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, snip.uid))
         if con.total_changes == 0:
-            raise RuntimeError(f"UID {uid!r} not found in DB")
-
-
-def write_snippet_json(json_path: Path, value: str) -> None:
-    payload = json.loads(json_path.read_text(encoding="utf-8"))
+            raise RuntimeError(f"UID {snip.uid!r} not found in DB")
+    payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
     payload["alfredsnippet"]["snippet"] = value
-    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def write_snippet(uid: str, json_path: Path, value: str) -> None:
-    """Update both SQLite (live) and JSON (sync/backup)."""
-    write_snippet_db(uid, value)
-    write_snippet_json(json_path, value)
+    snip.json_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 # ── main ────────────────────────────────────────────────────────────────────
@@ -95,13 +71,12 @@ def main() -> int:
     now = now_ts()
 
     # 1. Shift curr → prev, write new curr
-    prev = read_ts(CURR_TS_FILE)          # old curr becomes new prev
+    prev = read_ts(CURR_TS_FILE)
     if prev is not None:
         write_ts(PREV_TS_FILE, prev)
     write_ts(CURR_TS_FILE, now)
 
     if prev is None:
-        # First =move of the day — record as the first learning timestamp
         write_ts(FIRST_TS_FILE, now)
         print("First =move recorded. No interval computed yet.")
         return 0
@@ -115,25 +90,24 @@ def main() -> int:
 
     rest_minutes = 0.0
     if pause_ts is not None and cont_ts is not None and pause_ts > prev:
-        # Rest happened within this learning interval — subtract it
         rest_minutes = (cont_ts - pause_ts).total_seconds() / 60
         rest_minutes = max(rest_minutes, 0.0)
 
     interval_minutes = raw_minutes - rest_minutes
 
     # 4. Determine 吉凶 (fortune value)
-    fortune = "-1" if interval_minutes > 15 else "1"
     fortune_snippet = (
         "超出15分钟，不合规，应判断为凶(-1)"
         if interval_minutes > 15
         else "未到15分钟，合规"
     )
+    fortune = "-1" if interval_minutes > 15 else "1"
 
     # 5. Write interval + fortune to Alfred snippets
     interval_str = f"{interval_minutes:.1f}"
     try:
-        write_snippet(INTERVAL_UID, INTERVAL_JSON, interval_str)
-        write_snippet(FORTUNE_UID,  FORTUNE_JSON,  fortune_snippet)
+        write_snippet("interval",    interval_str)
+        write_snippet("fortunevalue", fortune_snippet)
     except (RuntimeError, OSError) as exc:
         print(f"Write failed: {exc}", file=sys.stderr)
         return 1

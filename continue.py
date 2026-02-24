@@ -6,66 +6,45 @@ import json
 import sqlite3
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+from config import CONT_TS_FILE, DB_FILE, PAUSE_TS_FILE, SNIPPETS  # noqa: E402
 import update_h  # noqa: E402
-
-BASE = Path("/Users/haichenlai/Desktop/Prompt")
-CONT_TS_FILE  = BASE / "continue_timestamp.txt"
-PAUSE_TS_FILE = BASE / "pause_timestamp.txt"
-
-# ── Alfred snippet config ───────────────────────────────────────────────────
-DB_FILE = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Databases/snippets.alfdb"
-)
-SNIPPETS_DIR = (
-    Path("/Users/haichenlai/Library/Application Support/Alfred"
-         "/Alfred.alfredpreferences")
-    / "snippets" / "学习时间追踪系统"
-)
-TOTAL_REST_UID = "B3689D50-EEDD-42FC-A4E5-D19A70BA709B"
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
 def read_total_rest() -> float:
     """Read current -total_rest_time from SQLite (in minutes)."""
+    snip = SNIPPETS["total_rest_time"]
     with sqlite3.connect(DB_FILE) as con:
         row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (TOTAL_REST_UID,)
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
         ).fetchone()
     if row is None:
-        raise RuntimeError(f"UID {TOTAL_REST_UID!r} not found in DB")
+        raise RuntimeError(f"UID {snip.uid!r} not found in DB")
     try:
         return float(row[0])
     except ValueError:
-        return 0.0  # treat malformed value as 0
+        return 0.0
 
 
 def write_total_rest(value: float) -> None:
     """Write updated -total_rest_time to SQLite + JSON."""
     str_value = f"{value:.1f}"
+    snip = SNIPPETS["total_rest_time"]
 
-    # SQLite (what Alfred reads live)
     with sqlite3.connect(DB_FILE) as con:
         con.execute(
             "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (str_value, TOTAL_REST_UID),
+            (str_value, snip.uid),
         )
 
-    # JSON (sync/backup)
-    matches = [
-        p for p in SNIPPETS_DIR.iterdir()
-        if p.name.startswith("-total_rest_time ") and p.suffix == ".json"
-    ]
-    if not matches:
+    if not snip.json_path.exists():
         raise RuntimeError("-total_rest_time JSON file not found")
-    json_path = matches[0]
-    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
     payload["alfredsnippet"]["snippet"] = str_value
-    json_path.write_text(
+    snip.json_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )

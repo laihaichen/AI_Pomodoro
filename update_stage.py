@@ -13,28 +13,13 @@ from __future__ import annotations
 import json
 import sqlite3
 import sys
-from pathlib import Path
 
-# ── Alfred snippet config ───────────────────────────────────────────────────
-PREFS = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Alfred.alfredpreferences"
-)
-DB_FILE = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Databases/snippets.alfdb"
-)
-SNIPPETS_DIR = PREFS / "snippets" / "学习时间追踪系统"
-
-STAGE_UID      = "DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3"
-DIFFICULTY_UID = "BDEE3C98-A4A1-4A2B-9046-18A12FD66083"
-
-# Difficulties that support milestone logic
-MILESTONE_DIFFICULTIES = {"平衡难度", "硬核难度"}
+sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+from config import DB_FILE, SNIPPETS  # noqa: E402
 
 # ── stage strings ───────────────────────────────────────────────────────────
 
-STAGE_DEFAULT        = "当前没有达到阶段性节点"
+STAGE_DEFAULT        = SNIPPETS["stage"].default
 STAGE_NOT_APPLICABLE = "当前难度不适用"
 
 STAGE_MILESTONE = (
@@ -57,27 +42,21 @@ STAGE_MILESTONE = (
     "- [宿命卡count + 1：玩家获得1张宿命卡，可在之后任意年龄使用]\n"
 )
 
+# Difficulties that support milestone logic
+MILESTONE_DIFFICULTIES = {"平衡难度", "硬核难度"}
+
 # ── helpers ─────────────────────────────────────────────────────────────────
 
-def write_snippet(uid: str, value: str) -> None:
-    """Update SQLite (live) and JSON (backup) for the given snippet UID."""
-    # 1. SQLite
+def _write_stage(value: str) -> None:
+    """Update SQLite (live) and JSON (backup) for -stage."""
+    snip = SNIPPETS["stage"]
     with sqlite3.connect(DB_FILE) as con:
-        con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, uid))
+        con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, snip.uid))
         if con.total_changes == 0:
-            raise RuntimeError(f"UID {uid!r} not found in DB")
-
-    # 2. JSON — find by prefix since [ ] break glob
-    matches = [
-        p for p in SNIPPETS_DIR.iterdir()
-        if p.name.startswith("-stage ") and p.suffix == ".json"
-    ]
-    if not matches:
-        raise RuntimeError("-stage JSON file not found in snippets dir")
-    json_path = matches[0]
-    payload = json.loads(json_path.read_text(encoding="utf-8"))
+            raise RuntimeError(f"UID {snip.uid!r} not found in DB")
+    payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
     payload["alfredsnippet"]["snippet"] = value
-    json_path.write_text(
+    snip.json_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
@@ -85,18 +64,20 @@ def write_snippet(uid: str, value: str) -> None:
 
 def read_stage() -> str:
     """Return the current -stage snippet value, or empty string on failure."""
+    snip = SNIPPETS["stage"]
     with sqlite3.connect(DB_FILE) as con:
         row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (STAGE_UID,)
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
         ).fetchone()
     return row[0].strip() if row else ""
 
 
 def read_difficulty() -> str:
     """Return the current -difficulty snippet value, or empty string on failure."""
+    snip = SNIPPETS["difficulty"]
     with sqlite3.connect(DB_FILE) as con:
         row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (DIFFICULTY_UID,)
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
         ).fetchone()
     return row[0].strip() if row else ""
 
@@ -107,17 +88,17 @@ def is_milestone_difficulty() -> bool:
 
 
 def set_milestone() -> None:
-    write_snippet(STAGE_UID, STAGE_MILESTONE)
+    _write_stage(STAGE_MILESTONE)
     print("✅ -stage → 阶段性节点 alert 已写入")
 
 
 def reset_stage() -> None:
-    write_snippet(STAGE_UID, STAGE_DEFAULT)
+    _write_stage(STAGE_DEFAULT)
     print("✅ -stage → 默认值（当前没有达到阶段性节点）已写入")
 
 
 def set_not_applicable() -> None:
-    write_snippet(STAGE_UID, STAGE_NOT_APPLICABLE)
+    _write_stage(STAGE_NOT_APPLICABLE)
     print("✅ -stage → 当前难度不适用（探索者难度）已写入")
 
 

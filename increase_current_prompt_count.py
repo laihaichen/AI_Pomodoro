@@ -13,39 +13,21 @@ from __future__ import annotations
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import datetime
 
-# ── import sibling script ───────────────────────────────────────────────────
-# Use a hardcoded absolute path so this works both in terminal AND when
-# Alfred pastes the code into a temp file (where __file__ would point to /tmp/).
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+from config import CURR_TS_FILE, DB_FILE, FIRST_TS_FILE, SNIPPETS  # noqa: E402
 import update_stage  # noqa: E402
 
-# ── Alfred snippet config ───────────────────────────────────────────────────
-PREFS = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Alfred.alfredpreferences"
-)
-DB_FILE = Path(
-    "/Users/haichenlai/Library/Application Support/Alfred"
-    "/Databases/snippets.alfdb"
-)
-SNIPPETS_DIR = PREFS / "snippets" / "学习时间追踪系统"
 
-COUNT_UID      = "F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB"
-OFFSET_UID     = "E99CD789-4D10-4C17-9A3A-C5076BA33ADB"
-TOTAL_REST_UID = "B3689D50-EEDD-42FC-A4E5-D19A70BA709B"
+# ── helpers ─────────────────────────────────────────────────────────────────
 
-BASE           = Path("/Users/haichenlai/Desktop/Prompt")
-FIRST_TS_FILE  = BASE / "first_timestamp.txt"
-CURR_TS_FILE   = BASE / "curr_timestamp.txt"
-
-def read_snippet_float(uid: str) -> float:
-    """Read a float value from Alfred SQLite by UID. Returns 0.0 on failure."""
+def read_snippet_float(key: str) -> float:
+    """Read a float value from Alfred SQLite by snippet key. Returns 0.0 on failure."""
+    snip = SNIPPETS[key]
     with sqlite3.connect(DB_FILE) as con:
         row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (uid,)
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
         ).fetchone()
     if row is None:
         return 0.0
@@ -58,19 +40,16 @@ def read_snippet_float(uid: str) -> float:
 def write_offset(value: float) -> None:
     """Write offset minutes to -offset snippet (DB + JSON)."""
     str_value = f"{value:.1f}"
+    snip = SNIPPETS["offset"]
     with sqlite3.connect(DB_FILE) as con:
         con.execute(
             "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (str_value, OFFSET_UID),
+            (str_value, snip.uid),
         )
-    matches = [
-        p for p in SNIPPETS_DIR.iterdir()
-        if p.name.startswith("-offset ") and p.suffix == ".json"
-    ]
-    if matches:
-        payload = json.loads(matches[0].read_text(encoding="utf-8"))
+    if snip.json_path.exists():
+        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
         payload["alfredsnippet"]["snippet"] = str_value
-        matches[0].write_text(
+        snip.json_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
@@ -82,8 +61,7 @@ def compute_and_write_offset(new_count: int) -> str:
            = (new_count × 10 + total_rest) - (curr_ts - first_ts)
     Returns a short status string for printing.
     """
-    # Read timestamps
-    def read_ts(path: Path) -> datetime | None:
+    def read_ts(path):
         if not path.exists():
             return None
         text = path.read_text(encoding="utf-8").strip()
@@ -95,7 +73,7 @@ def compute_and_write_offset(new_count: int) -> str:
         return "(offset 误差：时间戳文件缺失)"
 
     real_total   = (curr_ts - first_ts).total_seconds() / 60
-    total_rest   = read_snippet_float(TOTAL_REST_UID)
+    total_rest   = read_snippet_float("total_rest_time")
     expect_total = new_count * 10 + total_rest
     offset       = expect_total - real_total
 
@@ -105,12 +83,13 @@ def compute_and_write_offset(new_count: int) -> str:
 
 def read_count() -> int:
     """Read current -current_prompt_count from Alfred SQLite DB."""
+    snip = SNIPPETS["current_prompt_count"]
     with sqlite3.connect(DB_FILE) as con:
         row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (COUNT_UID,)
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
         ).fetchone()
     if row is None:
-        raise RuntimeError(f"UID {COUNT_UID!r} not found in DB")
+        raise RuntimeError(f"UID {snip.uid!r} not found in DB")
     try:
         return int(row[0])
     except ValueError:
@@ -120,23 +99,19 @@ def read_count() -> int:
 def write_count(value: int) -> None:
     """Update SQLite + JSON for -current_prompt_count."""
     str_value = str(value)
+    snip = SNIPPETS["current_prompt_count"]
 
     with sqlite3.connect(DB_FILE) as con:
         con.execute(
             "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (str_value, COUNT_UID),
+            (str_value, snip.uid),
         )
 
-    matches = [
-        p for p in SNIPPETS_DIR.iterdir()
-        if p.name.startswith("-current_prompt_count ") and p.suffix == ".json"
-    ]
-    if not matches:
+    if not snip.json_path.exists():
         raise RuntimeError("-current_prompt_count JSON file not found")
-    json_path = matches[0]
-    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
     payload["alfredsnippet"]["snippet"] = str_value
-    json_path.write_text(
+    snip.json_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
@@ -164,17 +139,14 @@ def main() -> int:
     # ── milestone state machine ─────────────────────────────────────────────
     try:
         if not update_stage.is_milestone_difficulty():
-            # Explorer difficulty — milestone logic does not apply
             update_stage.set_not_applicable()
             print(f"ℹ️  探索者难度，阶段性节点不适用（-stage → 当前难度不适用）")
 
         elif new_count % 18 == 0:
-            # Landed exactly on a milestone (18, 36, 54, ...)
             update_stage.set_milestone()
             print(f"🎯 阶段性节点触发：第 {new_count} 条记录（{new_count // 18} × 18）")
 
         elif new_count % 18 == 1 and new_count > 1:
-            # One past a milestone (19, 37, 55, ...) — reset stage
             update_stage.reset_stage()
             print(f"🔄 阶段性节点已过，-stage 重置（第 {new_count} 条记录）")
 
