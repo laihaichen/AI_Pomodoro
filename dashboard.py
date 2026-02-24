@@ -397,9 +397,14 @@ HTML = r"""<!DOCTYPE html>
     background: var(--border); border: 1px solid #3a3a3a;
     border-radius: 10px; color: var(--text);
     font-size: 12px; font-weight: 600;
-    padding: 10px 16px; cursor: pointer; line-height: 1.5;
+    padding: 10px 12px; cursor: pointer; line-height: 1.5;
     text-align: center; transition: background 0.15s, color 0.15s;
-    text-decoration: none; display: inline-block; font-family: inherit;
+    text-decoration: none; font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .next-pomodoro-btn .btn-sub {
+    font-weight: 400; font-size: 0.85em; opacity: 0.7; margin-top: 3px;
   }
   .next-pomodoro-btn:hover  { background: #333333; color: var(--bright); }
   .next-pomodoro-btn:active { background: #444444; }
@@ -540,28 +545,36 @@ HTML = r"""<!DOCTYPE html>
     <div class="hero-count" id="val-current_prompt_count">—</div>
     <div class="hero-label">当前第几条番茄钟记录</div>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;margin-left:16px;">
-    <button class="next-pomodoro-btn" onclick="triggerNextPomodoro(this)"
+  <div style="display:flex;gap:8px;align-items:stretch;margin-left:16px;flex:1;">
+    <button class="next-pomodoro-btn" style="flex:2;min-width:130px;"
+            onclick="triggerNextPomodoro(this)"
             title="执行 AppleScript：btn_next_pomodoro">
-      推进番茄钟记录<br>并向AI发送学习进度<br><span style="font-weight:400;font-size:11px;">（请记得剪切板上有内容）</span>
+      <span>推进番茄钟记录<br>并向AI发送学习进度</span>
+      <span class="btn-sub">（请记得剪切板上有内容）</span>
     </button>
-    <button class="next-pomodoro-btn" onclick="triggerStayPomodoro(this)"
+    <button class="next-pomodoro-btn" style="flex:2;min-width:130px;"
+            onclick="triggerStayPomodoro(this)"
             title="执行 AppleScript：btn_stay">
-      不推进番茄钟记录<br>并向AI发送学习进度<br><span style="font-weight:400;font-size:11px;">（请记得剪切板上有内容）</span>
+      <span>不推进番茄钟记录<br>并向AI发送学习进度</span>
+      <span class="btn-sub">（请记得剪切板上有内容）</span>
     </button>
-    <button class="next-pomodoro-btn" onclick="triggerPause(this)"
+    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
+            onclick="triggerPause(this)"
             title="执行 AppleScript：btn_pause">
       进入休息时间
     </button>
-    <button class="next-pomodoro-btn" onclick="triggerContinue(this)"
+    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
+            onclick="triggerContinue(this)"
             title="执行 AppleScript：btn_continue">
       从休息时间恢复
     </button>
-    <button class="next-pomodoro-btn" onclick="triggerGetCard(this)"
+    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
+            onclick="triggerGetCard(this)"
             title="执行 AppleScript：btn_getcard">
       获得一张宿命卡
     </button>
-    <button class="next-pomodoro-btn" onclick="triggerUseCard(this)"
+    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
+            onclick="triggerUseCard(this)"
             title="执行 AppleScript：btn_usecard">
       使用一张宿命卡
     </button>
