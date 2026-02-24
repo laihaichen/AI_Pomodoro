@@ -1,0 +1,1 @@
+lsof -ti :5050 | xargs kill -9 && python3 /Users/haichenlai/Desktop/Prompt/dashboard.py

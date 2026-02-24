@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import subprocess
 import sys
 from datetime import datetime, timezone
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
 from config import (  # noqa: E402
     CURR_TS_FILE, PREV_TS_FILE, FIRST_TS_FILE,
+    PAUSE_TS_FILE, CONT_TS_FILE,
     PENALIZED_REST_FILE, H_FILE,
     DB_FILE, SNIPPETS,
 )
@@ -103,23 +105,35 @@ def collect_state() -> dict:
     prev_raw   = _read_txt(PREV_TS_FILE)
     first_raw  = _read_txt(FIRST_TS_FILE)
 
-    state["curr_ts"]             = _fmt_ts(curr_raw)
-    state["prev_ts"]             = _fmt_ts(prev_raw)
-    state["first_ts"]            = _fmt_ts(first_raw)
-    state["penalized_rest_up_to"] = _read_txt(PENALIZED_REST_FILE) or "0"
-    state["h_value"]             = _read_txt(H_FILE) or "0"
+    state["curr_ts"]  = _fmt_ts(curr_raw)
+    state["prev_ts"]  = _fmt_ts(prev_raw)
+    state["first_ts"] = _fmt_ts(first_raw)
+    state["h_value"]  = _read_txt(H_FILE) or "0"
 
-    # Elapsed time since first record (in minutes)
-    if first_raw and curr_raw:
+    # Most recent rest action: compare pause vs continue timestamps
+    pause_raw = _read_txt(PAUSE_TS_FILE)
+    cont_raw  = _read_txt(CONT_TS_FILE)
+    if pause_raw and cont_raw:
         try:
-            first_dt = datetime.fromisoformat(first_raw)
-            curr_dt  = datetime.fromisoformat(curr_raw)
-            elapsed  = (curr_dt - first_dt).total_seconds() / 60
-            state["elapsed_minutes"] = round(elapsed, 1)
+            pause_is_newer = (
+                datetime.fromisoformat(pause_raw) >= datetime.fromisoformat(cont_raw)
+            )
         except Exception:
-            state["elapsed_minutes"] = None
+            pause_is_newer = True
+    elif pause_raw:
+        pause_is_newer = True
     else:
-        state["elapsed_minutes"] = None
+        pause_is_newer = False
+
+    if pause_raw and pause_is_newer:
+        state["last_rest_action"] = f"你在 {_fmt_ts(pause_raw)} 开始休息"
+        state["last_rest_is_paused"] = True
+    elif cont_raw and not pause_is_newer:
+        state["last_rest_action"] = f"你在 {_fmt_ts(cont_raw)} 结束休息"
+        state["last_rest_is_paused"] = False
+    else:
+        state["last_rest_action"] = "尚无休息记录"
+        state["last_rest_is_paused"] = False
 
     # ── Alfred snippets from SQLite ──────────────────────────────────────────
     snippet_keys = [
@@ -140,6 +154,19 @@ def collect_state() -> dict:
             state.setdefault(key, "DB error")
         state["db_error"] = str(exc)
 
+    # ── 真实学习时长 = 墙上时间 - 累计休息时间 ──────────────────────────────
+    if first_raw and curr_raw:
+        try:
+            first_dt     = datetime.fromisoformat(first_raw)
+            curr_dt      = datetime.fromisoformat(curr_raw)
+            wall_minutes = (curr_dt - first_dt).total_seconds() / 60
+            total_rest   = float(state.get("total_rest_time") or 0)
+            state["elapsed_minutes"] = round(wall_minutes - total_rest, 1)
+        except Exception:
+            state["elapsed_minutes"] = None
+    else:
+        state["elapsed_minutes"] = None
+
     return state
 
 
@@ -148,6 +175,96 @@ def collect_state() -> dict:
 @app.route("/api/state")
 def api_state():
     return jsonify(collect_state())
+
+
+@app.route("/api/next-pomodoro", methods=["POST"])
+def api_next_pomodoro():
+    script = (
+        'tell application id "com.runningwithcrayons.Alfred" '
+        'to run trigger "btn_next_pomodoro" '
+        'in workflow "com.pomodoro.ai" '
+        'with argument "test"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/stay-pomodoro", methods=["POST"])
+def api_stay_pomodoro():
+    script = (
+        'tell application id "com.runningwithcrayons.Alfred" '
+        'to run trigger "btn_stay" '
+        'in workflow "com.pomodoro.ai" '
+        'with argument "test"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/pause", methods=["POST"])
+def api_pause():
+    script = (
+        'tell application id "com.runningwithcrayons.Alfred" '
+        'to run trigger "btn_pause" '
+        'in workflow "com.pomodoro.ai" '
+        'with argument "test"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/continue", methods=["POST"])
+def api_continue():
+    script = (
+        'tell application id "com.runningwithcrayons.Alfred" '
+        'to run trigger "btn_continue" '
+        'in workflow "com.pomodoro.ai" '
+        'with argument "test"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/getcard", methods=["POST"])
+def api_getcard():
+    script = (
+        'tell application id "com.runningwithcrayons.Alfred" '
+        'to run trigger "btn_getcard" '
+        'in workflow "com.pomodoro.ai" '
+        'with argument "test"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/usecard", methods=["POST"])
+def api_usecard():
+    script = (
+        'tell application id "com.runningwithcrayons.Alfred" '
+        'to run trigger "btn_usecard" '
+        'in workflow "com.pomodoro.ai" '
+        'with argument "test"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/api/setup", methods=["POST"])
@@ -181,60 +298,52 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍅 学习追踪 Dashboard</title>
+<title>学习追踪 Dashboard</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:        #0f0f1a;
-    --surface:   #1e1e2e;
-    --border:    #313244;
-    --text:      #cdd6f4;
-    --subtext:   #6c7086;
-    --green:     #a6e3a1;
-    --yellow:    #f9e2af;
-    --red:       #f38ba8;
-    --blue:      #89b4fa;
-    --mauve:     #cba6f7;
-    --peach:     #fab387;
-    --teal:      #94e2d5;
+    --bg:      #111111;
+    --surface: #1a1a1a;
+    --border:  #2c2c2c;
+    --text:    #e0e0e0;
+    --dim:     #555555;
+    --bright:  #ffffff;
   }
 
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
     min-height: 100vh;
     padding: 24px;
   }
 
   /* ── header ── */
   .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 28px;
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 28px;
   }
   .header-left { display: flex; align-items: center; gap: 16px; }
-  .tomato { font-size: 56px; line-height: 1; }
-  .title-block h1 { font-size: 22px; font-weight: 700; color: var(--text); }
-  .title-block p  { font-size: 13px; color: var(--subtext); margin-top: 2px; }
+  .tomato { font-size: 48px; line-height: 1; }
+  .title-block h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+  .title-block p  { font-size: 12px; color: var(--dim); margin-top: 3px; }
   .refresh-badge {
-    font-size: 12px; color: var(--subtext);
+    font-size: 12px; color: var(--dim);
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 20px; padding: 6px 14px;
   }
-  .refresh-badge span { color: var(--blue); font-weight: 600; }
 
   /* ── section labels ── */
   .section-label {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-    color: var(--subtext); text-transform: uppercase;
-    margin: 24px 0 10px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+    color: var(--dim); text-transform: uppercase;
+    margin: 22px 0 8px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
   }
 
   /* ── grid ── */
-  .grid { display: grid; gap: 12px; }
+  .grid { display: grid; gap: 10px; }
   .grid-2 { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(3, 1fr); }
   .grid-4 { grid-template-columns: repeat(4, 1fr); }
@@ -243,63 +352,63 @@ HTML = r"""<!DOCTYPE html>
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 18px;
-    transition: border-color 0.3s;
+    border-radius: 10px;
+    padding: 14px 16px;
   }
-  .card.accent-green  { border-left: 3px solid var(--green); }
-  .card.accent-yellow { border-left: 3px solid var(--yellow); }
-  .card.accent-red    { border-left: 3px solid var(--red); }
-  .card.accent-blue   { border-left: 3px solid var(--blue); }
-  .card.accent-mauve  { border-left: 3px solid var(--mauve); }
-  .card.accent-peach  { border-left: 3px solid var(--peach); }
-  .card.accent-teal   { border-left: 3px solid var(--teal); }
+  /* all accent-* classes are now no-ops — same as .card */
+  .card.accent-green, .card.accent-yellow, .card.accent-red,
+  .card.accent-blue,  .card.accent-mauve,  .card.accent-peach,
+  .card.accent-teal   { border: 1px solid var(--border); }
 
   .card-label {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
-    color: var(--subtext); text-transform: uppercase; margin-bottom: 8px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--dim); text-transform: uppercase; margin-bottom: 8px;
   }
   .card-value {
-    font-size: 26px; font-weight: 700; color: var(--text);
-    line-height: 1.1;
+    font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.1;
   }
-  .card-value.small { font-size: 14px; font-weight: 500; line-height: 1.5; word-break: break-word; }
-  .card-sub {
-    font-size: 12px; color: var(--subtext); margin-top: 6px;
+  .card-value.small {
+    font-size: 13px; font-weight: 400; line-height: 1.6; word-break: break-word;
   }
+  .card-sub { font-size: 11px; color: var(--dim); margin-top: 5px; }
 
-  /* colour overrides for values */
-  .val-green  { color: var(--green)  !important; }
-  .val-yellow { color: var(--yellow) !important; }
-  .val-red    { color: var(--red)    !important; }
-  .val-blue   { color: var(--blue)   !important; }
-  .val-mauve  { color: var(--mauve)  !important; }
-  .val-peach  { color: var(--peach)  !important; }
-  .val-teal   { color: var(--teal)   !important; }
+  /* value states — monochrome only */
+  .val-green  { color: var(--text)   !important; }
+  .val-yellow { color: var(--text)   !important; }
+  .val-red    { color: var(--bright) !important; font-weight: 700; }
+  .val-blue   { color: var(--text)   !important; }
+  .val-mauve  { color: var(--text)   !important; }
+  .val-peach  { color: var(--text)   !important; }
+  .val-teal   { color: var(--text)   !important; }
 
-  /* hero count card */
+  /* hero card */
   .hero-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px;
+    display: flex; align-items: center; gap: 18px;
   }
-  .hero-tomato { font-size: 48px; }
-  .hero-count  { font-size: 64px; font-weight: 800; color: var(--peach); line-height: 1; }
-  .hero-label  { font-size: 14px; color: var(--subtext); margin-top: 4px; }
+  .hero-tomato { font-size: 40px; }
+  .hero-count  { font-size: 60px; font-weight: 800; color: var(--bright); line-height: 1; }
+  .hero-label  { font-size: 13px; color: var(--dim); margin-top: 4px; }
   .hero-right  { display: flex; flex-direction: column; gap: 4px; }
 
-  /* stage card (can be long text) */
-  .stage-card .card-value.small {
-    font-size: 13px;
-    color: var(--yellow);
-    white-space: pre-line;
+  /* action buttons */
+  .next-pomodoro-btn {
+    background: var(--border); border: 1px solid #3a3a3a;
+    border-radius: 10px; color: var(--text);
+    font-size: 12px; font-weight: 600;
+    padding: 10px 16px; cursor: pointer; line-height: 1.5;
+    text-align: center; transition: background 0.15s, color 0.15s;
+    text-decoration: none; display: inline-block; font-family: inherit;
   }
-  .stage-ok { color: var(--green) !important; }
-  .stage-na { color: var(--subtext) !important; }
+  .next-pomodoro-btn:hover  { background: #333333; color: var(--bright); }
+  .next-pomodoro-btn:active { background: #444444; }
+  .next-pomodoro-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* stage */
+  .stage-card .card-value.small { font-size: 13px; white-space: pre-line; }
+  .stage-ok { color: var(--dim)  !important; }
+  .stage-na { color: var(--dim)  !important; }
 
   @media (max-width: 700px) {
     .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
@@ -308,114 +417,103 @@ HTML = r"""<!DOCTYPE html>
 
   /* ── setup button ── */
   .setup-btn {
-    background: var(--mauve); color: #1e1e2e;
-    border: none; border-radius: 20px;
-    padding: 8px 18px; font-size: 13px; font-weight: 700;
-    cursor: pointer; transition: opacity 0.2s;
+    background: var(--border); border: 1px solid #3a3a3a;
+    color: var(--text); border-radius: 20px;
+    padding: 7px 16px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s; font-family: inherit;
   }
-  .setup-btn:hover { opacity: 0.85; }
+  .setup-btn:hover { background: #333333; color: var(--bright); }
 
   /* ── wizard modal ── */
   .modal-overlay {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7); z-index: 100;
+    background: rgba(0,0,0,0.75); z-index: 100;
     align-items: center; justify-content: center;
   }
   .modal-overlay.open { display: flex; }
   .modal {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 20px; padding: 36px 40px;
-    width: min(560px, 95vw); max-height: 90vh;
+    border-radius: 16px; padding: 32px 36px;
+    width: min(540px, 95vw); max-height: 90vh;
     overflow-y: auto; position: relative;
   }
   .modal-close {
-    position: absolute; top: 16px; right: 20px;
-    background: none; border: none; color: var(--subtext);
-    font-size: 20px; cursor: pointer;
+    position: absolute; top: 14px; right: 18px;
+    background: none; border: none; color: var(--dim);
+    font-size: 18px; cursor: pointer;
   }
   .modal-close:hover { color: var(--text); }
-  .wizard-progress {
-    display: flex; gap: 6px; margin-bottom: 28px;
-  }
+  .wizard-progress { display: flex; gap: 5px; margin-bottom: 26px; }
   .wizard-dot {
-    height: 4px; border-radius: 2px; flex: 1;
+    height: 3px; border-radius: 2px; flex: 1;
     background: var(--border); transition: background 0.3s;
   }
-  .wizard-dot.done { background: var(--mauve); }
-  .wizard-dot.active { background: var(--blue); }
+  .wizard-dot.done   { background: var(--dim); }
+  .wizard-dot.active { background: var(--text); }
   .wizard-step-title {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-    color: var(--subtext); text-transform: uppercase; margin-bottom: 6px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    color: var(--dim); text-transform: uppercase; margin-bottom: 6px;
   }
   .wizard-step-heading {
-    font-size: 20px; font-weight: 700; color: var(--text);
-    margin-bottom: 6px;
+    font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px;
   }
   .wizard-step-hint {
-    font-size: 13px; color: var(--subtext); margin-bottom: 20px;
-    line-height: 1.6;
+    font-size: 13px; color: var(--dim); margin-bottom: 18px; line-height: 1.6;
   }
   .wizard-input {
     width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--text);
-    font-size: 16px; padding: 12px 16px;
-    outline: none; transition: border-color 0.2s;
+    border-radius: 8px; color: var(--text); font-size: 15px;
+    padding: 11px 14px; outline: none; transition: border-color 0.2s;
     font-family: inherit;
   }
-  .wizard-input:focus { border-color: var(--blue); }
-  .wizard-input.error { border-color: var(--red); }
+  .wizard-input:focus { border-color: var(--dim); }
+  .wizard-input.error { border-color: var(--text); }
   .wizard-select {
     width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--text);
-    font-size: 16px; padding: 12px 16px;
-    outline: none; appearance: none; cursor: pointer;
-    font-family: inherit;
+    border-radius: 8px; color: var(--text); font-size: 15px;
+    padding: 11px 14px; outline: none; appearance: none;
+    cursor: pointer; font-family: inherit;
   }
-  .wizard-select:focus { border-color: var(--blue); }
+  .wizard-select:focus { border-color: var(--dim); }
   .wizard-textarea {
     width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--text);
-    font-size: 14px; padding: 12px 16px;
-    outline: none; resize: vertical; min-height: 90px;
+    border-radius: 8px; color: var(--text); font-size: 13px;
+    padding: 11px 14px; outline: none; resize: vertical; min-height: 80px;
     font-family: inherit; line-height: 1.6;
   }
-  .wizard-textarea:focus { border-color: var(--blue); }
-  .wizard-error {
-    color: var(--red); font-size: 12px; margin-top: 6px; min-height: 18px;
-  }
+  .wizard-textarea:focus { border-color: var(--dim); }
+  .wizard-error { color: var(--text); font-size: 12px; margin-top: 6px; min-height: 18px; }
   .wizard-btns {
-    display: flex; gap: 10px; margin-top: 24px; justify-content: flex-end;
+    display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end;
   }
   .btn-prev {
     background: none; border: 1px solid var(--border);
-    color: var(--subtext); border-radius: 10px;
-    padding: 10px 22px; font-size: 14px; cursor: pointer;
-    font-family: inherit;
+    color: var(--dim); border-radius: 8px; padding: 9px 20px;
+    font-size: 13px; cursor: pointer; font-family: inherit;
   }
   .btn-prev:hover { border-color: var(--text); color: var(--text); }
   .btn-next {
-    background: var(--blue); border: none; color: #1e1e2e;
-    border-radius: 10px; padding: 10px 28px;
-    font-size: 14px; font-weight: 700; cursor: pointer;
-    font-family: inherit; transition: opacity 0.2s;
+    background: var(--text); border: none; color: var(--bg);
+    border-radius: 8px; padding: 9px 26px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: opacity 0.15s;
   }
   .btn-next:hover { opacity: 0.85; }
   .btn-copy {
-    background: var(--green); border: none; color: #1e1e2e;
-    border-radius: 10px; padding: 10px 24px;
-    font-size: 14px; font-weight: 700; cursor: pointer;
-    font-family: inherit; transition: opacity 0.2s;
+    background: var(--text); border: none; color: var(--bg);
+    border-radius: 8px; padding: 9px 22px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: opacity 0.15s;
   }
   .btn-copy:hover { opacity: 0.85; }
   .prompt-result {
     width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--teal);
-    font-size: 13px; padding: 14px 16px;
+    border-radius: 8px; color: var(--text);
+    font-size: 12px; padding: 12px 14px;
     font-family: "SF Mono", "Menlo", monospace;
-    line-height: 1.7; resize: none; min-height: 220px;
-    outline: none;
+    line-height: 1.7; resize: none; min-height: 200px; outline: none;
   }
-  .copy-success { color: var(--green); font-size: 13px; margin-top: 8px; min-height: 20px; }
+  .copy-success { color: var(--text); font-size: 12px; margin-top: 8px; min-height: 20px; }
 </style>
 </head>
 <body>
@@ -429,22 +527,48 @@ HTML = r"""<!DOCTYPE html>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <button class="setup-btn" onclick="openWizard()">⚙️ 设置初始化 Prompt</button>
-    <div class="refresh-badge">每 <span>5</span> 秒刷新 · 上次更新：<span id="last-update">—</span></div>
+    <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
+    <div class="refresh-badge">每 5 秒刷新 · 上次更新：<span id="last-update">—</span></div>
   </div>
 </div>
 
 <!-- ── 番茄钟进度 ── -->
 <div class="section-label">番茄钟进度</div>
 <div class="hero-card" id="hero-card">
-  <div class="hero-tomato">🍅</div>
+  <div class="hero-tomato" style="font-size:32px; color:var(--dim);">#</div>
   <div>
     <div class="hero-count" id="val-current_prompt_count">—</div>
     <div class="hero-label">当前第几条番茄钟记录</div>
   </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;margin-left:16px;">
+    <button class="next-pomodoro-btn" onclick="triggerNextPomodoro(this)"
+            title="执行 AppleScript：btn_next_pomodoro">
+      推进番茄钟记录<br>并向AI发送学习进度<br><span style="font-weight:400;font-size:11px;">（请记得剪切板上有内容）</span>
+    </button>
+    <button class="next-pomodoro-btn" onclick="triggerStayPomodoro(this)"
+            title="执行 AppleScript：btn_stay">
+      不推进番茄钟记录<br>并向AI发送学习进度<br><span style="font-weight:400;font-size:11px;">（请记得剪切板上有内容）</span>
+    </button>
+    <button class="next-pomodoro-btn" onclick="triggerPause(this)"
+            title="执行 AppleScript：btn_pause">
+      进入休息时间
+    </button>
+    <button class="next-pomodoro-btn" onclick="triggerContinue(this)"
+            title="执行 AppleScript：btn_continue">
+      从休息时间恢复
+    </button>
+    <button class="next-pomodoro-btn" onclick="triggerGetCard(this)"
+            title="执行 AppleScript：btn_getcard">
+      获得一张宿命卡
+    </button>
+    <button class="next-pomodoro-btn" onclick="triggerUseCard(this)"
+            title="执行 AppleScript：btn_usecard">
+      使用一张宿命卡
+    </button>
+  </div>
   <div class="hero-right" style="margin-left:auto; text-align:right;">
-    <div style="font-size:13px;color:var(--subtext);">当前难度</div>
-    <div id="val-difficulty" style="font-size:20px;font-weight:700;color:var(--mauve);">—</div>
+    <div style="font-size:12px;color:var(--dim);">当前难度</div>
+    <div id="val-difficulty" style="font-size:18px;font-weight:700;color:var(--text);">—</div>
   </div>
 </div>
 
@@ -505,10 +629,9 @@ HTML = r"""<!DOCTYPE html>
     <div class="card-value" id="val-total_rest_time">—</div>
     <div class="card-sub">分钟（-total_rest_time snippet）</div>
   </div>
-  <div class="card accent-yellow">
-    <div class="card-label">已计入惩罚的休息截止</div>
-    <div class="card-value" id="val-penalized_rest_up_to">—</div>
-    <div class="card-sub">分钟（penalized_rest_up_to.txt）</div>
+  <div class="card" id="card-last-rest">
+    <div class="card-label">最近休息操作</div>
+    <div class="card-value small" id="val-last_rest_action">—</div>
   </div>
 </div>
 
@@ -790,6 +913,30 @@ function copyPrompt() {
   });
 }
 
+// ── Alfred triggers ──────────────────────────────────────────────────────────
+function _alfredTrigger(btn, endpoint) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = "⏳ 发送中...";
+  fetch(endpoint, { method: "POST" })
+    .then(r => r.json())
+    .then(d => {
+      btn.innerHTML = d.ok ? "✅ 已发送！" : "❌ 失败：" + d.error;
+      setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2500);
+    })
+    .catch(() => {
+      btn.innerHTML = "❌ 网络错误";
+      setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2500);
+    });
+}
+
+function triggerNextPomodoro(btn) { _alfredTrigger(btn, "/api/next-pomodoro"); }
+function triggerStayPomodoro(btn)  { _alfredTrigger(btn, "/api/stay-pomodoro"); }
+function triggerPause(btn)         { _alfredTrigger(btn, "/api/pause"); }
+function triggerContinue(btn)      { _alfredTrigger(btn, "/api/continue"); }
+function triggerGetCard(btn)       { _alfredTrigger(btn, "/api/getcard"); }
+function triggerUseCard(btn)       { _alfredTrigger(btn, "/api/usecard"); }
+
 // ── Dashboard data refresh ───────────────────────────────────────────────────
 const REFRESH_MS = 5000;
 let countdown = REFRESH_MS / 1000;
@@ -853,9 +1000,16 @@ function refreshData() {
       );
 
       // rest
-      setVal("val-max_rest_time",           d.max_rest_time);
-      setVal("val-total_rest_time",         d.total_rest_time);
-      setVal("val-penalized_rest_up_to",    d.penalized_rest_up_to);
+      setVal("val-max_rest_time",    d.max_rest_time);
+      setVal("val-total_rest_time",  d.total_rest_time);
+
+      // last rest action — colour by pause/continue state
+      setVal("val-last_rest_action", d.last_rest_action);
+      const restCard = document.getElementById("card-last-rest");
+      if (restCard) {
+        restCard.className = "card " + (d.last_rest_is_paused ? "accent-yellow" : "accent-green");
+      }
+      applyClass("val-last_rest_action", d.last_rest_is_paused ? "val-yellow" : "val-green");
 
       // penalty
       const hv = parseFloat(d.h_value);
