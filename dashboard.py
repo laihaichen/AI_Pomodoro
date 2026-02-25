@@ -105,6 +105,7 @@ def collect_state() -> dict:
     prev_raw   = _read_txt(PREV_TS_FILE)
     first_raw  = _read_txt(FIRST_TS_FILE)
 
+    state["curr_ts_raw"] = curr_raw
     state["curr_ts"]  = _fmt_ts(curr_raw)
     state["prev_ts"]  = _fmt_ts(prev_raw)
     state["first_ts"] = _fmt_ts(first_raw)
@@ -328,7 +329,7 @@ HTML = r"""<!DOCTYPE html>
   .tomato { font-size: 48px; line-height: 1; }
   .title-block h1 { font-size: 20px; font-weight: 600; color: var(--text); }
   .title-block p  { font-size: 12px; color: var(--dim); margin-top: 3px; }
-  .refresh-badge {
+  .refresh-badge, .pomodoro-timer {
     font-size: 12px; color: var(--dim);
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 20px; padding: 6px 14px;
@@ -533,6 +534,7 @@ HTML = r"""<!DOCTYPE html>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
+    <div class="pomodoro-timer">本次番茄钟计时：<span id="tomato-timer" style="font-weight:700;color:var(--bright); font-variant-numeric: tabular-nums;">0秒</span></div>
     <div class="refresh-badge">每 5 秒刷新 · 上次更新：<span id="last-update">—</span></div>
   </div>
 </div>
@@ -954,6 +956,7 @@ function triggerUseCard(btn)       { _alfredTrigger(btn, "/api/usecard"); }
 // ── Dashboard data refresh ───────────────────────────────────────────────────
 const REFRESH_MS = 5000;
 let countdown = REFRESH_MS / 1000;
+let currTsRaw = null; // Store ISO string for the timer
 
 function setVal(id, text) {
   const el = document.getElementById(id);
@@ -972,6 +975,7 @@ function refreshData() {
     .then(r => r.json())
     .then(d => {
       // timestamps
+      currTsRaw = d.curr_ts_raw;
       setVal("val-curr_ts",  d.curr_ts);
       setVal("val-prev_ts",  d.prev_ts);
       setVal("val-first_ts", d.first_ts);
@@ -1067,9 +1071,26 @@ function refreshData() {
     });
 }
 
-// countdown display
+// countdown display and tomato timer
 setInterval(() => {
   countdown = Math.max(0, countdown - 1);
+  
+  if (currTsRaw) {
+    const startDt = new Date(currTsRaw);
+    const nowDt = new Date();
+    const diffSecs = Math.floor((nowDt - startDt) / 1000);
+    
+    const timerEl = document.getElementById("tomato-timer");
+    if (diffSecs >= 0 && timerEl) {
+      if (diffSecs < 60) {
+        timerEl.textContent = `${diffSecs}秒`;
+      } else {
+        const m = Math.floor(diffSecs / 60);
+        const s = diffSecs % 60;
+        timerEl.textContent = `${m}分钟${s}秒`;
+      }
+    }
+  }
 }, 1000);
 
 // data refresh
