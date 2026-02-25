@@ -576,7 +576,8 @@ HTML = r"""<!DOCTYPE html>
     <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
             onclick="triggerUseCard(this)"
             title="执行 AppleScript：btn_usecard">
-      使用一张宿命卡
+      <span>使用一张宿命卡</span>
+      <span class="btn-sub">（请将想锁定的区间复制到剪切板）</span>
     </button>
   </div>
   <div class="hero-right" style="margin-left:auto; text-align:right;">
@@ -728,7 +729,7 @@ function buildSteps(hours) {
   // Max rest
   steps.push({ id: "max_rest", type: "number",
     title: "休息设置", heading: "今天允许的最长休息时间",
-    hint: "单位：分钟。建议 20 ~ 60 分钟。",
+    hint: "单位：分钟。",
     min: 1, max: 300, placeholder: "例：30",
   });
 
