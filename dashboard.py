@@ -713,7 +713,7 @@ function buildSteps(hours) {
   steps.push({ id: "hours", type: "number",
     title: "计划学习时长", heading: "今天计划学习几小时？",
     hint: "请输入 1 ~ 14 之间的整数。",
-    min: 1, max: 14, placeholder: "例：10",
+    min: 1, max: 14, placeholder: "例：9",
   });
 
   // Milestone steps
@@ -732,7 +732,7 @@ function buildSteps(hours) {
   steps.push({ id: "max_rest", type: "number",
     title: "休息设置", heading: "今天允许的最长休息时间",
     hint: "单位：分钟。",
-    min: 1, max: 300, placeholder: "例：30",
+    min: 1, max: 300, placeholder: "例：120",
   });
 
   // Difficulty
@@ -746,7 +746,7 @@ function buildSteps(hours) {
   steps.push({ id: "theme", type: "textarea",
     title: "故事主题", heading: "今天的模拟人生故事主题",
     hint: "描述你希望 AI 为今天的学习旅程设定的故事背景与主角。",
-    placeholder: "例：以一名刚入职的程序员为主角，在高压项目中寻找成长与平衡的故事。",
+    placeholder: "例：主人公是一个降生在 “KK诈骗园区” 的1岁婴儿，并且被一群诈骗犯养大。",
     required: false,
   });
 
