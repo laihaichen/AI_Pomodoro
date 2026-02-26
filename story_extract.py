@@ -27,23 +27,38 @@ def extract_stories():
     with open(md_file, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # 匹配所有的代码块
-    # 使用正则非贪婪匹配获取 ``` 和 ``` 之间的内容
-    code_blocks = re.findall(r'```(?:json)?\n(.*?)\n```', content, re.DOTALL)
-
     stories = []
-    for block in code_blocks:
-        try:
-            # 尝试解析 JSON
-            data = json.loads(block)
-            # 检查是否包含模拟人生特有的键
-            if isinstance(data, dict) and "this_age" in data and "current_event" in data:
-                age = data["this_age"]
-                event = data["current_event"]
-                stories.append(f"{age}岁：\n{event}\n")
-        except json.JSONDecodeError:
-            # 不是合法的 JSON 或不需要的块
-            continue
+    
+    # 1. 优先尝试匹配新的 <story_event> 格式
+    events = list(re.finditer(r'<story_event>\s*(.*?)\s*</story_event>', content, re.DOTALL))
+    if events:
+        for match in events:
+            event_text = match.group(1).strip()
+            # 在此标签的前面（最多1500字符内）寻找最近的角色年龄
+            preceding_text = content[max(0, match.start() - 1500) : match.start()]
+            # 匹配“角色年龄：15岁”或“角色年龄：[15岁]”等
+            age_match = list(re.finditer(r'角色年龄：.*?(\d+)\s*岁', preceding_text))
+            
+            if age_match:
+                age = age_match[-1].group(1) # 取最后一个最接近的
+            else:
+                # 备用方案：寻找“第X条”
+                record_match = list(re.finditer(r'\[?第(\d+)条记录\]?', preceding_text))
+                age = record_match[-1].group(1) if record_match else "?"
+                
+            stories.append(f"{age}岁：\n{event_text}\n")
+    else:
+        # 2. 如果没有找到新格式，尝试兼容旧的 JSON 格式
+        code_blocks = re.findall(r'```(?:json)?\n(.*?)\n```', content, re.DOTALL)
+        for block in code_blocks:
+            try:
+                data = json.loads(block)
+                if isinstance(data, dict) and "this_age" in data and "current_event" in data:
+                    age = data["this_age"]
+                    event = data["current_event"]
+                    stories.append(f"{age}岁：\n{event}\n")
+            except Exception:
+                continue
 
     if stories:
         with open(out_file, "w", encoding="utf-8") as f:
