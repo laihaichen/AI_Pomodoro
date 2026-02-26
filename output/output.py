@@ -3,11 +3,12 @@ import glob
 
 def main():
     # 获取当前脚本所在目录
-    directory = os.path.dirname(os.path.abspath(__file__))
-    output_file = os.path.join(directory, "output.txt")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(script_dir)
+    output_file = os.path.join(script_dir, "output.txt")
     
-    # 查找所有 .py 文件
-    py_files = glob.glob(os.path.join(directory, "*.py"))
+    # 查找上一级目录（项目根目录）下的所有 .py 文件
+    py_files = glob.glob(os.path.join(project_dir, "*.py"))
     
     count = 0
     with open(output_file, "w", encoding="utf-8") as outfile:

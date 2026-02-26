@@ -59,6 +59,7 @@ def generate_launch_prompt(
         ("3小时",  "第18条记录"),
         ("6小时",  "第36条记录"),
         ("9小时",  "第54条记录"),
+        ("12小时", "第72条记录"),
     ]
     lines = [
         f"启动一个 {today} 的学习时间追踪系统，期望时长是 {hours} 小时",
@@ -701,56 +702,62 @@ let wSteps = [];     // built after hours is known
 let wCurrent = 0;    // current step index
 
 const MILESTONE_DEFS = [
-  { range: "0 ~ 3小时",  record: "第18条记录", hours: 3 },
-  { range: "3 ~ 6小时",  record: "第36条记录", hours: 6 },
-  { range: "6 ~ 9小时",  record: "第54条记录", hours: 9 },
+  { range: "0 ~ 3小时",   record: "第18条记录", hours: 3  },
+  { range: "3 ~ 6小时",   record: "第36条记录", hours: 6  },
+  { range: "6 ~ 9小时",   record: "第54条记录", hours: 9  },
+  { range: "9 ~ 12小时",  record: "第72条记录", hours: 12 },
 ];
 
-function buildSteps(hours) {
+// difficulty === "" 表示尚未选择（向导第一次构建时，不插入里程碑）
+function buildSteps(hours, difficulty) {
   const steps = [];
+  const needMilestones = difficulty && difficulty !== "探索者难度";
+  const milestoneCount = MILESTONE_DEFS.filter(m => hours >= m.hours).length;
 
-  // Step 0: hours (already collected, we rebuild after)
+  // Step 0: hours
   steps.push({ id: "hours", type: "number",
     title: "计划学习时长", heading: "今天计划学习几小时？",
     hint: "请输入 1 ~ 14 之间的整数。",
     min: 1, max: 14, placeholder: "例：9",
   });
 
-  // Milestone steps
-  MILESTONE_DEFS.forEach((m, i) => {
-    if (hours >= m.hours) {
-      steps.push({ id: `milestone_${i}`, type: "text",
-        title: `阶段目标 ${i+1} / ${Math.floor(hours/3)}`,
-        heading: `${m.range} 阶段最低完成指标`,
-        hint: `${m.range}（${m.record}）达到时，你希望完成什么任务？`,
-        placeholder: "例：完成 3 道算法题",
-      });
-    }
+  // Step 1: difficulty（移到最前，决定是否需要里程碑步骤）
+  steps.push({ id: "difficulty", type: "select",
+    title: "游戏难度", heading: "请选择今天的游戏难度",
+    hint: "硬核 / 平衡难度需要设置阶段性最低指标；探索者难度跳过此步骤。",
+    options: ["硬核难度", "平衡难度", "探索者难度"],
   });
 
-  // Max rest
+  // 里程碑步骤 — 仅当难度为硬核或平衡，且学习时长已知时插入
+  if (needMilestones) {
+    MILESTONE_DEFS.forEach((m, i) => {
+      if (hours >= m.hours) {
+        steps.push({ id: `milestone_${i}`, type: "text",
+          title: `阶段目标 ${i+1} / ${milestoneCount}`,
+          heading: `${m.range} 阶段最低完成指标`,
+          hint: `${m.range}（${m.record}）达到时，你希望完成什么任务？`,
+          placeholder: "例：完成 3 道算法题",
+        });
+      }
+    });
+  }
+
+  // 最长休息时间
   steps.push({ id: "max_rest", type: "number",
     title: "休息设置", heading: "今天允许的最长休息时间",
     hint: "单位：分钟。",
     min: 1, max: 300, placeholder: "例：120",
   });
 
-  // Difficulty
-  steps.push({ id: "difficulty", type: "select",
-    title: "游戏难度", heading: "请选择今天的游戏难度",
-    hint: "难度影响阶段性节点检查和 Boss 战规则。",
-    options: ["硬核难度", "平衡难度", "探索者难度"],
-  });
-
-  // Theme
+  // 故事主题
   steps.push({ id: "theme", type: "textarea",
     title: "故事主题", heading: "今天的模拟人生故事主题",
     hint: "描述你希望 AI 为今天的学习旅程设定的故事背景与主角。",
-    placeholder: "例：主人公是一个降生在 “KK诈骗园区” 的1岁婴儿，并且被一群诈骗犯养大。",
+    placeholder: '例：主人公是一个降生在 “KK诈骗园区” 的1岁婴儿，并且被一群诈骗犯养大。',
     required: false,
   });
 
-  // Result
+  // 结果页
   steps.push({ id: "result", type: "result",
     title: "初始化完成", heading: "你的初始化 Prompt 已生成",
     hint: "以下内容已自动写入 -max_rest_time 与 -difficulty。请将 Prompt 复制给 AI 聊天工具开始今天的学习。",
@@ -763,7 +770,7 @@ function buildSteps(hours) {
 function openWizard() {
   wData = {};
   wCurrent = 0;
-  wSteps = buildSteps(0); // start with step 0 only until hours known
+  wSteps = buildSteps(0, ""); // hours=0, difficulty="" → 无里程碑，直到两者都已知
   document.getElementById("wizard-overlay").classList.add("open");
   renderStep();
 }
@@ -860,9 +867,9 @@ function wizardNext() {
     }
     inp.classList.remove("error");
     wData[step.id] = val;
-    // After hours step, rebuild full step list
+    // hours 确定后重建步骤（difficulty 此时可能已知或未知）
     if (step.id === "hours") {
-      wSteps = buildSteps(val);
+      wSteps = buildSteps(val, wData.difficulty || "");
     }
   } else if (step.type === "text") {
     const inp = document.getElementById("w-input");
@@ -875,7 +882,12 @@ function wizardNext() {
     inp.classList.remove("error");
     wData[step.id] = val;
   } else if (step.type === "select") {
-    wData[step.id] = document.getElementById("w-input").value;
+    const val = document.getElementById("w-input").value;
+    wData[step.id] = val;
+    // difficulty 确定后重建步骤，动态决定是否插入里程碑步骤
+    if (step.id === "difficulty") {
+      wSteps = buildSteps(wData.hours || 0, val);
+    }
   } else if (step.type === "textarea") {
     wData[step.id] = (document.getElementById("w-input").value || "").trim();
   }
