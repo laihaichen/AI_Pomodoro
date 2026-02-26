@@ -142,6 +142,7 @@ def collect_state() -> dict:
         "total_rest_time", "countcard", "interval", "fortunevalue",
         "current_prompt_count", "stage", "overtime_penalty_range",
         "offset", "difficulty", "max_rest_time", "violationcount",
+        "hour3", "hour6", "hour9", "hour12",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
@@ -155,6 +156,46 @@ def collect_state() -> dict:
         for key in snippet_keys:
             state.setdefault(key, "DB error")
         state["db_error"] = str(exc)
+
+    # ── 里程碑阶段计算 ───────────────────────────────────────────────────────
+    # 1-18 → hour3，19-36 → hour6，37-54 → hour9，55-72 → hour12
+    _MILESTONE_SLOTS = [
+        (1,  18, "hour3"),
+        (19, 36, "hour6"),
+        (37, 54, "hour9"),
+        (55, 72, "hour12"),
+    ]
+    _DEFAULT_MILESTONE = "当前无阶段性任务"
+    try:
+        count = int(state.get("current_prompt_count") or 0)
+    except (ValueError, TypeError):
+        count = 0
+
+    current_key = None
+    for lo, hi, key in _MILESTONE_SLOTS:
+        if lo <= count <= hi:
+            current_key = key
+            break
+
+    state["current_milestone_key"]  = current_key   # e.g. "hour3" or None
+    state["current_milestone_text"] = (
+        state.get(current_key, _DEFAULT_MILESTONE) if current_key else None
+    )
+    # 所有已设置（非默认）的里程碑列表
+    state["milestones_set"] = [
+        {"key": key, "label": label, "text": state.get(key, _DEFAULT_MILESTONE)}
+        for key, label in [("hour3","0~3小时"), ("hour6","3~6小时"),
+                           ("hour9","6~9小时"), ("hour12","9~12小时")]
+        if state.get(key, _DEFAULT_MILESTONE) != _DEFAULT_MILESTONE
+    ]
+
+    # ── 同步写入 -current-task snippet ──────────────────────────────────────
+    # 每次 /api/state 轮询时自动将「当前阶段任务」同步进 Alfred snippet
+    try:
+        _task_to_write = state["current_milestone_text"] or SNIPPETS["current_task"].default
+        write_snippet_value("current_task", _task_to_write)
+    except Exception:
+        pass  # 写入失败不影响 Dashboard 展示
 
     # ── 真实学习时长 = 墙上时间 - 累计休息时间 ──────────────────────────────
     if first_raw and curr_raw:
@@ -281,6 +322,25 @@ def api_setup():
 
         write_snippet_value("max_rest_time", max_rest)
         write_snippet_value("difficulty",    difficulty)
+
+        # ── 写入里程碑阶段任务 ────────────────────────────────────────────
+        # 与 JS MILESTONE_DEFS 保持一致：门槛 3/6/9/12 小时对应 hour3/6/9/12
+        _MILESTONE_MAP = [
+            (3,  "hour3"),
+            (6,  "hour6"),
+            (9,  "hour9"),
+            (12, "hour12"),
+        ]
+        # 先全部重置为默认值（防止旧数据残留）
+        default_milestone = SNIPPETS["hour3"].default  # "当前无阶段性任务"
+        for _, key in _MILESTONE_MAP:
+            write_snippet_value(key, default_milestone)
+
+        # 再按学习时长写入用户填写的内容
+        applicable_keys = [key for threshold, key in _MILESTONE_MAP if hours >= threshold]
+        for key, text in zip(applicable_keys, milestones):
+            if text:  # 跳过空字符串
+                write_snippet_value(key, text)
 
         prompt = generate_launch_prompt(hours, max_rest, difficulty, milestones, theme)
         return jsonify({"ok": True, "prompt": prompt})
@@ -674,6 +734,17 @@ HTML = r"""<!DOCTYPE html>
 
 <!-- ── 阶段性节点 ── -->
 <div class="section-label">阶段性节点 &amp; 游戏状态</div>
+<div class="grid grid-2" style="margin-bottom:10px;">
+  <div class="card" id="card-milestones-set">
+    <div class="card-label">今日里程碑任务总览</div>
+    <div id="val-milestones-set" class="card-value small" style="line-height:2;">—</div>
+  </div>
+  <div class="card" id="card-current-milestone">
+    <div class="card-label">当前阶段任务</div>
+    <div id="val-current-milestone-label" style="font-size:10px;color:var(--dim);margin-bottom:4px;"></div>
+    <div id="val-current-milestone-text" class="card-value small">—</div>
+  </div>
+</div>
 <div class="grid grid-2">
   <div class="card stage-card">
     <div class="card-label">当前阶段性节点状态</div>
@@ -685,6 +756,7 @@ HTML = r"""<!DOCTYPE html>
     <div class="card-sub">-violationcount snippet</div>
   </div>
 </div>
+
 
 <!-- ── Setup Wizard Modal ── -->
 <div class="modal-overlay" id="wizard-overlay">
@@ -1057,6 +1129,41 @@ function refreshData() {
       applyClass("val-violationcount",
         parseInt(d.violationcount) > 0 ? "val-red" : "val-green"
       );
+
+      // milestones overview — 今日里程碑任务总览（非默认值的组）
+      const msEl = document.getElementById("val-milestones-set");
+      if (msEl) {
+        const set = d.milestones_set || [];
+        if (set.length === 0) {
+          msEl.textContent = "暂无已设置的阶段性任务";
+          msEl.style.color = "var(--dim)";
+        } else {
+          msEl.innerHTML = set.map(m =>
+            `<span style="display:block;">
+              <span style="color:var(--dim);font-size:10px;">${m.label}</span>
+              &nbsp;${m.text}
+            </span>`
+          ).join("");
+          msEl.style.color = "";
+        }
+      }
+
+      // current milestone — 当前阶段任务
+      const cmLabel = document.getElementById("val-current-milestone-label");
+      const cmText  = document.getElementById("val-current-milestone-text");
+      const keyLabelMap = { hour3:"0~3小时", hour6:"3~6小时", hour9:"6~9小时", hour12:"9~12小时" };
+      if (cmLabel && cmText) {
+        if (d.current_milestone_key && d.current_milestone_text) {
+          cmLabel.textContent = keyLabelMap[d.current_milestone_key] || d.current_milestone_key;
+          cmText.textContent  = d.current_milestone_text;
+          cmText.className    = "card-value small val-green";
+        } else {
+          cmLabel.textContent = "";
+          cmText.textContent  = "番茄钟尚未开始";
+          cmText.className    = "card-value small";
+          cmText.style.color  = "var(--dim)";
+        }
+      }
 
       // stage
       const stage = d.stage || "";

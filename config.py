@@ -56,4 +56,11 @@ SNIPPETS: dict[str, Snippet] = {
     "offset":                 Snippet("E99CD789-4D10-4C17-9A3A-C5076BA33ADB", "-offset",                 "0.0"),
     "difficulty":             Snippet("BDEE3C98-A4A1-4A2B-9046-18A12FD66083", "-difficulty",             "", resettable=False),
     "max_rest_time":          Snippet("D197E8BC-85F4-45D0-82D4-814FA0DCA629", "-max_rest_time",          "0", resettable=False),
+    # ── 阶段性里程碑任务（每3小时一档）──────────────────────────────────────
+    "hour3":                  Snippet("FFAAA6C5-754A-4B84-9DA9-0B67F14CAA9E", "-hour3",                  "当前无阶段性任务"),
+    "hour6":                  Snippet("3740920C-9296-4B2C-B62A-4F7D544F1D56", "-hour6",                  "当前无阶段性任务"),
+    "hour9":                  Snippet("97DA8F51-E403-4DBB-B715-13326F170791", "-hour9",                  "当前无阶段性任务"),
+    "hour12":                 Snippet("6A798717-84DA-4597-B5AA-5D481BC15E21", "-hour12",                 "当前无阶段性任务"),
+    # ── 当前任务 ──────────────────────────────────────────────────────────────
+    "current_task":           Snippet("38C24B4C-7AC7-43E6-B690-63DBE8FB4EAD", "-current-task",           "无"),
 }
