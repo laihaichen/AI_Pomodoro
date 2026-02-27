@@ -20,7 +20,7 @@ from config import (  # noqa: E402
     CURR_TS_FILE, PREV_TS_FILE, FIRST_TS_FILE,
     PAUSE_TS_FILE, CONT_TS_FILE,
     PENALIZED_REST_FILE, H_FILE,
-    DB_FILE, SNIPPETS,
+    DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
 )
 
 from flask import Flask, jsonify, render_template, request
@@ -206,7 +206,8 @@ def collect_state() -> dict:
 
     state["current_milestone_key"]  = current_key   # e.g. "hour3" or None
     state["current_milestone_text"] = (
-        state.get(current_key, _DEFAULT_MILESTONE) if current_key else None
+        state.get(current_key, _DEFAULT_MILESTONE) if current_key
+        else state.get("hour3", _DEFAULT_MILESTONE)  # count=0：预填第一阶段任务，避免首条 prompt 读到「无」
     )
     # 所有已设置（非默认）的里程碑列表
     state["milestones_set"] = [
@@ -223,6 +224,38 @@ def collect_state() -> dict:
         write_snippet_value("current_task", _task_to_write)
     except Exception:
         pass  # 写入失败不影响 Dashboard 展示
+
+    # ── 同步写入 -current-progress-indicator snippet ──────────────────────────
+    # 读取 milestone_goals.json 中当前槽位的分母，组合成「X/Y 未到达进度」写入 snippet
+    try:
+        _goals: dict = {}
+        if MILESTONE_GOALS_FILE.exists():
+            _goals = json.loads(MILESTONE_GOALS_FILE.read_text(encoding="utf-8"))
+        # 当前槽位的分母（count=0 时也用 hour3 的分母）
+        _goal_key = current_key or "hour3"
+        _denominator = int(_goals.get(_goal_key, 0))
+        # 读取当前 snippet 值，解析分子（格式：「N/M ...」）
+        _cur_indicator = ""
+        with sqlite3.connect(DB_FILE) as _con:
+            _row = _con.execute(
+                "SELECT snippet FROM snippets WHERE uid = ?",
+                (SNIPPETS["current_progress_indicator"].uid,)
+            ).fetchone()
+            _cur_indicator = _row[0] if _row else ""
+        try:
+            _numerator = int(_cur_indicator.split("/")[0])
+        except (ValueError, IndexError):
+            _numerator = 0
+        if _denominator > 0:
+            _label = "已到达进度" if _numerator >= _denominator else "未到达进度"
+            _progress_str = f"{_numerator}/{_denominator} {_label}"
+        else:
+            _progress_str = SNIPPETS["current_progress_indicator"].default  # "0/0 未到达进度"
+        write_snippet_value("current_progress_indicator", _progress_str)
+        state["current_progress_indicator"] = _progress_str
+        state["current_milestone_denominator"] = _denominator
+    except Exception:
+        pass
 
     # ── Boss战节点自动触发 ────────────────────────────────────────────────────
     # 硬核难度下，每次轮询检查 current_prompt_count 是否等于目标条数
@@ -384,6 +417,26 @@ def api_setup():
             if text:  # 跳过空字符串
                 write_snippet_value(key, text)
 
+        # ── 写入进度条分母到 milestone_goals.json ────────────────────────────
+        denominators = data.get("denominators", [])  # 与 milestones[] 等长的整数列表
+        goals: dict[str, int] = {"hour3": 0, "hour6": 0, "hour9": 0, "hour12": 0}
+        for key, denom in zip(applicable_keys, denominators):
+            try:
+                goals[key] = max(0, int(denom))
+            except (ValueError, TypeError):
+                goals[key] = 0
+        MILESTONE_GOALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        MILESTONE_GOALS_FILE.write_text(
+            json.dumps(goals, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        # 同步重置 -current-progress-indicator（分子清零）
+        _init_denom = goals.get("hour3", 0)
+        write_snippet_value(
+            "current_progress_indicator",
+            f"0/{_init_denom} 未到达进度" if _init_denom > 0
+            else SNIPPETS["current_progress_indicator"].default
+        )
+
         # ── Boss战节点初始化 ──────────────────────────────────────────────────
         if difficulty == "硬核难度":
             # 触发节点：倒数第2条prompt输出（即第 hours*6 - 1 条）
@@ -398,9 +451,40 @@ def api_setup():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/progress-step", methods=["POST"])
+def api_progress_step():
+    """Increment or decrement the progress indicator numerator by delta (+1 / -1)."""
+    data = request.get_json()
+    delta = int(data.get("delta", 0))
+    try:
+        # Read current value from Alfred DB
+        with sqlite3.connect(DB_FILE) as con:
+            row = con.execute(
+                "SELECT snippet FROM snippets WHERE uid = ?",
+                (SNIPPETS["current_progress_indicator"].uid,)
+            ).fetchone()
+        cur = row[0] if row else "0/0 未到达进度"
+
+        # Parse "N/M ..." format
+        parts = cur.split("/")
+        numerator   = int(parts[0].strip())
+        denominator = int(parts[1].strip().split()[0])
+
+        # Clamp new numerator to [0, denominator]
+        new_num = max(0, min(numerator + delta, denominator))
+        label   = "已到达进度" if new_num >= denominator > 0 else "未到达进度"
+        new_str = f"{new_num}/{denominator} {label}"
+
+        write_snippet_value("current_progress_indicator", new_str)
+        return jsonify({"ok": True, "value": new_str})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/")
 def index():
     return render_template("dashboard.html")
+
 
 
 # ── HTML / CSS / JS → 已拆分到独立文件 ─────────────────────────────────────

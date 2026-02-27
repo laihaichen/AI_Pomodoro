@@ -1,204 +1,228 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学习追踪 Dashboard</title>
-<link rel="stylesheet" href="/static/dashboard.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习追踪 Dashboard</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
 </head>
+
 <body>
 
-<div class="header">
-  <div class="header-left">
-    <div class="tomato">🍅</div>
-    <div class="title-block">
-      <h1>学习追踪 Dashboard</h1>
-      <p>实时读取 Alfred Snippets &amp; 本地数据文件</p>
+    <div class="header">
+        <div class="header-left">
+            <div class="tomato">🍅</div>
+            <div class="title-block">
+                <h1>学习追踪 Dashboard</h1>
+                <p>实时读取 Alfred Snippets &amp; 本地数据文件</p>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
+            <div class="pomodoro-timer">本次番茄钟计时：<span id="tomato-timer"
+                    style="font-weight:700;color:var(--bright); font-variant-numeric: tabular-nums;">0秒</span></div>
+            <div class="refresh-badge">每 5 秒刷新 · 上次更新：<span id="last-update">—</span></div>
+            <!-- 番茄钟进度（小型） -->
+            <div
+                style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px 16px;">
+                <span
+                    style="font-size:11px;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase;">番茄钟进度</span>
+                <span id="val-current_prompt_count-header"
+                    style="font-size:22px;font-weight:800;color:var(--bright);line-height:1;font-variant-numeric:tabular-nums;">—</span>
+                <span style="font-size:11px;color:var(--dim);">条</span>
+            </div>
+        </div>
     </div>
-  </div>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
-    <div class="pomodoro-timer">本次番茄钟计时：<span id="tomato-timer" style="font-weight:700;color:var(--bright); font-variant-numeric: tabular-nums;">0秒</span></div>
-    <div class="refresh-badge">每 5 秒刷新 · 上次更新：<span id="last-update">—</span></div>
-    <!-- 番茄钟进度（小型） -->
-    <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px 16px;">
-      <span style="font-size:11px;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase;">番茄钟进度</span>
-      <span id="val-current_prompt_count-header" style="font-size:22px;font-weight:800;color:var(--bright);line-height:1;font-variant-numeric:tabular-nums;">—</span>
-      <span style="font-size:11px;color:var(--dim);">条</span>
+
+    <!-- ── 控制按钮 ── -->
+    <div class="section-label">控制按钮</div>
+    <div class="card" style="padding:12px 16px;">
+        <div style="display:flex;gap:8px;align-items:stretch;">
+            <button class="next-pomodoro-btn" style="flex:2;min-width:130px;" onclick="triggerNextPomodoro(this)"
+                title="执行 AppleScript：btn_next_pomodoro">
+                <span>推进番茄钟记录<br>并向AI发送学习进度</span>
+                <span class="btn-sub">（请记得剪切板上有内容）</span>
+            </button>
+            <button class="next-pomodoro-btn" style="flex:2;min-width:130px;" onclick="triggerStayPomodoro(this)"
+                title="执行 AppleScript：btn_stay">
+                <span>不推进番茄钟记录<br>并向AI发送学习进度</span>
+                <span class="btn-sub">（请记得剪切板上有内容）</span>
+            </button>
+            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerPause(this)"
+                title="执行 AppleScript：btn_pause">
+                进入休息时间
+            </button>
+            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerContinue(this)"
+                title="执行 AppleScript：btn_continue">
+                从休息时间恢复
+            </button>
+            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerGetCard(this)"
+                title="执行 AppleScript：btn_getcard">
+                获得一张宿命卡
+            </button>
+            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerUseCard(this)"
+                title="执行 AppleScript：btn_usecard">
+                <span>使用一张宿命卡</span>
+                <span class="btn-sub">（请将想锁定的区间复制到剪切板）</span>
+            </button>
+        </div>
     </div>
-  </div>
-</div>
 
-<!-- ── 控制按钮 ── -->
-<div class="section-label">控制按钮</div>
-<div class="card" style="padding:12px 16px;">
-  <div style="display:flex;gap:8px;align-items:stretch;">
-    <button class="next-pomodoro-btn" style="flex:2;min-width:130px;"
-            onclick="triggerNextPomodoro(this)"
-            title="执行 AppleScript：btn_next_pomodoro">
-      <span>推进番茄钟记录<br>并向AI发送学习进度</span>
-      <span class="btn-sub">（请记得剪切板上有内容）</span>
-    </button>
-    <button class="next-pomodoro-btn" style="flex:2;min-width:130px;"
-            onclick="triggerStayPomodoro(this)"
-            title="执行 AppleScript：btn_stay">
-      <span>不推进番茄钟记录<br>并向AI发送学习进度</span>
-      <span class="btn-sub">（请记得剪切板上有内容）</span>
-    </button>
-    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
-            onclick="triggerPause(this)"
-            title="执行 AppleScript：btn_pause">
-      进入休息时间
-    </button>
-    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
-            onclick="triggerContinue(this)"
-            title="执行 AppleScript：btn_continue">
-      从休息时间恢复
-    </button>
-    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
-            onclick="triggerGetCard(this)"
-            title="执行 AppleScript：btn_getcard">
-      获得一张宿命卡
-    </button>
-    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
-            onclick="triggerUseCard(this)"
-            title="执行 AppleScript：btn_usecard">
-      <span>使用一张宿命卡</span>
-      <span class="btn-sub">（请将想锁定的区间复制到剪切板）</span>
-    </button>
-  </div>
-</div>
+    <!-- ── 时间戳 ── -->
+    <div class="section-label">时间戳</div>
+    <div class="grid grid-4">
+        <div class="card accent-blue">
+            <div class="card-label">当前时间戳</div>
+            <div class="card-value" id="val-curr_ts" style="font-size:20px;">—</div>
+            <div class="card-sub">curr_timestamp.txt</div>
+        </div>
+        <div class="card accent-blue">
+            <div class="card-label">上一次时间戳</div>
+            <div class="card-value" id="val-prev_ts" style="font-size:20px;">—</div>
+            <div class="card-sub">prev_timestamp.txt</div>
+        </div>
+        <div class="card accent-teal">
+            <div class="card-label">今日开始时间</div>
+            <div class="card-value" id="val-first_ts" style="font-size:20px;">—</div>
+            <div class="card-sub">first_timestamp.txt</div>
+        </div>
+        <div class="card accent-teal">
+            <div class="card-label">已学习时长</div>
+            <div class="card-value" id="val-elapsed_minutes" style="font-size:20px;">—</div>
+            <div class="card-sub">分钟（curr - first）</div>
+        </div>
+    </div>
 
-<!-- ── 时间戳 ── -->
-<div class="section-label">时间戳</div>
-<div class="grid grid-4">
-  <div class="card accent-blue">
-    <div class="card-label">当前时间戳</div>
-    <div class="card-value" id="val-curr_ts" style="font-size:20px;">—</div>
-    <div class="card-sub">curr_timestamp.txt</div>
-  </div>
-  <div class="card accent-blue">
-    <div class="card-label">上一次时间戳</div>
-    <div class="card-value" id="val-prev_ts" style="font-size:20px;">—</div>
-    <div class="card-sub">prev_timestamp.txt</div>
-  </div>
-  <div class="card accent-teal">
-    <div class="card-label">今日开始时间</div>
-    <div class="card-value" id="val-first_ts" style="font-size:20px;">—</div>
-    <div class="card-sub">first_timestamp.txt</div>
-  </div>
-  <div class="card accent-teal">
-    <div class="card-label">已学习时长</div>
-    <div class="card-value" id="val-elapsed_minutes" style="font-size:20px;">—</div>
-    <div class="card-sub">分钟（curr - first）</div>
-  </div>
-</div>
+    <!-- ── 时间间隔 & 吉凶 ── -->
+    <div class="section-label">本轮区间</div>
+    <div class="grid grid-3">
+        <div class="card accent-peach">
+            <div class="card-label">当前时间间隔</div>
+            <div class="card-value" id="val-interval">—</div>
+            <div class="card-sub">分钟（&gt;15 min → 凶）</div>
+        </div>
+        <div class="card">
+            <div class="card-label">是否超时？（吉凶值）</div>
+            <div class="card-value small" id="val-fortunevalue">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">时间偏移量</div>
+            <div class="card-value" id="val-offset">—</div>
+            <div class="card-sub">偏移量 &gt; 60 → 判负</div>
+        </div>
+    </div>
 
-<!-- ── 时间间隔 & 吉凶 ── -->
-<div class="section-label">本轮区间</div>
-<div class="grid grid-3">
-  <div class="card accent-peach">
-    <div class="card-label">当前时间间隔</div>
-    <div class="card-value" id="val-interval">—</div>
-    <div class="card-sub">分钟（&gt;15 min → 凶）</div>
-  </div>
-  <div class="card">
-    <div class="card-label">是否超时？（吉凶值）</div>
-    <div class="card-value small" id="val-fortunevalue">—</div>
-  </div>
-  <div class="card">
-    <div class="card-label">时间偏移量</div>
-    <div class="card-value" id="val-offset">—</div>
-    <div class="card-sub">偏移量 &gt; 60 → 判负</div>
-  </div>
-</div>
+    <!-- ── 休息 ── -->
+    <div class="section-label">休息状态</div>
+    <div class="grid grid-3">
+        <div class="card accent-green">
+            <div class="card-label">最大允许休息时间</div>
+            <div class="card-value" id="val-max_rest_time">—</div>
+            <div class="card-sub">分钟（-max_rest_time snippet）</div>
+        </div>
+        <div class="card accent-green">
+            <div class="card-label">今日累计休息时间</div>
+            <div class="card-value" id="val-total_rest_time">—</div>
+            <div class="card-sub">分钟（-total_rest_time snippet）</div>
+        </div>
+        <div class="card" id="card-last-rest">
+            <div class="card-label">最近休息操作</div>
+            <div class="card-value small" id="val-last_rest_action">—</div>
+        </div>
+    </div>
 
-<!-- ── 休息 ── -->
-<div class="section-label">休息状态</div>
-<div class="grid grid-3">
-  <div class="card accent-green">
-    <div class="card-label">最大允许休息时间</div>
-    <div class="card-value" id="val-max_rest_time">—</div>
-    <div class="card-sub">分钟（-max_rest_time snippet）</div>
-  </div>
-  <div class="card accent-green">
-    <div class="card-label">今日累计休息时间</div>
-    <div class="card-value" id="val-total_rest_time">—</div>
-    <div class="card-sub">分钟（-total_rest_time snippet）</div>
-  </div>
-  <div class="card" id="card-last-rest">
-    <div class="card-label">最近休息操作</div>
-    <div class="card-value small" id="val-last_rest_action">—</div>
-  </div>
-</div>
+    <!-- ── 惩罚 ── -->
+    <div class="section-label">超时惩罚</div>
+    <div class="grid grid-3">
+        <div class="card accent-red">
+            <div class="card-label">累计超时惩罚 H</div>
+            <div class="card-value" id="val-h_value">—</div>
+            <div class="card-sub">分钟（h_value.txt）</div>
+        </div>
+        <div class="card accent-red">
+            <div class="card-label">超时惩罚随机数范围</div>
+            <div class="card-value small" id="val-overtime_penalty_range">—</div>
+            <div class="card-sub">-overtime-penalty-range</div>
+        </div>
+        <div class="card accent-mauve">
+            <div class="card-label">宿命卡数量</div>
+            <div class="card-value" id="val-countcard">—</div>
+            <div class="card-sub">-countcard snippet</div>
+        </div>
+    </div>
 
-<!-- ── 惩罚 ── -->
-<div class="section-label">超时惩罚</div>
-<div class="grid grid-3">
-  <div class="card accent-red">
-    <div class="card-label">累计超时惩罚 H</div>
-    <div class="card-value" id="val-h_value">—</div>
-    <div class="card-sub">分钟（h_value.txt）</div>
-  </div>
-  <div class="card accent-red">
-    <div class="card-label">超时惩罚随机数范围</div>
-    <div class="card-value small" id="val-overtime_penalty_range">—</div>
-    <div class="card-sub">-overtime-penalty-range</div>
-  </div>
-  <div class="card accent-mauve">
-    <div class="card-label">宿命卡数量</div>
-    <div class="card-value" id="val-countcard">—</div>
-    <div class="card-sub">-countcard snippet</div>
-  </div>
-</div>
-
-<!-- ── 阶段性节点 ── -->
-<div class="section-label">阶段性节点 &amp; 游戏状态</div>
-<!-- 当前难度 -->
-<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:16px;padding:14px 20px;">
-  <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--dim);">当前难度</span>
-  <span id="val-difficulty" style="font-size:20px;font-weight:700;color:var(--text);">—</span>
-</div>
-<div class="grid grid-2" style="margin-bottom:10px;">
-  <div class="card" id="card-milestones-set">
-    <div class="card-label">今日里程碑任务总览</div>
-    <div id="val-milestones-set" class="card-value small" style="line-height:2;">—</div>
-  </div>
-  <div class="card" id="card-current-milestone">
-    <div class="card-label">当前阶段任务</div>
-    <div id="val-current-milestone-label" style="font-size:10px;color:var(--dim);margin-bottom:4px;"></div>
-    <div id="val-current-milestone-text" class="card-value small">—</div>
-  </div>
-</div>
-<div class="grid grid-2">
-  <div class="card stage-card">
-    <div class="card-label">当前阶段性节点状态</div>
-    <div class="card-value small" id="val-stage">—</div>
-  </div>
-  <div class="card accent-mauve">
-    <div class="card-label">违规次数</div>
-    <div class="card-value" id="val-violationcount">—</div>
-    <div class="card-sub">-violationcount snippet</div>
-  </div>
-</div>
-<div class="grid grid-2" style="margin-top:10px;">
-  <div class="card" id="card-bossfight">
-    <div class="card-label">⚔️ Boss战节点状态</div>
-    <div class="card-value small" id="val-bossfight_stage">—</div>
-    <div class="card-sub">-bossfight-stage snippet</div>
-  </div>
-</div>
+    <!-- ── 阶段性节点 ── -->
+    <div class="section-label">阶段性节点 &amp; 游戏状态</div>
+    <!-- 当前难度 -->
+    <div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:16px;padding:14px 20px;">
+        <span
+            style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--dim);">当前难度</span>
+        <span id="val-difficulty" style="font-size:20px;font-weight:700;color:var(--text);">—</span>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:10px;">
+        <div class="card" id="card-milestones-set">
+            <div class="card-label">今日里程碑任务总览</div>
+            <div id="val-milestones-set" class="card-value small" style="line-height:2;">—</div>
+        </div>
+        <div class="card" id="card-current-milestone">
+            <div class="card-label">当前阶段任务</div>
+            <div id="val-current-milestone-label" style="font-size:10px;color:var(--dim);margin-bottom:4px;"></div>
+            <div id="val-current-milestone-text" class="card-value small">—</div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+                <!-- ▲▼ 步进按钮 -->
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                    <button onclick="progressStep(1)" title="+1" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;
+                                   color:var(--bright);font-size:10px;line-height:1;padding:2px 5px;
+                                   cursor:pointer;transition:background 0.15s;"
+                        onmouseover="this.style.background='var(--accent-dim)'"
+                        onmouseout="this.style.background='var(--surface)'">▲</button>
+                    <button onclick="progressStep(-1)" title="-1" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;
+                                   color:var(--dim);font-size:10px;line-height:1;padding:2px 5px;
+                                   cursor:pointer;transition:background 0.15s;"
+                        onmouseover="this.style.background='var(--accent-dim)'"
+                        onmouseout="this.style.background='var(--surface)'">▼</button>
+                </div>
+                <span style="font-size:10px;color:var(--dim);letter-spacing:0.06em;">当前阶段性任务进度指示</span>
+                <span id="val-current-progress-indicator"
+                    style="font-size:13px;font-weight:700;color:var(--bright);font-variant-numeric:tabular-nums;">
+                    —
+                </span>
+            </div>
 
 
-<!-- ── Setup Wizard Modal ── -->
-<div class="modal-overlay" id="wizard-overlay">
-  <div class="modal">
-    <button class="modal-close" onclick="closeWizard()">✕</button>
-    <div class="wizard-progress" id="wizard-progress"></div>
-    <div id="wizard-body"></div>
-  </div>
-</div>
+        </div>
+    </div>
+    <div class="grid grid-2">
+        <div class="card stage-card">
+            <div class="card-label">当前阶段性节点状态</div>
+            <div class="card-value small" id="val-stage">—</div>
+        </div>
+        <div class="card accent-mauve">
+            <div class="card-label">违规次数</div>
+            <div class="card-value" id="val-violationcount">—</div>
+            <div class="card-sub">-violationcount snippet</div>
+        </div>
+    </div>
+    <div class="grid grid-2" style="margin-top:10px;">
+        <div class="card" id="card-bossfight">
+            <div class="card-label">⚔️ Boss战节点状态</div>
+            <div class="card-value small" id="val-bossfight_stage">—</div>
+            <div class="card-sub">-bossfight-stage snippet</div>
+        </div>
+    </div>
 
-<script src="/static/dashboard.js"></script>
+
+    <!-- ── Setup Wizard Modal ── -->
+    <div class="modal-overlay" id="wizard-overlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closeWizard()">✕</button>
+            <div class="wizard-progress" id="wizard-progress"></div>
+            <div id="wizard-body"></div>
+        </div>
+    </div>
+
+    <script src="/static/dashboard.js"></script>
 </body>
+
 </html>

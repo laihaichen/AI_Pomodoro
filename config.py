@@ -24,6 +24,8 @@ PAUSE_TS_FILE       = DATA_DIR / "pause_timestamp.txt"
 CONT_TS_FILE        = DATA_DIR / "continue_timestamp.txt"
 H_FILE              = DATA_DIR / "h_value.txt"
 PENALIZED_REST_FILE = DATA_DIR / "penalized_rest_up_to.txt"
+MILESTONE_GOALS_FILE = DATA_DIR / "milestone_goals.json"   # 各阶段进度条分母
+
 
 # ── snippet registry ─────────────────────────────────────────────────────────
 

@@ -32,16 +32,18 @@ function buildSteps(hours, difficulty) {
         options: ["硬核难度", "平衡难度", "探索者难度"],
     });
 
-    // 里程碑步骤 — 仅当难度为硬核或平衡，且学习时长已知时插入
+    // 里程碑步骤 — 每个 slot 合并为一页（任务文字 + 进度分母）
     if (needMilestones) {
         MILESTONE_DEFS.forEach((m, i) => {
             if (hours >= m.hours) {
                 steps.push({
-                    id: `milestone_${i}`, type: "text",
+                    id: `milestone_${i}`,
+                    denomId: `denom_${i}`,
+                    type: "milestone_combo",
                     title: `阶段目标 ${i + 1} / ${milestoneCount}`,
                     heading: `${m.range} 阶段最低完成指标`,
-                    hint: `${m.range}（${m.record}）达到时，你希望完成什么任务？`,
-                    placeholder: "例：完成 3 道算法题",
+                    hint: `${m.range}（${m.record}）达到时的任务確认。`,
+                    placeholder: "例：完成 10 个简历投递",
                 });
             }
         });
@@ -60,7 +62,7 @@ function buildSteps(hours, difficulty) {
         id: "theme", type: "textarea",
         title: "故事主题", heading: "今天的模拟人生故事主题",
         hint: "描述你希望 AI 为今天的学习旅程设定的故事背景与主角。",
-        placeholder: '例：主人公是一个降生在 "KK诈骗园区" 的1岁婴儿，并且被一群诈骗犯养大。',
+        placeholder: '例：主人公是一个降生在KK诈骗园区的1岁婴儿，并且被一群诈骗犯养大。',
         required: false,
     });
 
@@ -124,6 +126,19 @@ function renderStep() {
     } else if (step.type === "textarea") {
         inputHTML = `<textarea id="w-input" class="wizard-textarea"
       placeholder="${step.placeholder}">${savedVal}</textarea>`;
+    } else if (step.type === "milestone_combo") {
+        const savedDenom = wData[step.denomId] ?? "";
+        inputHTML = `
+          <input id="w-input" class="wizard-input" type="text"
+            placeholder="${step.placeholder}" value="${wData[step.id] ?? ''}" />
+          <div style="margin-top:14px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:var(--dim);white-space:nowrap;">进度条分母：</span>
+            <input id="w-denom" class="wizard-input" type="number" min="1" max="999"
+              placeholder="例：10" value="${savedDenom}"
+              style="width:120px;flex-shrink:0;"
+              title="分母用于生成 -current-progress-indicator。如「完成10个简历投递」，分母为 10" />
+            <span style="font-size:11px;color:var(--dim);">(完成条数)用于进度条</span>
+          </div>`;
     } else if (step.type === "result") {
         inputHTML = `<textarea id="w-result" class="prompt-result" readonly></textarea>
       <div class="copy-success" id="copy-msg"></div>`;
@@ -196,6 +211,18 @@ function wizardNext() {
         if (step.id === "difficulty") {
             wSteps = buildSteps(wData.hours || 0, val);
         }
+    } else if (step.type === "milestone_combo") {
+        const inp = document.getElementById("w-input");
+        const denom = document.getElementById("w-denom");
+        const val = inp.value.trim();
+        if (!val) {
+            inp.classList.add("error");
+            errEl.textContent = "请输入任务内容。";
+            return;
+        }
+        inp.classList.remove("error");
+        wData[step.id] = val;
+        wData[step.denomId] = parseInt(denom.value) || 0;
     } else if (step.type === "textarea") {
         wData[step.id] = (document.getElementById("w-input").value || "").trim();
     }
@@ -211,9 +238,13 @@ function wizardPrev() {
 
 // ── Submit to backend ────────────────────────────────────────────────────────
 function submitSetup() {
+
     const milestones = [];
+    const denominators = [];
     wSteps.forEach(s => {
         if (s.id.startsWith("milestone_")) milestones.push(wData[s.id] || "");
+        if (s.type === "milestone_combo") denominators.push(Number(wData[s.denomId]) || 0);
+
     });
 
     fetch("/api/setup", {
@@ -224,6 +255,7 @@ function submitSetup() {
             max_rest: wData.max_rest,
             difficulty: wData.difficulty,
             milestones: milestones,
+            denominators: denominators,   // 新增：各阶段进度条分母
             theme: wData.theme || "",
         }),
     })
@@ -239,6 +271,7 @@ function submitSetup() {
             document.getElementById("w-result").value = "网络错误：" + err;
         });
 }
+
 
 function copyPrompt() {
     const text = document.getElementById("w-result").value;
@@ -272,6 +305,27 @@ function triggerPause(btn) { _alfredTrigger(btn, "/api/pause"); }
 function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
 function triggerGetCard(btn) { _alfredTrigger(btn, "/api/getcard"); }
 function triggerUseCard(btn) { _alfredTrigger(btn, "/api/usecard"); }
+
+// ── Progress indicator stepper ───────────────────────────────────────────────
+function progressStep(delta) {
+    fetch("/api/progress-step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delta: delta }),
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                const el = document.getElementById("val-current-progress-indicator");
+                if (el) {
+                    el.textContent = d.value;
+                    el.style.color = d.value.startsWith("0/0") ? "var(--dim)"
+                        : d.value.includes("已到达") ? "var(--green, #4ade80)"
+                            : "var(--bright)";
+                }
+            }
+        });
+}
 
 // ── Dashboard data refresh ───────────────────────────────────────────────────
 const REFRESH_MS = 5000;
@@ -400,6 +454,17 @@ function refreshData() {
                     cmText.style.color = "var(--dim)";
                 }
             }
+
+            // progress indicator — 当前阶段性任务进度指示
+            const piEl = document.getElementById("val-current-progress-indicator");
+            if (piEl) {
+                const pi = d.current_progress_indicator || "0/0 未到达进度";
+                piEl.textContent = pi;
+                piEl.style.color = pi.startsWith("0/0") ? "var(--dim)"
+                    : pi.includes("已到达") ? "var(--green, #4ade80)"
+                        : "var(--bright)";
+            }
+
 
             // stage
             const stage = d.stage || "";

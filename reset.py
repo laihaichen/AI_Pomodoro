@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import DATA_DIR, DB_FILE, SNIPPETS, SNIPPETS_DIR  # noqa: E402
+from config import DATA_DIR, DB_FILE, SNIPPETS, SNIPPETS_DIR, MILESTONE_GOALS_FILE  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────
 DATA_FILES_TO_CLEAR = [
@@ -111,6 +111,18 @@ def main() -> int:
         print(f"  ✓ penalized_rest_up_to → {max_rest:.1f} (= max_rest_time)")
     except Exception as exc:
         print(f"  ✗ penalized_rest_up_to 初始化失败：{exc}", file=sys.stderr)
+
+    # Reset milestone_goals.json — 分母全部清零
+    try:
+        MILESTONE_GOALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        MILESTONE_GOALS_FILE.write_text(
+            json.dumps({"hour3": 0, "hour6": 0, "hour9": 0, "hour12": 0},
+                       ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print("  ✓ milestone_goals.json → all zeros")
+    except Exception as exc:
+        print(f"  ✗ milestone_goals.json 重置失败：{exc}", file=sys.stderr)
 
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0
