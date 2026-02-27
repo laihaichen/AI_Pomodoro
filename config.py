@@ -63,4 +63,6 @@ SNIPPETS: dict[str, Snippet] = {
     "hour12":                 Snippet("6A798717-84DA-4597-B5AA-5D481BC15E21", "-hour12",                 "当前无阶段性任务"),
     # ── 当前任务 ──────────────────────────────────────────────────────────────
     "current_task":           Snippet("38C24B4C-7AC7-43E6-B690-63DBE8FB4EAD", "-current-task",           "无"),
+    # ── Boss战节点 ───────────────────────────────────────────────────────────
+    "bossfight_stage":        Snippet("4899268D-842C-4BD9-A455-FBF75DB89993", "-bossfight-stage",        "当前没有进入boss战节点"),
 }

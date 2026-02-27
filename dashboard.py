@@ -27,6 +27,33 @@ from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
+# ── Boss战触发文本（模块级常量，供 collect_state 与 api_setup 共享）────────────
+_BOSSFIGHT_ACTIVE_TEXT = """\
+当前已经达到boss战节点，请AI根据游戏规则出题。
+
+【boss战阶段规则回忆】
+
+硬核难度：额外胜利条件 — Boss战
+
+当距离完成当日目标还剩1条学习记录时自动触发Boss战
+出题节点：在倒数第二条用户prompt对应的AI输出末尾，根据当日学习内容生成一题综合考核题
+回答配额：玩家仅有1次回答机会（最后一条prompt）
+作答方式：玩家必须将答案手写在白板上（白板手撕），并将白板上的手写答案拍照提交给AI进行审核
+断网要求：玩家在开始回答的那一刻必须完全脱离任何互联网，不能从任何外部来源获取答案
+唯一的例外：玩家允许查看学习时间追踪系统的历史记录（之前所有回合的AI回复内容），但不能产生历史记录之外的任何新记录（即不能发送新的prompt或使用任何在线资源）
+判定规则（No Mercy）：若玩家答对则通过；若答错或未在最后一条prompt内作答，立即判定Boss战失败→模拟人生游戏失败，没有第二次机会
+休息禁止：Boss战期间禁止开启休息功能，玩家不能利用休息时间钻空子
+括号例外机制限制：Boss战期间，括号例外机制被允许使用的唯一理由是向AI声明比赛规则；玩家不能通过括号例外机制询问关于题目本身的任何内容
+继承关系：硬核难度需同时满足平衡难度的阶段性最低任务指标，即所有条件叠加
+
+对AI出题者的要求：
+
+1. 客观性原则：所出的Boss战题目必须有客观的正确答案和客观的错误答案，玩家的回答应该是明确的正确或明确的错误（对错模糊的主观题不适合作为Boss战题目）
+2. 难度适中原则：题目既不能太简单（否则不符合Boss的挑战性），也不能太难（超出白板手撕的合理难度范围）
+3. 不超纲原则：所出的Boss战题目必须是玩家当天学习内容的反映，如果玩家当天吃透了所学内容，应该能够合理地成功完成Boss战题目
+4. 评分标准：出题时需同时说明客观的评分标准，以便判定答案的正确性\
+"""
+
 # ── snippet writer (for setup wizard) ────────────────────────────────────────
 
 def write_snippet_value(key: str, value: str) -> None:
@@ -142,7 +169,7 @@ def collect_state() -> dict:
         "total_rest_time", "countcard", "interval", "fortunevalue",
         "current_prompt_count", "stage", "overtime_penalty_range",
         "offset", "difficulty", "max_rest_time", "violationcount",
-        "hour3", "hour6", "hour9", "hour12",
+        "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
@@ -196,6 +223,21 @@ def collect_state() -> dict:
         write_snippet_value("current_task", _task_to_write)
     except Exception:
         pass  # 写入失败不影响 Dashboard 展示
+
+    # ── Boss战节点自动触发 ────────────────────────────────────────────────────
+    # 硬核难度下，每次轮询检查 current_prompt_count 是否等于目标条数
+    # snippet 值格式：「等待Boss战节点（第N条）」→ 达到时改写为完整 boss 战文本
+    try:
+        import re as _re
+        _diff     = state.get("difficulty", "")
+        _bfs_cur  = state.get("bossfight_stage", "")
+        if _diff == "硬核难度" and _bfs_cur not in ("当前难度不适用", _BOSSFIGHT_ACTIVE_TEXT):
+            _m = _re.search(r"第(\d+)条", _bfs_cur)
+            if _m and count == int(_m.group(1)):
+                write_snippet_value("bossfight_stage", _BOSSFIGHT_ACTIVE_TEXT)
+                state["bossfight_stage"] = _BOSSFIGHT_ACTIVE_TEXT
+    except Exception:
+        pass
 
     # ── 真实学习时长 = 墙上时间 - 累计休息时间 ──────────────────────────────
     if first_raw and curr_raw:
@@ -341,6 +383,14 @@ def api_setup():
         for key, text in zip(applicable_keys, milestones):
             if text:  # 跳过空字符串
                 write_snippet_value(key, text)
+
+        # ── Boss战节点初始化 ──────────────────────────────────────────────────
+        if difficulty == "硬核难度":
+            # 触发节点：倒数第2条prompt输出（即第 hours*6 - 1 条）
+            bossfight_target = hours * 6 - 1
+            write_snippet_value("bossfight_stage", f"等待Boss战节点（第{bossfight_target}条）")
+        else:
+            write_snippet_value("bossfight_stage", "当前难度不适用")
 
         prompt = generate_launch_prompt(hours, max_rest, difficulty, milestones, theme)
         return jsonify({"ok": True, "prompt": prompt})
@@ -754,6 +804,13 @@ HTML = r"""<!DOCTYPE html>
     <div class="card-label">违规次数</div>
     <div class="card-value" id="val-violationcount">—</div>
     <div class="card-sub">-violationcount snippet</div>
+  </div>
+</div>
+<div class="grid grid-2" style="margin-top:10px;">
+  <div class="card" id="card-bossfight">
+    <div class="card-label">⚔️ Boss战节点状态</div>
+    <div class="card-value small" id="val-bossfight_stage">—</div>
+    <div class="card-sub">-bossfight-stage snippet</div>
   </div>
 </div>
 
@@ -1177,6 +1234,25 @@ function refreshData() {
           stageEl.classList.add("stage-ok");
         } else if (stage.includes("不适用")) {
           stageEl.classList.add("stage-na");
+        }
+      }
+
+      // bossfight stage
+      const bfs     = d.bossfight_stage || "";
+      const bfsEl   = document.getElementById("val-bossfight_stage");
+      const bfsCard = document.getElementById("card-bossfight");
+      if (bfsEl) {
+        bfsEl.textContent   = bfs;
+        bfsEl.className     = "card-value small";
+        bfsEl.style.color   = "";
+        if (bfsCard) bfsCard.style.borderColor = "";
+        if (bfs.includes("已经达到boss战节点")) {
+          bfsEl.classList.add("val-red");
+          if (bfsCard) bfsCard.style.borderColor = "rgba(255,80,80,0.6)";
+        } else if (bfs.includes("不适用")) {
+          bfsEl.style.color = "var(--dim)";
+        } else if (bfs.includes("等待")) {
+          bfsEl.classList.add("val-green");
         }
       }
 

@@ -18,6 +18,7 @@ Resets:
     - -fortunevalue          → "未到15分钟，合规"
     - -current_prompt_count  → "0"
     - -stage                 → "当前没有达到阶段性节点"
+    - -bossfight-stage       → "当前没有进入boss战节点"
     - -total_rest_time       → "0"
     - -overtime-penalty-range → "{random:0..0}"
     - -offset                → "0.0"
