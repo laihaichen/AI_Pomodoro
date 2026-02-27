@@ -66,8 +66,17 @@
                 <span>使用一张宿命卡</span>
                 <span class="btn-sub">（请将想锁定的区间复制到剪切板）</span>
             </button>
+            <button id="btn-reset-all" onclick="triggerReset(this)" title="重置所有游戏状态（二次确认）" style="flex:1;min-width:80px;background:rgba(220,50,50,0.12);
+                       border:1px solid rgba(220,50,50,0.4);border-radius:8px;
+                       color:#f87171;font-size:12px;font-weight:600;
+                       cursor:pointer;padding:8px 6px;transition:background 0.2s;"
+                onmouseover="this.style.background='rgba(220,50,50,0.25)'"
+                onmouseout="this.style.background='rgba(220,50,50,0.12)'">
+                🔄 重置所有状态
+            </button>
         </div>
     </div>
+
 
     <!-- ── 时间戳 ── -->
     <div class="section-label">时间戳</div>

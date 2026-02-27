@@ -74,4 +74,6 @@ SNIPPETS: dict[str, Snippet] = {
     "time_cont":                     Snippet("BD542EAD-9643-4A73-8358-4BF4D9223FC5", "-time-cont",                     "0"),
     # ── 进度指示器 ───────────────────────────────────────────────────────────
     "current_progress_indicator":    Snippet("B2B0E669-50DE-4C5E-9381-C5FBCF28A997", "-current-progress-indicator",    "0/0 未到达进度"),
+    # ── 随机数 ───────────────────────────────────────────────────────────────
+    "random_num":                    Snippet("2C5EB3C4-C0A2-4E57-B43F-E9986256F225", "-random-num",                    "0"),
 }

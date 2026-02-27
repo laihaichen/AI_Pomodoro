@@ -58,7 +58,10 @@ def write_offset(value: float) -> None:
 def compute_and_write_offset(new_count: int) -> str:
     """
     offset = 期望总时间 - 真实总时间
-           = (new_count × 10 + total_rest) - (curr_ts - first_ts)
+           = ((new_count - 1) × 10 + total_rest) - (curr_ts - first_ts)
+
+    说明：发送第 1 条记录时尚无区间时长，期望时间 = 0；
+          发送第 N 条记录时已产生 N-1 个完整 10 分钟区间。
     Returns a short status string for printing.
     """
     def read_ts(path):
@@ -74,11 +77,12 @@ def compute_and_write_offset(new_count: int) -> str:
 
     real_total   = (curr_ts - first_ts).total_seconds() / 60
     total_rest   = read_snippet_float("total_rest_time")
-    expect_total = new_count * 10 + total_rest
+    expect_total = (new_count - 1) * 10 + total_rest   # 第1条时 expect=0
     offset       = expect_total - real_total
 
     write_offset(offset)
     return f"-offset = {offset:.1f} 分钟（期望 {expect_total:.1f} - 真实 {real_total:.1f}）"
+
 
 
 def read_count() -> int:

@@ -87,9 +87,9 @@ function openWizard() {
 function closeWizard() {
     document.getElementById("wizard-overlay").classList.remove("open");
 }
-document.getElementById("wizard-overlay").addEventListener("click", e => {
-    if (e.target === e.currentTarget) closeWizard();
-});
+// 遮罩层点击不再关闭 Wizard（防止误触丢失进度）
+// 关闭唯一方式：点击右上角 ✕ 按钮
+
 
 // ── Render current step ──────────────────────────────────────────────────────
 function renderProgress() {
@@ -305,6 +305,37 @@ function triggerPause(btn) { _alfredTrigger(btn, "/api/pause"); }
 function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
 function triggerGetCard(btn) { _alfredTrigger(btn, "/api/getcard"); }
 function triggerUseCard(btn) { _alfredTrigger(btn, "/api/usecard"); }
+
+function triggerReset(btn) {
+    const confirmed = window.confirm("⚠️ 你确定要重置所有状态吗？\n\n这将清空所有番茄钟记录、时间戳、Snippets 数据，操作无法撤销。");
+    if (!confirmed) return;
+
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = "⏳ 重置中...";
+
+    fetch("/api/reset", { method: "POST" })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                btn.innerHTML = "✅ 已重置";
+                btn.style.color = "#4ade80";
+                setTimeout(() => {
+                    btn.innerHTML = orig;
+                    btn.style.color = "#f87171";
+                    btn.disabled = false;
+                    refreshData();   // 立即刷新页面数据
+                }, 2500);
+            } else {
+                btn.innerHTML = "❌ 失败";
+                setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
+            }
+        })
+        .catch(() => {
+            btn.innerHTML = "❌ 网络错误";
+            setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
+        });
+}
 
 // ── Progress indicator stepper ───────────────────────────────────────────────
 function progressStep(delta) {

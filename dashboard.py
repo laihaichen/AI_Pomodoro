@@ -451,7 +451,24 @@ def api_setup():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/reset", methods=["POST"])
+def api_reset():
+    """Run reset.py to wipe all game state back to Day-0 defaults."""
+    try:
+        import subprocess as _sp
+        result = _sp.run(
+            ["python3", "/Users/haichenlai/Desktop/Prompt/reset.py"],
+            capture_output=True, text=True, timeout=15
+        )
+        output = result.stdout + result.stderr
+        ok = result.returncode == 0
+        return jsonify({"ok": ok, "output": output})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/progress-step", methods=["POST"])
+
 def api_progress_step():
     """Increment or decrement the progress indicator numerator by delta (+1 / -1)."""
     data = request.get_json()
