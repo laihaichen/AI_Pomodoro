@@ -58,9 +58,26 @@ def main() -> int:
     # 1. Write continue timestamp (used by move.py for interval deduction)
     CONT_TS_FILE.write_text(now.isoformat(), encoding="utf-8")
 
+    # 同步写入 -time-cont snippet（本地时间，人类可读格式）
+    time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        _snip = SNIPPETS["time_cont"]
+        with sqlite3.connect(DB_FILE) as _con:
+            _con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (time_str, _snip.uid))
+        if _snip.json_path.exists():
+            import json as _json
+            _payload = _json.loads(_snip.json_path.read_text(encoding="utf-8"))
+            _payload["alfredsnippet"]["snippet"] = time_str
+            _snip.json_path.write_text(
+                _json.dumps(_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+    except (RuntimeError, OSError) as exc:
+        print(f"time_cont write failed: {exc}", file=sys.stderr)
+
     # 2. Calculate this rest's duration
     if not PAUSE_TS_FILE.exists():
-        print(f"休息结束记录：{now.isoformat()}（未找到对应的 pause 记录）")
+        print(f"休息结束记录：{time_str}（未找到对应的 pause 记录）")
         return 0
 
     pause_text = PAUSE_TS_FILE.read_text(encoding="utf-8").strip()

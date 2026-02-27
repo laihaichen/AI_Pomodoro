@@ -65,4 +65,9 @@ SNIPPETS: dict[str, Snippet] = {
     "current_task":           Snippet("38C24B4C-7AC7-43E6-B690-63DBE8FB4EAD", "-current-task",           "无"),
     # ── Boss战节点 ───────────────────────────────────────────────────────────
     "bossfight_stage":        Snippet("4899268D-842C-4BD9-A455-FBF75DB89993", "-bossfight-stage",        "当前没有进入boss战节点"),
+    # ── 当前时间 ─────────────────────────────────────────────────────────────
+    "current_time":           Snippet("9D341FDD-4978-449F-91CD-D108A9A64636", "-current-time",           "0"),
+    # ── 休息时间戳 ───────────────────────────────────────────────────────────
+    "time_pause":             Snippet("320E3246-386D-4995-8708-148F7C5C2730", "-time-pause",              "0"),
+    "time_cont":              Snippet("BD542EAD-9643-4A73-8358-4BF4D9223FC5", "-time-cont",               "0"),
 }

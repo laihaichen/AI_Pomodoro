@@ -78,6 +78,11 @@ def main() -> int:
 
     if prev is None:
         write_ts(FIRST_TS_FILE, now)
+        # 第1条记录：同样写入当前时间到 -current-time snippet
+        try:
+            write_snippet("current_time", now.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
+        except (RuntimeError, OSError) as exc:
+            print(f"current_time write failed: {exc}", file=sys.stderr)
         print("First =move recorded. No interval computed yet.")
         return 0
 
@@ -103,11 +108,13 @@ def main() -> int:
     )
     fortune = "-1" if interval_minutes > 15 else "1"
 
-    # 5. Write interval + fortune to Alfred snippets
+    # 5. Write interval + fortune + current-time to Alfred snippets
     interval_str = f"{interval_minutes:.1f}"
+    current_time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
     try:
-        write_snippet("interval",    interval_str)
+        write_snippet("interval",     interval_str)
         write_snippet("fortunevalue", fortune_snippet)
+        write_snippet("current_time", current_time_str)
     except (RuntimeError, OSError) as exc:
         print(f"Write failed: {exc}", file=sys.stderr)
         return 1
