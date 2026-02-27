@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""update_h.py — shared module for accumulating H and writing -overtime-penalty-range.
+"""update_h.py — shared module for accumulating H and writing -overtime-penalty-random-num.
 
 H (超时惩罚数字) accumulates from two sources:
   1. move.py   : interval > 20 min  →  H += (interval - 20)
   2. continue.py: total_rest > max_rest  →  H += (total_rest - penalized_rest_up_to)
 
--overtime-penalty-range format:
-  H == 0  →  "{random:0..0}"   (no penalty, Alfred expands to 0)
-  H >  0  →  "{random:1..2H}"  e.g. H=11 → "{random:1..22}"
+-overtime-penalty-random-num format:
+  H == 0  →  "0"   (无惩罚)
+  H >  0  →  Python random.randint(1, 2H)  e.g. H=11 → randint(1, 22)
 
 State files (in data/):
   h_value.txt               : current H (float, minutes), default 0
@@ -17,6 +17,7 @@ State files (in data/):
 from __future__ import annotations
 
 import json
+import random
 import sqlite3
 import sys
 
@@ -73,29 +74,35 @@ def read_max_rest() -> float:
 
 # ── snippet writer ────────────────────────────────────────────────────────────
 
-def write_overtime_range(h: float) -> None:
-    """Write the Alfred dynamic placeholder for -overtime-penalty-range."""
+def write_overtime_range(h: float) -> str:
+    """
+    Compute a deterministic penalty random number and write to -overtime-penalty-random-num.
+    H == 0 → writes "0" (no penalty)
+    H >  0 → writes random.randint(1, h_int * 2)
+    Returns the value written as a string.
+    """
     h_int = int(h)
     if h_int <= 0:
-        range_str = "{random:0..0}"
+        value = "0"
     else:
-        range_str = "{random:1.." + str(h_int * 2) + "}"
+        value = str(random.randint(1, h_int * 2))
 
-    snip = SNIPPETS["overtime_penalty_range"]
+    snip = SNIPPETS["overtime_penalty_random_num"]
 
     with sqlite3.connect(DB_FILE) as con:
         con.execute(
             "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (range_str, snip.uid),
+            (value, snip.uid),
         )
 
     if snip.json_path.exists():
         payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-        payload["alfredsnippet"]["snippet"] = range_str
+        payload["alfredsnippet"]["snippet"] = value
         snip.json_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+    return value
 
 
 # ── public API ────────────────────────────────────────────────────────────────
@@ -130,5 +137,5 @@ if __name__ == "__main__":
     print(f"H = {h:.1f} 分钟")
     print(f"已计入休息惩罚截止：{p:.1f} 分钟  |  max_rest = {m:.1f} 分钟")
     h_int = int(h)
-    rng = "{random:0..0}" if h_int == 0 else "{random:1.." + str(h_int * 2) + "}"
-    print(f"-overtime-penalty-range = {rng}")
+    rng = "0" if h_int == 0 else f"randint(1, {h_int * 2})"
+    print(f"-overtime-penalty-random-num range = {rng}")

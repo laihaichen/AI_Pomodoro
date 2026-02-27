@@ -13,10 +13,14 @@ On each call:
   4. Write interval minutes to Alfred snippet  -interval  (DB + JSON)
   5. Write +1 or -1 to Alfred snippet  -fortunevalue     (DB + JSON)
      rule: interval > 15 min  →  -1 (凶),  else  +1 (吉)
+  6. Generate a fresh 1-100 random number and write to -random-num (DB + JSON)
+     每条番茄钟绑定一个唯一随机数；用户多次展开 -go 不会刷新，
+     只有下次推进番茄钟才刷新。
 """
 from __future__ import annotations
 
 import json
+import random
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -78,13 +82,16 @@ def main() -> int:
 
     if prev is None:
         write_ts(FIRST_TS_FILE, now)
-        # 第1条记录：同样写入当前时间到 -current-time snippet
+        # 第1条记录：写入当前时间 + 生成随机数
+        rand_num = random.randint(1, 100)
         try:
             write_snippet("current_time", now.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
+            write_snippet("random_num",   str(rand_num))
         except (RuntimeError, OSError) as exc:
-            print(f"current_time write failed: {exc}", file=sys.stderr)
-        print("First =move recorded. No interval computed yet.")
+            print(f"current_time/random_num write failed: {exc}", file=sys.stderr)
+        print(f"First =move recorded. No interval computed yet.  -random-num = {rand_num}")
         return 0
+
 
     # 2. Compute raw interval
     raw_minutes = (now - prev).total_seconds() / 60
@@ -111,10 +118,12 @@ def main() -> int:
     # 5. Write interval + fortune + current-time to Alfred snippets
     interval_str = f"{interval_minutes:.1f}"
     current_time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    rand_num = random.randint(1, 100)   # 每条番茄钟生成一个新随机数
     try:
         write_snippet("interval",     interval_str)
         write_snippet("fortunevalue", fortune_snippet)
         write_snippet("current_time", current_time_str)
+        write_snippet("random_num",   str(rand_num))
     except (RuntimeError, OSError) as exc:
         print(f"Write failed: {exc}", file=sys.stderr)
         return 1
@@ -131,7 +140,7 @@ def main() -> int:
     verdict   = "凶 (-1)" if fortune == "-1" else "吉 (+1)"
     print(
         f"区间时间差：{interval_minutes:.1f} 分钟{rest_info}  →  {verdict}{h_info}\n"
-        f"-interval = {interval_str}，-fortunevalue = {fortune}"
+        f"-interval = {interval_str}，-fortunevalue = {fortune}，-random-num = {rand_num}"
     )
     return 0
 

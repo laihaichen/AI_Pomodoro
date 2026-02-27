@@ -54,7 +54,8 @@ SNIPPETS: dict[str, Snippet] = {
     "current_prompt_count":   Snippet("F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB", "-current_prompt_count",   "0"),
     "stage":                  Snippet("DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3", "-stage",                  "当前没有达到阶段性节点"),
     "total_rest_time":        Snippet("B3689D50-EEDD-42FC-A4E5-D19A70BA709B", "-total_rest_time",        "0"),
-    "overtime_penalty_range": Snippet("D3D8CE6B-3AE4-4A88-91A2-9D23E0804E2D", "-overtime-penalty-range", "{random:0..0}"),
+    "overtime_penalty_random_num": Snippet("D3D8CE6B-3AE4-4A88-91A2-9D23E0804E2D", "-overtime-penalty-random-num", "0"),
+
     "offset":                 Snippet("E99CD789-4D10-4C17-9A3A-C5076BA33ADB", "-offset",                 "0.0"),
     "difficulty":             Snippet("BDEE3C98-A4A1-4A2B-9046-18A12FD66083", "-difficulty",             "", resettable=False),
     "max_rest_time":          Snippet("D197E8BC-85F4-45D0-82D4-814FA0DCA629", "-max_rest_time",          "0", resettable=False),

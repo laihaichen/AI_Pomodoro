@@ -439,10 +439,11 @@ function refreshData() {
             setVal("val-h_value", isNaN(hv) ? d.h_value : hv.toFixed(1) + " 分钟");
             applyClass("val-h_value", !isNaN(hv) && hv > 0 ? "val-red" : "val-green");
 
-            setVal("val-overtime_penalty_range", d.overtime_penalty_range);
-            applyClass("val-overtime_penalty_range",
-                d.overtime_penalty_range === "{random:0..0}" ? "val-green" : "val-yellow"
+            setVal("val-overtime_penalty_random_num", d.overtime_penalty_random_num);
+            applyClass("val-overtime_penalty_random_num",
+                d.overtime_penalty_random_num === "0" ? "val-green" : "val-red"
             );
+
 
             // cards
             setVal("val-countcard", d.countcard);
@@ -531,10 +532,19 @@ function refreshData() {
                 }
             }
 
+            // random num — 本轮原始随机数
+            const rnEl = document.getElementById("val-random_num");
+            if (rnEl) {
+                const rn = d.random_num || "0";
+                rnEl.textContent = rn;
+                rnEl.style.color = rn === "0" ? "var(--dim)" : "var(--bright)";
+            }
+
             // update time
             document.getElementById("last-update").textContent =
                 new Date().toLocaleTimeString("zh-CN");
             countdown = REFRESH_MS / 1000;
+
         })
         .catch(err => {
             document.getElementById("last-update").textContent = "读取失败";

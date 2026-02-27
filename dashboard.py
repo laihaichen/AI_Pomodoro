@@ -167,9 +167,10 @@ def collect_state() -> dict:
     # ── Alfred snippets from SQLite ──────────────────────────────────────────
     snippet_keys = [
         "total_rest_time", "countcard", "interval", "fortunevalue",
-        "current_prompt_count", "stage", "overtime_penalty_range",
+        "current_prompt_count", "stage", "overtime_penalty_random_num",
         "offset", "difficulty", "max_rest_time", "violationcount",
         "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
+        "random_num",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
