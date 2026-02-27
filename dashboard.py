@@ -647,18 +647,19 @@ HTML = r"""<!DOCTYPE html>
     <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
     <div class="pomodoro-timer">本次番茄钟计时：<span id="tomato-timer" style="font-weight:700;color:var(--bright); font-variant-numeric: tabular-nums;">0秒</span></div>
     <div class="refresh-badge">每 5 秒刷新 · 上次更新：<span id="last-update">—</span></div>
+    <!-- 番茄钟进度（小型） -->
+    <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px 16px;">
+      <span style="font-size:11px;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase;">番茄钟进度</span>
+      <span id="val-current_prompt_count-header" style="font-size:22px;font-weight:800;color:var(--bright);line-height:1;font-variant-numeric:tabular-nums;">—</span>
+      <span style="font-size:11px;color:var(--dim);">条</span>
+    </div>
   </div>
 </div>
 
-<!-- ── 番茄钟进度 ── -->
-<div class="section-label">番茄钟进度</div>
-<div class="hero-card" id="hero-card">
-  <div class="hero-tomato" style="font-size:32px; color:var(--dim);">#</div>
-  <div>
-    <div class="hero-count" id="val-current_prompt_count">—</div>
-    <div class="hero-label">当前第几条番茄钟记录</div>
-  </div>
-  <div style="display:flex;gap:8px;align-items:stretch;margin-left:16px;flex:1;">
+<!-- ── 控制按钮 ── -->
+<div class="section-label">控制按钮</div>
+<div class="card" style="padding:12px 16px;">
+  <div style="display:flex;gap:8px;align-items:stretch;">
     <button class="next-pomodoro-btn" style="flex:2;min-width:130px;"
             onclick="triggerNextPomodoro(this)"
             title="执行 AppleScript：btn_next_pomodoro">
@@ -692,10 +693,6 @@ HTML = r"""<!DOCTYPE html>
       <span>使用一张宿命卡</span>
       <span class="btn-sub">（请将想锁定的区间复制到剪切板）</span>
     </button>
-  </div>
-  <div class="hero-right" style="margin-left:auto; text-align:right;">
-    <div style="font-size:12px;color:var(--dim);">当前难度</div>
-    <div id="val-difficulty" style="font-size:18px;font-weight:700;color:var(--text);">—</div>
   </div>
 </div>
 
@@ -784,6 +781,11 @@ HTML = r"""<!DOCTYPE html>
 
 <!-- ── 阶段性节点 ── -->
 <div class="section-label">阶段性节点 &amp; 游戏状态</div>
+<!-- 当前难度 -->
+<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:16px;padding:14px 20px;">
+  <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--dim);">当前难度</span>
+  <span id="val-difficulty" style="font-size:20px;font-weight:700;color:var(--text);">—</span>
+</div>
 <div class="grid grid-2" style="margin-bottom:10px;">
   <div class="card" id="card-milestones-set">
     <div class="card-label">今日里程碑任务总览</div>
@@ -1130,10 +1132,10 @@ function refreshData() {
         setVal("val-elapsed_minutes", "—");
       }
 
-      // prompt count
-      setVal("val-current_prompt_count", d.current_prompt_count);
+      // prompt count — header badge
+      setVal("val-current_prompt_count-header", d.current_prompt_count);
 
-      // difficulty
+      // difficulty — now in 阶段性节点 section
       setVal("val-difficulty", d.difficulty);
 
       // interval — color by >15
