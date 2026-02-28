@@ -468,6 +468,16 @@ function refreshData() {
             // difficulty — now in 阶段性节点 section
             setVal("val-difficulty", d.difficulty);
 
+            // total_score — 总积分（正绿负红）
+            const tsEl = document.getElementById("val-total_score");
+            if (tsEl) {
+                const ts = parseInt(d.total_score) || 0;
+                tsEl.textContent = ts >= 0 ? "+" + ts : String(ts);
+                tsEl.style.color = ts > 0 ? "var(--green, #4ade80)"
+                    : ts < 0 ? "#f87171"
+                        : "var(--dim)";
+            }
+
             // interval — color by >15
             const ivl = parseFloat(d.interval);
             setVal("val-interval", isNaN(ivl) ? d.interval : ivl.toFixed(1) + " 分钟");

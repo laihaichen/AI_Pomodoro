@@ -167,11 +167,19 @@
 
     <!-- ── 阶段性节点 ── -->
     <div class="section-label">阶段性节点 &amp; 游戏状态</div>
-    <!-- 当前难度 -->
-    <div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:16px;padding:14px 20px;">
+    <!-- 当前难度 + 总积分 -->
+    <div class="card"
+        style="margin-bottom:10px;display:flex;align-items:center;gap:16px;padding:14px 20px;flex-wrap:wrap;">
         <span
             style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--dim);">当前难度</span>
         <span id="val-difficulty" style="font-size:20px;font-weight:700;color:var(--text);">—</span>
+        <!-- 分隔线 -->
+        <span style="width:1px;height:28px;background:var(--border);display:inline-block;margin:0 4px;"></span>
+        <span
+            style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--dim);">当前总积分</span>
+        <span id="val-total_score"
+            style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--bright);">0</span>
+        <span style="font-size:11px;color:var(--dim);">分</span>
     </div>
     <div class="grid grid-2" style="margin-bottom:10px;">
         <div class="card" id="card-milestones-set">

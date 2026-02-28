@@ -74,6 +74,20 @@ def write_snippet_value(key: str, value: str) -> None:
         )
 
 
+def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
+    """Read -total-score, add delta, multiply by factor, write back. Returns new value."""
+    snip = SNIPPETS["total_score"]
+    with sqlite3.connect(DB_FILE) as con:
+        row = con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
+    try:
+        current = int(row[0]) if row else 0
+    except (ValueError, TypeError):
+        current = 0
+    new_val = round((current + delta) * factor)
+    write_snippet_value("total_score", str(new_val))
+    return new_val
+
+
 def generate_launch_prompt(
     hours: int,
     max_rest: str,
@@ -171,7 +185,7 @@ def collect_state() -> dict:
         "current_prompt_count", "stage", "overtime_penalty_random_num",
         "offset", "difficulty", "max_rest_time", "violationcount",
         "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
-        "random_num", "foretold", "total_count", "is_victory",
+        "random_num", "foretold", "total_count", "is_victory", "total_score",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
@@ -508,9 +522,14 @@ def api_boss_defeated():
     try:
         BOSS_DEFEATED_FILE.parent.mkdir(parents=True, exist_ok=True)
         BOSS_DEFEATED_FILE.write_text(result, encoding="utf-8")
-        # Boss战失败 → 同步写入游戏失败状态
-        if result == "false":
+        if result == "true":
+            # Boss胜利 → +1000
+            update_total_score(delta=1000)
+        else:
+            # Boss失败 → 写入游戏失败状态，-1000，再 ×0.8
             write_snippet_value("is_victory", "已失败，失败来源：boss战失败")
+            update_total_score(delta=-1000)
+            update_total_score(factor=0.8)
         return jsonify({"ok": True, "boss_defeated": result})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -522,6 +541,8 @@ def api_declare_victory():
     all failure paths are auto-written by backend scripts before this point."""
     try:
         write_snippet_value("is_victory", "已胜利")
+        # 胜利结算 → ×1.2
+        update_total_score(factor=1.2)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500

@@ -69,6 +69,21 @@ def write_snippet(key: str, value: str) -> None:
     )
 
 
+def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
+    """Read current -total-score, add delta, multiply by factor, write back. Returns new value."""
+    snip = SNIPPETS["total_score"]
+    with sqlite3.connect(DB_FILE) as con:
+        row = con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
+    try:
+        current = int(row[0]) if row else 0
+    except (ValueError, TypeError):
+        current = 0
+    new_val = round((current + delta) * factor)
+    write_snippet("total_score", str(new_val))
+    return new_val
+
+
+
 def probability_check(health: int) -> bool:
     """
     输入健康度（0-10整数），以 health*10% 的概率返回 True（吉）。
@@ -172,6 +187,14 @@ def main() -> int:
                 write_snippet("is_victory", "已失败，失败来源：命运值")
         except (RuntimeError, OSError) as exc:
             print(f"snippet write failed: {exc}", file=sys.stderr)
+        # 积分：累加命运值；失败时再 ×0.8
+        try:
+            new_score = update_total_score(delta=final_fate)
+            if final_fate <= -90:
+                new_score = update_total_score(factor=0.8)
+            print(f"  总积分={new_score}")
+        except Exception as exc:
+            print(f"total_score update failed: {exc}", file=sys.stderr)
         write_final_fate(final_fate)
         print(
             f"First =move recorded.\n"
@@ -248,13 +271,21 @@ def main() -> int:
     except (RuntimeError, OSError) as exc:
         print(f"final_fate_value/foretold write failed: {exc}", file=sys.stderr)
 
+    # 积分：累加命运值；失败时再 ×0.8
+    try:
+        new_score = update_total_score(delta=final_fate)
+        if final_fate <= -90:
+            new_score = update_total_score(factor=0.8)
+    except Exception as exc:
+        print(f"total_score update failed: {exc}", file=sys.stderr)
+        new_score = None
 
     # 9. Report
     rest_info = f" (休息扣除 {rest_minutes:.1f} 分钟)" if rest_minutes > 0 else ""
     print(
         f"区间：{interval_minutes:.1f} min{rest_info}  健康度={health}{h_info}\n"
         f"吉凶={fortune_str}（概率判定独立）  原始随机数={rand_num}\n"
-        f"超时惩罚={overtime}  最终命运值={final_fate}"
+        f"超时惩罚={overtime}  最终命运值={final_fate}  总积分={new_score}"
     )
     return 0
 
