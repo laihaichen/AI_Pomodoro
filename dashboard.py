@@ -368,6 +368,23 @@ def api_stay_pomodoro():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/divine-intervention", methods=["POST"])
+def api_divine_intervention():
+    """Copy the divine-intervention prompt to clipboard, then trigger stay.applescript."""
+    data = request.get_json(silent=True) or {}
+    prompt_text = data.get("prompt", "")
+    try:
+        # ① 写入剪切板
+        subprocess.run(["pbcopy"], input=prompt_text.encode("utf-8"),
+                       check=True, timeout=5)
+        # ② 运行 stay.applescript
+        stay_script = str(BASE / "applescript" / "stay.applescript")
+        subprocess.run(["osascript", stay_script], check=True, timeout=10)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/pause", methods=["POST"])
 def api_pause():
     script = (

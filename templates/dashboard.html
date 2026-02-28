@@ -78,6 +78,14 @@
                 🔄 重置所有状态
             </button>
         </div>
+        <!-- 第二行：辅助工具 -->
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="next-pomodoro-btn"
+                style="flex:0 0 auto;min-width:80px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;"
+                onclick="openDivineModal()" title="神圣干预辅助填写器">
+                ✨ 神圣干预辅助填写器
+            </button>
+        </div>
     </div>
 
 
@@ -313,6 +321,70 @@
                 </button>
             </div>
             <div class="card-sub" style="margin-top:4px;">-is-victory snippet · 后台自动写入</div>
+        </div>
+    </div>
+
+    <!-- ── 神圣干预 Modal ── -->
+    <div class="modal-overlay" id="divine-overlay" style="display:none;">
+        <div class="modal" style="max-width:560px;width:95%;">
+            <button class="modal-close" onclick="closeDivineModal()">✕</button>
+            <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--bright);">✨ 神圣干预辅助填写器</h2>
+
+            <!-- Step 1: 区间选择 -->
+            <div id="divine-step1">
+                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请选择你希望修改的命运值区间：</div>
+                <select id="divine-zone-select" style="width:100%;background:var(--surface);border:1px solid var(--border);
+                        border-radius:6px;color:var(--text);font-size:13px;padding:8px 10px;outline:none;">
+                    <option value="高度正面（85~100）">高度正面（85~100）</option>
+                    <option value="中等正面（50~84）">中等正面（50~84）</option>
+                    <option value="轻度正面（1~49）">轻度正面（1~49）</option>
+                    <option value="轻度负面（-1~-30）">轻度负面（-1~-30）</option>
+                    <option value="中等负面（-31~-60）">中等负面（-31~-60）</option>
+                    <option value="严重负面（-61~-89）">严重负面（-61~-89）</option>
+                </select>
+                <button onclick="divineNext()" style="margin-top:12px;width:100%;padding:9px;
+                        background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.5);
+                        border-radius:6px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;">
+                    下一步 →
+                </button>
+            </div>
+
+            <!-- Step 2: 剧情输入 -->
+            <div id="divine-step2" style="display:none;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">已选区间：<span id="divine-zone-display"
+                        style="color:#a78bfa;font-weight:700;"></span></div>
+                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请填写你放在该区间的新剧情：</div>
+                <textarea id="divine-new-text" rows="5" placeholder="在此输入自定义事件描述…"
+                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+                           color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button onclick="divineBack()" style="flex:1;padding:9px;
+                            background:transparent;border:1px solid var(--border);
+                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 返回</button>
+                    <button onclick="divineGenerate()" style="flex:2;padding:9px;
+                            background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.5);
+                            border-radius:6px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;">生成
+                        Prompt</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Prompt 展示 + 发送 -->
+            <div id="divine-step3" style="display:none;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">生成的 Prompt（点击可全选）：</div>
+                <textarea id="divine-prompt-output" rows="14" readonly onclick="this.select()"
+                    style="width:100%;background:rgba(0,0,0,0.25);border:1px solid var(--border);
+                           border-radius:6px;color:var(--bright);font-size:12px;line-height:1.6;
+                           padding:10px;resize:none;outline:none;font-family:monospace;box-sizing:border-box;"></textarea>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button onclick="divineBack2()" style="flex:1;padding:9px;
+                            background:transparent;border:1px solid var(--border);
+                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 修改</button>
+                    <button id="divine-send-btn" onclick="divineSend()" style="flex:2;padding:9px;
+                            background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.6);
+                            border-radius:6px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;">📋
+                        复制并发送</button>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -414,7 +414,91 @@ function declareVictory() {
         });
 }
 
+// ── 神圣干预辅助填写器 ──────────────────────────────────────────────────────────
+const DIVINE_RULE = `【关于神圣干预作用的游戏规则提示】
+
+[神圣干预：玩家为角色X+1岁的事件预判栏目选择一个命运值区间（高度正面85~100、中等正面50~84、轻度正面1~49、轻度负面-1~-30、中等负面-31~-60、严重负面-61~-89），并为该区间填写一个自定义的事件描述；该描述将替换AI原本生成的该区间事件内容；实际触发仍需命运值落在玩家选择的区间；⚠️ 约束：不能在负面事件里写正面情节，或在正面事件里写负面情节]
+
+神圣干预：
+- 玩家选择一个命运值区间（对应JSON中的某个键，如 POS_HIGH、NEG_MID 等）
+- 玩家提供该区间的自定义事件描述
+- AI需检查玩家提供的事件描述是否符合区间性质（正面/负面），如不符则拒绝执行
+- 在本轮输出末尾的 JSON 代码块中，将玩家自定义的事件文本写入对应的槽位
+- 实际触发仍需角色X+1岁时的命运值落在玩家选择的区间`;
+
+let _divineOld = "";
+
+function openDivineModal() {
+    // 重置到第一步
+    document.getElementById("divine-step1").style.display = "";
+    document.getElementById("divine-step2").style.display = "none";
+    document.getElementById("divine-step3").style.display = "none";
+    document.getElementById("divine-new-text").value = "";
+    document.getElementById("divine-overlay").style.display = "flex";
+}
+
+function closeDivineModal() {
+    document.getElementById("divine-overlay").style.display = "none";
+}
+
+function divineNext() {
+    _divineOld = document.getElementById("divine-zone-select").value;
+    document.getElementById("divine-zone-display").textContent = _divineOld;
+    document.getElementById("divine-step1").style.display = "none";
+    document.getElementById("divine-step2").style.display = "";
+    document.getElementById("divine-new-text").focus();
+}
+
+function divineBack() {
+    document.getElementById("divine-step2").style.display = "none";
+    document.getElementById("divine-step1").style.display = "";
+}
+
+function divineBack2() {
+    document.getElementById("divine-step3").style.display = "none";
+    document.getElementById("divine-step2").style.display = "";
+}
+
+function divineGenerate() {
+    const newStory = document.getElementById("divine-new-text").value.trim();
+    if (!newStory) {
+        alert("请先填写自定义事件描述");
+        return;
+    }
+    const prompt = `使用[神圣干预]修改对应的区间\n\n被修改的区间：${_divineOld}\n\n修改为：${newStory}\n\n${DIVINE_RULE}`;
+    document.getElementById("divine-prompt-output").value = prompt;
+    document.getElementById("divine-step2").style.display = "none";
+    document.getElementById("divine-step3").style.display = "";
+}
+
+function divineSend() {
+    const prompt = document.getElementById("divine-prompt-output").value;
+    const btn = document.getElementById("divine-send-btn");
+    btn.textContent = "发送中…";
+    btn.disabled = true;
+    fetch("/api/divine-intervention", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                btn.textContent = "✅ 已复制并发送";
+                setTimeout(() => closeDivineModal(), 1200);
+            } else {
+                btn.textContent = "❌ 失败：" + (d.error || "未知错误");
+                btn.disabled = false;
+            }
+        })
+        .catch(() => {
+            btn.textContent = "📋 复制并发送";
+            btn.disabled = false;
+        });
+}
+
 // ── Dashboard data refresh ───────────────────────────────────────────────────
+
 const REFRESH_MS = 1000;
 
 let countdown = REFRESH_MS / 1000;
