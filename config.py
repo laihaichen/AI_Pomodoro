@@ -115,5 +115,8 @@ SNIPPETS: dict[str, Snippet] = {
     # ── 休息时间戳（不出现在面板）──────────────────────────────────────────
     "time_pause":             Snippet("320E3246-386D-4995-8708-148F7C5C2730", "-time-pause",             "0"),
     "time_cont":              Snippet("BD542EAD-9643-4A73-8358-4BF4D9223FC5", "-time-cont",              "0"),
+    # ── 学习助手系统 ─────────────────────────────────────────────────────────
+    "is_eligible_for_reward": Snippet("CFCCE93B-4480-4898-9056-8331A5A2764B",  "-is-eligible-for-reward", "当前未超过85，无奖励",
+                                      panel_label="是否应该触发幸运系统"),
 }
 

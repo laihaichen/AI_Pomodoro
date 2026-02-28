@@ -187,6 +187,33 @@ def main() -> int:
                 write_snippet("is_victory", "已失败，失败来源：命运值")
         except (RuntimeError, OSError) as exc:
             print(f"snippet write failed: {exc}", file=sys.stderr)
+        # 幸运系统：final_fate >= 85 时写入触发提示，否则还原默认值
+        try:
+            _LUCKY_MSG = (
+                "最终命运值>=85，幸运系统已触发\n\n"
+                "##### 幸运操作列表\n\n"
+                "- [神圣干预：玩家为角色X+1岁的事件预判栏目选择一个命运值区间"
+                "（高度正面85~100、中等正面50~84、轻度正面1~49、"
+                "轻度负面-1~-30、中等负面-31~-60、严重负面-61~-89），"
+                "并为该区间填写一个自定义的事件描述；该描述将替换AI原本生成的该区间事件内容；"
+                "实际触发仍需命运值落在玩家选择的区间；"
+                "⚠️ 约束：不能在负面事件里写正面情节，或在正面事件里写负面情节]\n"
+                "- [宿命卡count + 1：玩家获得1张宿命卡，可在之后任意年龄使用]"
+            )
+            _DEFAULT = SNIPPETS["is_eligible_for_reward"].default
+            if final_fate >= 85:
+                write_snippet("is_eligible_for_reward", _LUCKY_MSG)
+            else:
+                # 仅当当前值不是默认值时才写，避免多余写入
+                import sqlite3 as _sql
+                _snip = SNIPPETS["is_eligible_for_reward"]
+                with _sql.connect(DB_FILE) as _c:
+                    _row = _c.execute("SELECT snippet FROM snippets WHERE uid=?", (_snip.uid,)).fetchone()
+                _cur_val = (_row[0] or "").strip() if _row else ""
+                if _cur_val != _DEFAULT:
+                    write_snippet("is_eligible_for_reward", _DEFAULT)
+        except Exception as exc:
+            print(f"is_eligible_for_reward update failed: {exc}", file=sys.stderr)
         # 积分：累加命运值；失败时再 ×0.9
         try:
             new_score = update_total_score(delta=final_fate)
@@ -270,6 +297,33 @@ def main() -> int:
             write_snippet("is_victory", "已失败，失败来源：命运值")
     except (RuntimeError, OSError) as exc:
         print(f"final_fate_value/foretold write failed: {exc}", file=sys.stderr)
+
+    # 幸运系统：final_fate >= 85 时写入触发提示，否则还原默认值
+    try:
+        _LUCKY_MSG = (
+            "最终命运值>=85，幸运系统已触发\n\n"
+            "##### 幸运操作列表\n\n"
+            "- [神圣干预：玩家为角色X+1岁的事件预判栏目选择一个命运值区间"
+            "（高度正面85~100、中等正面50~84、轻度正面1~49、"
+            "轻度负面-1~-30、中等负面-31~-60、严重负面-61~-89），"
+            "并为该区间填写一个自定义的事件描述；该描述将替换AI原本生成的该区间事件内容；"
+            "实际触发仍需命运值落在玩家选择的区间；"
+            "⚠️ 约束：不能在负面事件里写正面情节，或在正面事件里写负面情节]\n"
+            "- [宿命卡count + 1：玩家获得1张宿命卡，可在之后任意年龄使用]"
+        )
+        _DEFAULT = SNIPPETS["is_eligible_for_reward"].default
+        if final_fate >= 85:
+            write_snippet("is_eligible_for_reward", _LUCKY_MSG)
+        else:
+            import sqlite3 as _sql
+            _snip = SNIPPETS["is_eligible_for_reward"]
+            with _sql.connect(DB_FILE) as _c:
+                _row = _c.execute("SELECT snippet FROM snippets WHERE uid=?", (_snip.uid,)).fetchone()
+            _cur_val = (_row[0] or "").strip() if _row else ""
+            if _cur_val != _DEFAULT:
+                write_snippet("is_eligible_for_reward", _DEFAULT)
+    except Exception as exc:
+        print(f"is_eligible_for_reward update failed: {exc}", file=sys.stderr)
 
     # 积分：累加命运值；失败时再 ×0.9
     try:

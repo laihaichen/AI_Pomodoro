@@ -39,3 +39,28 @@ class BaseCondition:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._params})"
+
+
+class AlwaysCondition(BaseCondition):
+    """永远满足的条件——用于无前提触发的技能。
+
+    用法示例：
+        skill = Skill(name="被动每轮触发", conditions=[always], effects=[...])
+    """
+
+    name = "always"
+    description = "无任何前提，技能始终可触发。"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def is_met(self, context: dict) -> bool:  # noqa: ARG002
+        return True
+
+    def __repr__(self) -> str:
+        return "AlwaysCondition()"
+
+
+# 模块级单例，直接 import 使用：from mod.conditions import always
+always = AlwaysCondition()
+
