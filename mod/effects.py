@@ -39,3 +39,38 @@ class BaseEffect:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._params})"
+
+
+class FinalFateEffect(BaseEffect):
+    """修改最终命运值（final_fate）的效果。
+
+    在 context["final_fate"] 上叠加一个固定的 delta。
+    示例：
+        FinalFateEffect(delta=+10)   # 命运值 +10
+        FinalFateEffect(delta=-20)   # 命运值 -20
+    """
+
+    name = "final_fate_effect"
+    description = "修改本轮最终命运值。"
+
+    def __init__(self, delta: int) -> None:
+        """
+        Args:
+            delta: 对命运值的修改量（正数为增益，负数为减益）
+        """
+        super().__init__(delta=delta)
+        self.delta = delta
+
+    def apply(self, context: dict) -> dict:
+        """将 delta 叠加到 context['final_fate'] 上。
+
+        若 context 中不含 'final_fate'，则跳过（安全降级）。
+        """
+        if "final_fate" in context:
+            context["final_fate"] = context["final_fate"] + self.delta
+        return context
+
+    def __repr__(self) -> str:
+        sign = "+" if self.delta >= 0 else ""
+        return f"FinalFateEffect(delta={sign}{self.delta})"
+
