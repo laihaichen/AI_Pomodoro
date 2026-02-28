@@ -434,6 +434,17 @@ function refreshData() {
 
             // prompt count — header badge
             setVal("val-current_prompt_count-header", d.current_prompt_count);
+            // total count — header badge
+            const tcHeaderEl = document.getElementById("val-total_count-header");
+            if (tcHeaderEl) {
+                const tc = d.total_count || "—";
+                tcHeaderEl.textContent = tc;
+                // 当前条数达到总条数时亮绿
+                const cur = parseInt(d.current_prompt_count) || 0;
+                const tot = parseInt(tc) || 0;
+                tcHeaderEl.style.color = (tot > 0 && cur >= tot)
+                    ? "var(--green, #4ade80)" : "var(--dim)";
+            }
 
             // difficulty — now in 阶段性节点 section
             setVal("val-difficulty", d.difficulty);
@@ -632,6 +643,24 @@ function refreshData() {
                             : ft.startsWith("NEG_LOW") ? "var(--bright)"
                                 : ft.startsWith("POS") ? "var(--green, #4ade80)"
                                     : "var(--dim)";
+            }
+
+            // is_victory — 游戏胜利状态
+            const ivEl = document.getElementById("val-is_victory");
+            const ivCard = document.getElementById("card-is-victory");
+            if (ivEl) {
+                const iv = d.is_victory || "尚未胜利";
+                ivEl.textContent = iv;
+                const isFailed = iv.startsWith("已失败");
+                const isVictory = iv.startsWith("已胜利");
+                ivEl.style.color = isFailed ? "#f87171"
+                    : isVictory ? "var(--green, #4ade80)"
+                        : "var(--dim)";
+                if (ivCard) {
+                    ivCard.style.borderColor = isFailed ? "rgba(248,113,113,0.5)"
+                        : isVictory ? "rgba(74,222,128,0.5)"
+                            : "";
+                }
             }
 
             // update time

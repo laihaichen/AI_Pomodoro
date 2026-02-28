@@ -168,6 +168,8 @@ def main() -> int:
             write_snippet("fortune_and_misfortune", fortune_str)
             write_snippet("final_fate_value",      str(final_fate))
             write_snippet("foretold",              SNIPPETS["foretold"].default)  # 第一条无上一轮JSON
+            if final_fate <= -90:
+                write_snippet("is_victory", "已失败，失败来源：命运值")
         except (RuntimeError, OSError) as exc:
             print(f"snippet write failed: {exc}", file=sys.stderr)
         write_final_fate(final_fate)
@@ -241,6 +243,8 @@ def main() -> int:
     try:
         write_snippet("final_fate_value", str(final_fate))
         write_snippet("foretold",         category)
+        if final_fate <= -90:
+            write_snippet("is_victory", "已失败，失败来源：命运值")
     except (RuntimeError, OSError) as exc:
         print(f"final_fate_value/foretold write failed: {exc}", file=sys.stderr)
 

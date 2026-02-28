@@ -54,6 +54,21 @@ def write_offset(value: float) -> None:
             encoding="utf-8",
         )
 
+def write_snippet(key: str, value: str) -> None:
+    """Write a single snippet value to Alfred SQLite DB + JSON file."""
+    snip = SNIPPETS[key]
+    with sqlite3.connect(DB_FILE) as con:
+        con.execute(
+            "UPDATE snippets SET snippet = ? WHERE uid = ?",
+            (value, snip.uid),
+        )
+    if snip.json_path.exists():
+        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
+        payload["alfredsnippet"]["snippet"] = value
+        snip.json_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
 def compute_and_write_offset(new_count: int) -> str:
     """
@@ -81,6 +96,15 @@ def compute_and_write_offset(new_count: int) -> str:
     offset       = expect_total - real_total
 
     write_offset(offset)
+
+    # 偏移量超过 +60 分钟 → 游戏直接判负
+    if offset > 60:
+        try:
+            write_snippet("is_victory", "已失败，失败来源：时间偏移量超限")
+            print(f"⚠️  offset={offset:.1f} > 60，游戏失败：is_victory → 已失败")
+        except Exception as exc:
+            print(f"is_victory 写入失败: {exc}", file=sys.stderr)
+
     return f"-offset = {offset:.1f} 分钟（期望 {expect_total:.1f} - 真实 {real_total:.1f}）"
 
 

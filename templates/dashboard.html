@@ -30,6 +30,9 @@
                     style="font-size:11px;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase;">番茄钟进度</span>
                 <span id="val-current_prompt_count-header"
                     style="font-size:22px;font-weight:800;color:var(--bright);line-height:1;font-variant-numeric:tabular-nums;">—</span>
+                <span style="font-size:14px;color:var(--dim);font-weight:600;">/</span>
+                <span id="val-total_count-header"
+                    style="font-size:22px;font-weight:800;color:var(--dim);line-height:1;font-variant-numeric:tabular-nums;">—</span>
                 <span style="font-size:11px;color:var(--dim);">条</span>
             </div>
         </div>
@@ -285,7 +288,18 @@
         </div>
     </div>
 
+    <!-- 游戏胜利状态 -->
+    <div class="grid grid-1" style="margin-top:10px;">
+        <div class="card" id="card-is-victory">
+            <div class="card-label">🏆 游戏胜利状态</div>
+            <div id="val-is_victory" style="font-size:16px;font-weight:700;margin-top:6px;letter-spacing:0.02em;">—
+            </div>
+            <div class="card-sub" style="margin-top:4px;">-is-victory snippet · 后台自动写入</div>
+        </div>
+    </div>
+
     <!-- ── Setup Wizard Modal ── -->
+
 
     <div class="modal-overlay" id="wizard-overlay">
         <div class="modal">

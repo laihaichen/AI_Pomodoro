@@ -171,7 +171,7 @@ def collect_state() -> dict:
         "current_prompt_count", "stage", "overtime_penalty_random_num",
         "offset", "difficulty", "max_rest_time", "violationcount",
         "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
-        "random_num", "foretold", "total_count",
+        "random_num", "foretold", "total_count", "is_victory",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
@@ -508,6 +508,9 @@ def api_boss_defeated():
     try:
         BOSS_DEFEATED_FILE.parent.mkdir(parents=True, exist_ok=True)
         BOSS_DEFEATED_FILE.write_text(result, encoding="utf-8")
+        # Boss战失败 → 同步写入游戏失败状态
+        if result == "false":
+            write_snippet_value("is_victory", "已失败，失败来源：boss战失败")
         return jsonify({"ok": True, "boss_defeated": result})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
