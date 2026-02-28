@@ -167,11 +167,11 @@ def collect_state() -> dict:
 
     # ── Alfred snippets from SQLite ──────────────────────────────────────────
     snippet_keys = [
-        "total_rest_time", "countcard", "interval", "fortunevalue",
+        "total_rest_time", "countcard", "interval", "is_time_within_limit",
         "current_prompt_count", "stage", "overtime_penalty_random_num",
         "offset", "difficulty", "max_rest_time", "violationcount",
         "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
-        "random_num",
+        "random_num", "foretold",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
@@ -245,7 +245,13 @@ def collect_state() -> dict:
             ).fetchone()
             _cur_indicator = _row[0] if _row else ""
         try:
-            _numerator = int(_cur_indicator.split("/")[0])
+            _parts        = _cur_indicator.split("/")
+            _numerator    = int(_parts[0])
+            # 解析旧 snippet 里的分母（格式：「N/M 标签」）
+            _old_denom    = int(_parts[1].split()[0])
+            # 分母变化 → 任务已切换，分子必须清零
+            if _old_denom != _denominator:
+                _numerator = 0
         except (ValueError, IndexError):
             _numerator = 0
         if _denominator > 0:

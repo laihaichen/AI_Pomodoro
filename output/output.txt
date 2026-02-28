@@ -104,7 +104,7 @@ All other scripts import constants from here instead of defining them locally.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 # ── base paths ───────────────────────────────────────────────────────────────
@@ -123,15 +123,20 @@ PAUSE_TS_FILE       = DATA_DIR / "pause_timestamp.txt"
 CONT_TS_FILE        = DATA_DIR / "continue_timestamp.txt"
 H_FILE              = DATA_DIR / "h_value.txt"
 PENALIZED_REST_FILE = DATA_DIR / "penalized_rest_up_to.txt"
+MILESTONE_GOALS_FILE = DATA_DIR / "milestone_goals.json"   # 各阶段进度条分母
+HEALTH_FILE          = DATA_DIR / "health.txt"              # 健康度（初始9，只减不加）
+FINAL_FATE_FILE      = DATA_DIR / "final_fate.txt"          # 最终命运值
+
 
 # ── snippet registry ─────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
 class Snippet:
     uid: str
-    name: str       # Alfred snippet name prefix; also used for JSON filename
-    default: str    # value written on =reset; empty string → not reset
+    name: str           # Alfred snippet name prefix; also used for JSON filename
+    default: str        # value written on =reset; empty string → not reset
     resettable: bool = True
+    panel_label: str = ""  # AI面板显示名称；空字符串 = 不出现在游戏状态面板
 
     @property
     def json_filename(self) -> str:
@@ -144,18 +149,66 @@ class Snippet:
 
 
 SNIPPETS: dict[str, Snippet] = {
-    "countcard":              Snippet("247CAEF6-57F5-4BCC-8D87-3E87CDDA1D0E", "-countcard",              "0"),
-    "violationcount":         Snippet("1076C34A-79DA-42CE-A75A-EF4C853B0C2F", "-violationcount",         "0"),
-    "interval":               Snippet("0352B20F-33EE-44A0-B570-FAAF2FA1E8E8", "-interval",               "0"),
-    "fortunevalue":           Snippet("8BD89037-57B3-4964-A204-3D2D1F1250FA", "-fortunevalue",           "未到15分钟，合规"),
-    "current_prompt_count":   Snippet("F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB", "-current_prompt_count",   "0"),
-    "stage":                  Snippet("DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3", "-stage",                  "当前没有达到阶段性节点"),
-    "total_rest_time":        Snippet("B3689D50-EEDD-42FC-A4E5-D19A70BA709B", "-total_rest_time",        "0"),
-    "overtime_penalty_range": Snippet("D3D8CE6B-3AE4-4A88-91A2-9D23E0804E2D", "-overtime-penalty-range", "{random:0..0}"),
-    "offset":                 Snippet("E99CD789-4D10-4C17-9A3A-C5076BA33ADB", "-offset",                 "0.0"),
+    # ── 时间 ─────────────────────────────────────────────────────────────────
+    "current_time":           Snippet("9D341FDD-4978-449F-91CD-D108A9A64636", "-current-time",           "0",
+                                      panel_label="本条时间"),
+    # ── 学习进度 ──────────────────────────────────────────────────────────────
+    "current_prompt_count":   Snippet("F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB", "-current_prompt_count",   "0",
+                                      panel_label="当前学习记录条数"),
+    # ── 健康度（概率吉凶系统） ────────────────────────────────────────────────
+    "healthy":                Snippet("1186A78C-D0B8-4F9A-880A-B039B1BBB5E9", "-healthy",                "9",
+                                      panel_label="健康度"),
+    # ── 随机数 ───────────────────────────────────────────────────────────────
+    "random_num":             Snippet("2C5EB3C4-C0A2-4E57-B43F-E9986256F225", "-random-num",             "0",
+                                      panel_label="原始随机数"),
+    # ── 最终命运值 ────────────────────────────────────────────────────────────
+    "final_fate_value":       Snippet("373A5619-9AE9-4739-B7FE-7D511F660F80", "-final-fate-value",       "0",
+                                      panel_label="最终命运值"),
+    # ── 超时惩罚 ─────────────────────────────────────────────────────────────
+    "overtime_penalty_random_num": Snippet("D3D8CE6B-3AE4-4A88-91A2-9D23E0804E2D", "-overtime-penalty-random-num", "0",
+                                           panel_label="超时惩罚随机数"),
+    # ── 时间计算 ─────────────────────────────────────────────────────────────
+    "interval":               Snippet("0352B20F-33EE-44A0-B570-FAAF2FA1E8E8", "-interval",               "0",
+                                      panel_label="时间差"),
+    "fortunevalue":           Snippet("8BD89037-57B3-4964-A204-3D2D1F1250FA", "-fortunevalue",           "未到15分钟，合规",
+                                      panel_label="时间差是否合规的状态"),
+    "fortune_and_misfortune": Snippet("5BBAE44F-7BEC-4F9B-A578-58A9F7F84CF4", "-fortune-and-misfortune", "吉",
+                                      panel_label="吉凶结果"),
+    # ── 阶段性任务 ────────────────────────────────────────────────────────────
+    "current_task":           Snippet("38C24B4C-7AC7-43E6-B690-63DBE8FB4EAD", "-current-task",           "无",
+                                      panel_label="当前正在进行的阶段性任务"),
+    "current_progress_indicator": Snippet("B2B0E669-50DE-4C5E-9381-C5FBCF28A997", "-current-progress-indicator", "0/0 未到达进度",
+                                          panel_label="当前阶段性任务进度情况"),
+    "stage":                  Snippet("DB01CF4F-8C54-4F29-B535-9E99BEC5A4B3", "-stage",                  "当前没有达到阶段性节点",
+                                      panel_label="当前是否达到阶段性节点？"),
+    # ── Boss战 ───────────────────────────────────────────────────────────────
+    "bossfight_stage":        Snippet("4899268D-842C-4BD9-A455-FBF75DB89993", "-bossfight-stage",        "当前没有进入boss战节点",
+                                      panel_label="当前是否进入boss战节点？"),
+    # ── 命运预设事件 ─────────────────────────────────────────────────────────
+    "foretold":               Snippet("FDAF9504-8D5C-41CF-8286-1B62AA250B7D", "-foretold",               "当前为第一条记录，没有预设事件",
+                                      panel_label="应该加载的预设事件，上一轮的"),
+    # ── 休息 & 统计 ───────────────────────────────────────────────────────────
+    "total_rest_time":        Snippet("B3689D50-EEDD-42FC-A4E5-D19A70BA709B", "-total_rest_time",        "0",
+                                      panel_label="累计休息时间"),
+    "countcard":              Snippet("247CAEF6-57F5-4BCC-8D87-3E87CDDA1D0E", "-countcard",              "0",
+                                      panel_label="当前宿命卡持有数"),
+    "violationcount":         Snippet("1076C34A-79DA-42CE-A75A-EF4C853B0C2F", "-violationcount",         "0",
+                                      panel_label="人工智能当前违规次数"),
+    "offset":                 Snippet("E99CD789-4D10-4C17-9A3A-C5076BA33ADB", "-offset",                 "0.0",
+                                      panel_label="当前时间偏移值(超过正60直接判负)"),
+    # ── 设置（不出现在面板）─────────────────────────────────────────────────
     "difficulty":             Snippet("BDEE3C98-A4A1-4A2B-9046-18A12FD66083", "-difficulty",             "", resettable=False),
     "max_rest_time":          Snippet("D197E8BC-85F4-45D0-82D4-814FA0DCA629", "-max_rest_time",          "0", resettable=False),
+    # ── 阶段性里程碑任务（每3小时一档，不出现在面板主行）───────────────────
+    "hour3":                  Snippet("FFAAA6C5-754A-4B84-9DA9-0B67F14CAA9E", "-hour3",                  "当前无阶段性任务"),
+    "hour6":                  Snippet("3740920C-9296-4B2C-B62A-4F7D544F1D56", "-hour6",                  "当前无阶段性任务"),
+    "hour9":                  Snippet("97DA8F51-E403-4DBB-B715-13326F170791", "-hour9",                  "当前无阶段性任务"),
+    "hour12":                 Snippet("6A798717-84DA-4597-B5AA-5D481BC15E21", "-hour12",                 "当前无阶段性任务"),
+    # ── 休息时间戳（不出现在面板）──────────────────────────────────────────
+    "time_pause":             Snippet("320E3246-386D-4995-8708-148F7C5C2730", "-time-pause",             "0"),
+    "time_cont":              Snippet("BD542EAD-9643-4A73-8358-4BF4D9223FC5", "-time-cont",              "0"),
 }
+
 
 
 --- increase_current_prompt_count.py ---
@@ -219,7 +272,10 @@ def write_offset(value: float) -> None:
 def compute_and_write_offset(new_count: int) -> str:
     """
     offset = 期望总时间 - 真实总时间
-           = (new_count × 10 + total_rest) - (curr_ts - first_ts)
+           = ((new_count - 1) × 10 + total_rest) - (curr_ts - first_ts)
+
+    说明：发送第 1 条记录时尚无区间时长，期望时间 = 0；
+          发送第 N 条记录时已产生 N-1 个完整 10 分钟区间。
     Returns a short status string for printing.
     """
     def read_ts(path):
@@ -235,11 +291,12 @@ def compute_and_write_offset(new_count: int) -> str:
 
     real_total   = (curr_ts - first_ts).total_seconds() / 60
     total_rest   = read_snippet_float("total_rest_time")
-    expect_total = new_count * 10 + total_rest
+    expect_total = (new_count - 1) * 10 + total_rest   # 第1条时 expect=0
     offset       = expect_total - real_total
 
     write_offset(offset)
     return f"-offset = {offset:.1f} 分钟（期望 {expect_total:.1f} - 真实 {real_total:.1f}）"
+
 
 
 def read_count() -> int:
@@ -358,6 +415,7 @@ Resets:
     - -fortunevalue          → "未到15分钟，合规"
     - -current_prompt_count  → "0"
     - -stage                 → "当前没有达到阶段性节点"
+    - -bossfight-stage       → "当前没有进入boss战节点"
     - -total_rest_time       → "0"
     - -overtime-penalty-range → "{random:0..0}"
     - -offset                → "0.0"
@@ -370,7 +428,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import DATA_DIR, DB_FILE, SNIPPETS, SNIPPETS_DIR  # noqa: E402
+from config import DATA_DIR, DB_FILE, SNIPPETS, SNIPPETS_DIR, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────
 DATA_FILES_TO_CLEAR = [
@@ -450,6 +508,33 @@ def main() -> int:
         print(f"  ✓ penalized_rest_up_to → {max_rest:.1f} (= max_rest_time)")
     except Exception as exc:
         print(f"  ✗ penalized_rest_up_to 初始化失败：{exc}", file=sys.stderr)
+
+    # Reset milestone_goals.json — 分母全部清零
+    try:
+        MILESTONE_GOALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        MILESTONE_GOALS_FILE.write_text(
+            json.dumps({"hour3": 0, "hour6": 0, "hour9": 0, "hour12": 0},
+                       ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print("  ✓ milestone_goals.json → all zeros")
+    except Exception as exc:
+        print(f"  ✗ milestone_goals.json 重置失败：{exc}", file=sys.stderr)
+
+    # Reset health.txt → 9
+    try:
+        HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
+        HEALTH_FILE.write_text("9", encoding="utf-8")
+        print("  ✓ health.txt → 9")
+    except Exception as exc:
+        print(f"  ✗ health.txt 重置失败：{exc}", file=sys.stderr)
+
+    # Clear final_fate.txt
+    try:
+        FINAL_FATE_FILE.write_text("", encoding="utf-8")
+        print("  ✓ final_fate.txt → cleared")
+    except Exception as exc:
+        print(f"  ✗ final_fate.txt 清空失败：{exc}", file=sys.stderr)
 
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0
@@ -580,12 +665,40 @@ from config import (  # noqa: E402
     CURR_TS_FILE, PREV_TS_FILE, FIRST_TS_FILE,
     PAUSE_TS_FILE, CONT_TS_FILE,
     PENALIZED_REST_FILE, H_FILE,
-    DB_FILE, SNIPPETS,
+    DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
+    HEALTH_FILE, FINAL_FATE_FILE,
 )
 
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
+
+# ── Boss战触发文本（模块级常量，供 collect_state 与 api_setup 共享）────────────
+_BOSSFIGHT_ACTIVE_TEXT = """\
+当前已经达到boss战节点，请AI根据游戏规则出题。
+
+【boss战阶段规则回忆】
+
+硬核难度：额外胜利条件 — Boss战
+
+当距离完成当日目标还剩1条学习记录时自动触发Boss战
+出题节点：在倒数第二条用户prompt对应的AI输出末尾，根据当日学习内容生成一题综合考核题
+回答配额：玩家仅有1次回答机会（最后一条prompt）
+作答方式：玩家必须将答案手写在白板上（白板手撕），并将白板上的手写答案拍照提交给AI进行审核
+断网要求：玩家在开始回答的那一刻必须完全脱离任何互联网，不能从任何外部来源获取答案
+唯一的例外：玩家允许查看学习时间追踪系统的历史记录（之前所有回合的AI回复内容），但不能产生历史记录之外的任何新记录（即不能发送新的prompt或使用任何在线资源）
+判定规则（No Mercy）：若玩家答对则通过；若答错或未在最后一条prompt内作答，立即判定Boss战失败→模拟人生游戏失败，没有第二次机会
+休息禁止：Boss战期间禁止开启休息功能，玩家不能利用休息时间钻空子
+括号例外机制限制：Boss战期间，括号例外机制被允许使用的唯一理由是向AI声明比赛规则；玩家不能通过括号例外机制询问关于题目本身的任何内容
+继承关系：硬核难度需同时满足平衡难度的阶段性最低任务指标，即所有条件叠加
+
+对AI出题者的要求：
+
+1. 客观性原则：所出的Boss战题目必须有客观的正确答案和客观的错误答案，玩家的回答应该是明确的正确或明确的错误（对错模糊的主观题不适合作为Boss战题目）
+2. 难度适中原则：题目既不能太简单（否则不符合Boss的挑战性），也不能太难（超出白板手撕的合理难度范围）
+3. 不超纲原则：所出的Boss战题目必须是玩家当天学习内容的反映，如果玩家当天吃透了所学内容，应该能够合理地成功完成Boss战题目
+4. 评分标准：出题时需同时说明客观的评分标准，以便判定答案的正确性\
+"""
 
 # ── snippet writer (for setup wizard) ────────────────────────────────────────
 
@@ -619,6 +732,7 @@ def generate_launch_prompt(
         ("3小时",  "第18条记录"),
         ("6小时",  "第36条记录"),
         ("9小时",  "第54条记录"),
+        ("12小时", "第72条记录"),
     ]
     lines = [
         f"启动一个 {today} 的学习时间追踪系统，期望时长是 {hours} 小时",
@@ -699,8 +813,10 @@ def collect_state() -> dict:
     # ── Alfred snippets from SQLite ──────────────────────────────────────────
     snippet_keys = [
         "total_rest_time", "countcard", "interval", "fortunevalue",
-        "current_prompt_count", "stage", "overtime_penalty_range",
+        "current_prompt_count", "stage", "overtime_penalty_random_num",
         "offset", "difficulty", "max_rest_time", "violationcount",
+        "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
+        "random_num", "foretold",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
@@ -715,6 +831,94 @@ def collect_state() -> dict:
             state.setdefault(key, "DB error")
         state["db_error"] = str(exc)
 
+    # ── 里程碑阶段计算 ───────────────────────────────────────────────────────
+    # 1-18 → hour3，19-36 → hour6，37-54 → hour9，55-72 → hour12
+    _MILESTONE_SLOTS = [
+        (1,  18, "hour3"),
+        (19, 36, "hour6"),
+        (37, 54, "hour9"),
+        (55, 72, "hour12"),
+    ]
+    _DEFAULT_MILESTONE = "当前无阶段性任务"
+    try:
+        count = int(state.get("current_prompt_count") or 0)
+    except (ValueError, TypeError):
+        count = 0
+
+    current_key = None
+    for lo, hi, key in _MILESTONE_SLOTS:
+        if lo <= count <= hi:
+            current_key = key
+            break
+
+    state["current_milestone_key"]  = current_key   # e.g. "hour3" or None
+    state["current_milestone_text"] = (
+        state.get(current_key, _DEFAULT_MILESTONE) if current_key
+        else state.get("hour3", _DEFAULT_MILESTONE)  # count=0：预填第一阶段任务，避免首条 prompt 读到「无」
+    )
+    # 所有已设置（非默认）的里程碑列表
+    state["milestones_set"] = [
+        {"key": key, "label": label, "text": state.get(key, _DEFAULT_MILESTONE)}
+        for key, label in [("hour3","0~3小时"), ("hour6","3~6小时"),
+                           ("hour9","6~9小时"), ("hour12","9~12小时")]
+        if state.get(key, _DEFAULT_MILESTONE) != _DEFAULT_MILESTONE
+    ]
+
+    # ── 同步写入 -current-task snippet ──────────────────────────────────────
+    # 每次 /api/state 轮询时自动将「当前阶段任务」同步进 Alfred snippet
+    try:
+        _task_to_write = state["current_milestone_text"] or SNIPPETS["current_task"].default
+        write_snippet_value("current_task", _task_to_write)
+    except Exception:
+        pass  # 写入失败不影响 Dashboard 展示
+
+    # ── 同步写入 -current-progress-indicator snippet ──────────────────────────
+    # 读取 milestone_goals.json 中当前槽位的分母，组合成「X/Y 未到达进度」写入 snippet
+    try:
+        _goals: dict = {}
+        if MILESTONE_GOALS_FILE.exists():
+            _goals = json.loads(MILESTONE_GOALS_FILE.read_text(encoding="utf-8"))
+        # 当前槽位的分母（count=0 时也用 hour3 的分母）
+        _goal_key = current_key or "hour3"
+        _denominator = int(_goals.get(_goal_key, 0))
+        # 读取当前 snippet 值，解析分子（格式：「N/M ...」）
+        _cur_indicator = ""
+        with sqlite3.connect(DB_FILE) as _con:
+            _row = _con.execute(
+                "SELECT snippet FROM snippets WHERE uid = ?",
+                (SNIPPETS["current_progress_indicator"].uid,)
+            ).fetchone()
+            _cur_indicator = _row[0] if _row else ""
+        try:
+            _numerator = int(_cur_indicator.split("/")[0])
+        except (ValueError, IndexError):
+            _numerator = 0
+        if _denominator > 0:
+            _label = "已到达进度" if _numerator >= _denominator else "未到达进度"
+            _progress_str = f"{_numerator}/{_denominator} {_label}"
+        else:
+            _progress_str = SNIPPETS["current_progress_indicator"].default  # "0/0 未到达进度"
+        write_snippet_value("current_progress_indicator", _progress_str)
+        state["current_progress_indicator"] = _progress_str
+        state["current_milestone_denominator"] = _denominator
+    except Exception:
+        pass
+
+    # ── Boss战节点自动触发 ────────────────────────────────────────────────────
+    # 硬核难度下，每次轮询检查 current_prompt_count 是否等于目标条数
+    # snippet 值格式：「等待Boss战节点（第N条）」→ 达到时改写为完整 boss 战文本
+    try:
+        import re as _re
+        _diff     = state.get("difficulty", "")
+        _bfs_cur  = state.get("bossfight_stage", "")
+        if _diff == "硬核难度" and _bfs_cur not in ("当前难度不适用", _BOSSFIGHT_ACTIVE_TEXT):
+            _m = _re.search(r"第(\d+)条", _bfs_cur)
+            if _m and count == int(_m.group(1)):
+                write_snippet_value("bossfight_stage", _BOSSFIGHT_ACTIVE_TEXT)
+                state["bossfight_stage"] = _BOSSFIGHT_ACTIVE_TEXT
+    except Exception:
+        pass
+
     # ── 真实学习时长 = 墙上时间 - 累计休息时间 ──────────────────────────────
     if first_raw and curr_raw:
         try:
@@ -727,6 +931,19 @@ def collect_state() -> dict:
             state["elapsed_minutes"] = None
     else:
         state["elapsed_minutes"] = None
+
+    # ── 健康度 & 最终命运值 ────────────────────────────────────────────
+    try:
+        h_text = HEALTH_FILE.read_text(encoding="utf-8").strip() if HEALTH_FILE.exists() else "9"
+        state["health"] = int(h_text) if h_text.isdigit() else 9
+    except Exception:
+        state["health"] = 9
+
+    try:
+        ff_text = FINAL_FATE_FILE.read_text(encoding="utf-8").strip() if FINAL_FATE_FILE.exists() else ""
+        state["final_fate"] = int(ff_text) if ff_text.lstrip("-").isdigit() else None
+    except Exception:
+        state["final_fate"] = None
 
     return state
 
@@ -841,825 +1058,135 @@ def api_setup():
         write_snippet_value("max_rest_time", max_rest)
         write_snippet_value("difficulty",    difficulty)
 
+        # ── 写入里程碑阶段任务 ────────────────────────────────────────────
+        # 与 JS MILESTONE_DEFS 保持一致：门槛 3/6/9/12 小时对应 hour3/6/9/12
+        _MILESTONE_MAP = [
+            (3,  "hour3"),
+            (6,  "hour6"),
+            (9,  "hour9"),
+            (12, "hour12"),
+        ]
+        # 先全部重置为默认值（防止旧数据残留）
+        default_milestone = SNIPPETS["hour3"].default  # "当前无阶段性任务"
+        for _, key in _MILESTONE_MAP:
+            write_snippet_value(key, default_milestone)
+
+        # 再按学习时长写入用户填写的内容
+        applicable_keys = [key for threshold, key in _MILESTONE_MAP if hours >= threshold]
+        for key, text in zip(applicable_keys, milestones):
+            if text:  # 跳过空字符串
+                write_snippet_value(key, text)
+
+        # ── 写入进度条分母到 milestone_goals.json ────────────────────────────
+        denominators = data.get("denominators", [])  # 与 milestones[] 等长的整数列表
+        goals: dict[str, int] = {"hour3": 0, "hour6": 0, "hour9": 0, "hour12": 0}
+        for key, denom in zip(applicable_keys, denominators):
+            try:
+                goals[key] = max(0, int(denom))
+            except (ValueError, TypeError):
+                goals[key] = 0
+        MILESTONE_GOALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        MILESTONE_GOALS_FILE.write_text(
+            json.dumps(goals, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        # 同步重置 -current-progress-indicator（分子清零）
+        _init_denom = goals.get("hour3", 0)
+        write_snippet_value(
+            "current_progress_indicator",
+            f"0/{_init_denom} 未到达进度" if _init_denom > 0
+            else SNIPPETS["current_progress_indicator"].default
+        )
+
+        # ── Boss战节点初始化 ──────────────────────────────────────────────────
+        if difficulty == "硬核难度":
+            # 触发节点：倒数第2条prompt输出（即第 hours*6 - 1 条）
+            bossfight_target = hours * 6 - 1
+            write_snippet_value("bossfight_stage", f"等待Boss战节点（第{bossfight_target}条）")
+        else:
+            write_snippet_value("bossfight_stage", "当前难度不适用")
+
         prompt = generate_launch_prompt(hours, max_rest, difficulty, milestones, theme)
         return jsonify({"ok": True, "prompt": prompt})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/health-adjust", methods=["POST"])
+def api_health_adjust():
+    """Decrease (or increase) health by delta, clamped to [0, 10]."""
+    data  = request.get_json()
+    delta = int(data.get("delta", 0))
+    try:
+        current = int(HEALTH_FILE.read_text(encoding="utf-8").strip()) \
+                  if HEALTH_FILE.exists() else 9
+        new_val = max(0, min(current + delta, 10))
+        HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
+        HEALTH_FILE.write_text(str(new_val), encoding="utf-8")
+        return jsonify({"ok": True, "health": new_val})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/reset", methods=["POST"])
+
+def api_reset():
+    """Run reset.py to wipe all game state back to Day-0 defaults."""
+    try:
+        import subprocess as _sp
+        result = _sp.run(
+            ["python3", "/Users/haichenlai/Desktop/Prompt/reset.py"],
+            capture_output=True, text=True, timeout=15
+        )
+        output = result.stdout + result.stderr
+        ok = result.returncode == 0
+        return jsonify({"ok": ok, "output": output})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/progress-step", methods=["POST"])
+
+def api_progress_step():
+    """Increment or decrement the progress indicator numerator by delta (+1 / -1)."""
+    data = request.get_json()
+    delta = int(data.get("delta", 0))
+    try:
+        # Read current value from Alfred DB
+        with sqlite3.connect(DB_FILE) as con:
+            row = con.execute(
+                "SELECT snippet FROM snippets WHERE uid = ?",
+                (SNIPPETS["current_progress_indicator"].uid,)
+            ).fetchone()
+        cur = row[0] if row else "0/0 未到达进度"
+
+        # Parse "N/M ..." format
+        parts = cur.split("/")
+        numerator   = int(parts[0].strip())
+        denominator = int(parts[1].strip().split()[0])
+
+        # Clamp new numerator to [0, denominator]
+        new_num = max(0, min(numerator + delta, denominator))
+        label   = "已到达进度" if new_num >= denominator > 0 else "未到达进度"
+        new_str = f"{new_num}/{denominator} {label}"
+
+        write_snippet_value("current_progress_indicator", new_str)
+        return jsonify({"ok": True, "value": new_str})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/")
 def index():
-    return render_template_string(HTML)
+    return render_template("dashboard.html")
 
 
-# ── HTML / CSS / JS (single-file frontend) ───────────────────────────────────
 
-HTML = r"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学习追踪 Dashboard</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+# ── HTML / CSS / JS → 已拆分到独立文件 ─────────────────────────────────────
+# templates/dashboard.html  — HTML 结构
+# static/dashboard.css      — 样式
+# static/dashboard.js       — 交互逻辑
 
-  :root {
-    --bg:      #111111;
-    --surface: #1a1a1a;
-    --border:  #2c2c2c;
-    --text:    #e0e0e0;
-    --dim:     #555555;
-    --bright:  #ffffff;
-  }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-    min-height: 100vh;
-    padding: 24px;
-  }
-
-  /* ── header ── */
-  .header {
-    display: flex; align-items: center;
-    justify-content: space-between; margin-bottom: 28px;
-  }
-  .header-left { display: flex; align-items: center; gap: 16px; }
-  .tomato { font-size: 48px; line-height: 1; }
-  .title-block h1 { font-size: 20px; font-weight: 600; color: var(--text); }
-  .title-block p  { font-size: 12px; color: var(--dim); margin-top: 3px; }
-  .refresh-badge, .pomodoro-timer {
-    font-size: 12px; color: var(--dim);
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 20px; padding: 6px 14px;
-  }
-
-  /* ── section labels ── */
-  .section-label {
-    font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
-    color: var(--dim); text-transform: uppercase;
-    margin: 22px 0 8px;
-    border-bottom: 1px solid var(--border); padding-bottom: 6px;
-  }
-
-  /* ── grid ── */
-  .grid { display: grid; gap: 10px; }
-  .grid-2 { grid-template-columns: repeat(2, 1fr); }
-  .grid-3 { grid-template-columns: repeat(3, 1fr); }
-  .grid-4 { grid-template-columns: repeat(4, 1fr); }
-
-  /* ── card ── */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  /* all accent-* classes are now no-ops — same as .card */
-  .card.accent-green, .card.accent-yellow, .card.accent-red,
-  .card.accent-blue,  .card.accent-mauve,  .card.accent-peach,
-  .card.accent-teal   { border: 1px solid var(--border); }
-
-  .card-label {
-    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
-    color: var(--dim); text-transform: uppercase; margin-bottom: 8px;
-  }
-  .card-value {
-    font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.1;
-  }
-  .card-value.small {
-    font-size: 13px; font-weight: 400; line-height: 1.6; word-break: break-word;
-  }
-  .card-sub { font-size: 11px; color: var(--dim); margin-top: 5px; }
-
-  /* value states — monochrome only */
-  .val-green  { color: var(--text)   !important; }
-  .val-yellow { color: var(--text)   !important; }
-  .val-red    { color: var(--bright) !important; font-weight: 700; }
-  .val-blue   { color: var(--text)   !important; }
-  .val-mauve  { color: var(--text)   !important; }
-  .val-peach  { color: var(--text)   !important; }
-  .val-teal   { color: var(--text)   !important; }
-
-  /* hero card */
-  .hero-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 22px;
-    display: flex; align-items: center; gap: 18px;
-  }
-  .hero-tomato { font-size: 40px; }
-  .hero-count  { font-size: 60px; font-weight: 800; color: var(--bright); line-height: 1; }
-  .hero-label  { font-size: 13px; color: var(--dim); margin-top: 4px; }
-  .hero-right  { display: flex; flex-direction: column; gap: 4px; }
-
-  /* action buttons */
-  .next-pomodoro-btn {
-    background: var(--border); border: 1px solid #3a3a3a;
-    border-radius: 10px; color: var(--text);
-    font-size: 12px; font-weight: 600;
-    padding: 10px 12px; cursor: pointer; line-height: 1.5;
-    text-align: center; transition: background 0.15s, color 0.15s;
-    text-decoration: none; font-family: inherit;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column;
-  }
-  .next-pomodoro-btn .btn-sub {
-    font-weight: 400; font-size: 0.85em; opacity: 0.7; margin-top: 3px;
-  }
-  .next-pomodoro-btn:hover  { background: #333333; color: var(--bright); }
-  .next-pomodoro-btn:active { background: #444444; }
-  .next-pomodoro-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  /* stage */
-  .stage-card .card-value.small { font-size: 13px; white-space: pre-line; }
-  .stage-ok { color: var(--dim)  !important; }
-  .stage-na { color: var(--dim)  !important; }
-
-  @media (max-width: 700px) {
-    .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
-    .grid-2 { grid-template-columns: 1fr; }
-  }
-
-  /* ── setup button ── */
-  .setup-btn {
-    background: var(--border); border: 1px solid #3a3a3a;
-    color: var(--text); border-radius: 20px;
-    padding: 7px 16px; font-size: 12px; font-weight: 600;
-    cursor: pointer; transition: background 0.15s; font-family: inherit;
-  }
-  .setup-btn:hover { background: #333333; color: var(--bright); }
-
-  /* ── wizard modal ── */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.75); z-index: 100;
-    align-items: center; justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 32px 36px;
-    width: min(540px, 95vw); max-height: 90vh;
-    overflow-y: auto; position: relative;
-  }
-  .modal-close {
-    position: absolute; top: 14px; right: 18px;
-    background: none; border: none; color: var(--dim);
-    font-size: 18px; cursor: pointer;
-  }
-  .modal-close:hover { color: var(--text); }
-  .wizard-progress { display: flex; gap: 5px; margin-bottom: 26px; }
-  .wizard-dot {
-    height: 3px; border-radius: 2px; flex: 1;
-    background: var(--border); transition: background 0.3s;
-  }
-  .wizard-dot.done   { background: var(--dim); }
-  .wizard-dot.active { background: var(--text); }
-  .wizard-step-title {
-    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-    color: var(--dim); text-transform: uppercase; margin-bottom: 6px;
-  }
-  .wizard-step-heading {
-    font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px;
-  }
-  .wizard-step-hint {
-    font-size: 13px; color: var(--dim); margin-bottom: 18px; line-height: 1.6;
-  }
-  .wizard-input {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-size: 15px;
-    padding: 11px 14px; outline: none; transition: border-color 0.2s;
-    font-family: inherit;
-  }
-  .wizard-input:focus { border-color: var(--dim); }
-  .wizard-input.error { border-color: var(--text); }
-  .wizard-select {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-size: 15px;
-    padding: 11px 14px; outline: none; appearance: none;
-    cursor: pointer; font-family: inherit;
-  }
-  .wizard-select:focus { border-color: var(--dim); }
-  .wizard-textarea {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-size: 13px;
-    padding: 11px 14px; outline: none; resize: vertical; min-height: 80px;
-    font-family: inherit; line-height: 1.6;
-  }
-  .wizard-textarea:focus { border-color: var(--dim); }
-  .wizard-error { color: var(--text); font-size: 12px; margin-top: 6px; min-height: 18px; }
-  .wizard-btns {
-    display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end;
-  }
-  .btn-prev {
-    background: none; border: 1px solid var(--border);
-    color: var(--dim); border-radius: 8px; padding: 9px 20px;
-    font-size: 13px; cursor: pointer; font-family: inherit;
-  }
-  .btn-prev:hover { border-color: var(--text); color: var(--text); }
-  .btn-next {
-    background: var(--text); border: none; color: var(--bg);
-    border-radius: 8px; padding: 9px 26px;
-    font-size: 13px; font-weight: 700; cursor: pointer;
-    font-family: inherit; transition: opacity 0.15s;
-  }
-  .btn-next:hover { opacity: 0.85; }
-  .btn-copy {
-    background: var(--text); border: none; color: var(--bg);
-    border-radius: 8px; padding: 9px 22px;
-    font-size: 13px; font-weight: 700; cursor: pointer;
-    font-family: inherit; transition: opacity 0.15s;
-  }
-  .btn-copy:hover { opacity: 0.85; }
-  .prompt-result {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text);
-    font-size: 12px; padding: 12px 14px;
-    font-family: "SF Mono", "Menlo", monospace;
-    line-height: 1.7; resize: none; min-height: 200px; outline: none;
-  }
-  .copy-success { color: var(--text); font-size: 12px; margin-top: 8px; min-height: 20px; }
-</style>
-</head>
-<body>
-
-<div class="header">
-  <div class="header-left">
-    <div class="tomato">🍅</div>
-    <div class="title-block">
-      <h1>学习追踪 Dashboard</h1>
-      <p>实时读取 Alfred Snippets &amp; 本地数据文件</p>
-    </div>
-  </div>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
-    <div class="pomodoro-timer">本次番茄钟计时：<span id="tomato-timer" style="font-weight:700;color:var(--bright); font-variant-numeric: tabular-nums;">0秒</span></div>
-    <div class="refresh-badge">每 5 秒刷新 · 上次更新：<span id="last-update">—</span></div>
-  </div>
-</div>
-
-<!-- ── 番茄钟进度 ── -->
-<div class="section-label">番茄钟进度</div>
-<div class="hero-card" id="hero-card">
-  <div class="hero-tomato" style="font-size:32px; color:var(--dim);">#</div>
-  <div>
-    <div class="hero-count" id="val-current_prompt_count">—</div>
-    <div class="hero-label">当前第几条番茄钟记录</div>
-  </div>
-  <div style="display:flex;gap:8px;align-items:stretch;margin-left:16px;flex:1;">
-    <button class="next-pomodoro-btn" style="flex:2;min-width:130px;"
-            onclick="triggerNextPomodoro(this)"
-            title="执行 AppleScript：btn_next_pomodoro">
-      <span>推进番茄钟记录<br>并向AI发送学习进度</span>
-      <span class="btn-sub">（请记得剪切板上有内容）</span>
-    </button>
-    <button class="next-pomodoro-btn" style="flex:2;min-width:130px;"
-            onclick="triggerStayPomodoro(this)"
-            title="执行 AppleScript：btn_stay">
-      <span>不推进番茄钟记录<br>并向AI发送学习进度</span>
-      <span class="btn-sub">（请记得剪切板上有内容）</span>
-    </button>
-    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
-            onclick="triggerPause(this)"
-            title="执行 AppleScript：btn_pause">
-      进入休息时间
-    </button>
-    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
-            onclick="triggerContinue(this)"
-            title="执行 AppleScript：btn_continue">
-      从休息时间恢复
-    </button>
-    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
-            onclick="triggerGetCard(this)"
-            title="执行 AppleScript：btn_getcard">
-      获得一张宿命卡
-    </button>
-    <button class="next-pomodoro-btn" style="flex:1;min-width:80px;"
-            onclick="triggerUseCard(this)"
-            title="执行 AppleScript：btn_usecard">
-      <span>使用一张宿命卡</span>
-      <span class="btn-sub">（请将想锁定的区间复制到剪切板）</span>
-    </button>
-  </div>
-  <div class="hero-right" style="margin-left:auto; text-align:right;">
-    <div style="font-size:12px;color:var(--dim);">当前难度</div>
-    <div id="val-difficulty" style="font-size:18px;font-weight:700;color:var(--text);">—</div>
-  </div>
-</div>
-
-<!-- ── 时间戳 ── -->
-<div class="section-label">时间戳</div>
-<div class="grid grid-4">
-  <div class="card accent-blue">
-    <div class="card-label">当前时间戳</div>
-    <div class="card-value" id="val-curr_ts" style="font-size:20px;">—</div>
-    <div class="card-sub">curr_timestamp.txt</div>
-  </div>
-  <div class="card accent-blue">
-    <div class="card-label">上一次时间戳</div>
-    <div class="card-value" id="val-prev_ts" style="font-size:20px;">—</div>
-    <div class="card-sub">prev_timestamp.txt</div>
-  </div>
-  <div class="card accent-teal">
-    <div class="card-label">今日开始时间</div>
-    <div class="card-value" id="val-first_ts" style="font-size:20px;">—</div>
-    <div class="card-sub">first_timestamp.txt</div>
-  </div>
-  <div class="card accent-teal">
-    <div class="card-label">已学习时长</div>
-    <div class="card-value" id="val-elapsed_minutes" style="font-size:20px;">—</div>
-    <div class="card-sub">分钟（curr - first）</div>
-  </div>
-</div>
-
-<!-- ── 时间间隔 & 吉凶 ── -->
-<div class="section-label">本轮区间</div>
-<div class="grid grid-3">
-  <div class="card accent-peach">
-    <div class="card-label">当前时间间隔</div>
-    <div class="card-value" id="val-interval">—</div>
-    <div class="card-sub">分钟（&gt;15 min → 凶）</div>
-  </div>
-  <div class="card">
-    <div class="card-label">是否超时？（吉凶值）</div>
-    <div class="card-value small" id="val-fortunevalue">—</div>
-  </div>
-  <div class="card">
-    <div class="card-label">时间偏移量</div>
-    <div class="card-value" id="val-offset">—</div>
-    <div class="card-sub">偏移量 &gt; 60 → 判负</div>
-  </div>
-</div>
-
-<!-- ── 休息 ── -->
-<div class="section-label">休息状态</div>
-<div class="grid grid-3">
-  <div class="card accent-green">
-    <div class="card-label">最大允许休息时间</div>
-    <div class="card-value" id="val-max_rest_time">—</div>
-    <div class="card-sub">分钟（-max_rest_time snippet）</div>
-  </div>
-  <div class="card accent-green">
-    <div class="card-label">今日累计休息时间</div>
-    <div class="card-value" id="val-total_rest_time">—</div>
-    <div class="card-sub">分钟（-total_rest_time snippet）</div>
-  </div>
-  <div class="card" id="card-last-rest">
-    <div class="card-label">最近休息操作</div>
-    <div class="card-value small" id="val-last_rest_action">—</div>
-  </div>
-</div>
-
-<!-- ── 惩罚 ── -->
-<div class="section-label">超时惩罚</div>
-<div class="grid grid-3">
-  <div class="card accent-red">
-    <div class="card-label">累计超时惩罚 H</div>
-    <div class="card-value" id="val-h_value">—</div>
-    <div class="card-sub">分钟（h_value.txt）</div>
-  </div>
-  <div class="card accent-red">
-    <div class="card-label">超时惩罚随机数范围</div>
-    <div class="card-value small" id="val-overtime_penalty_range">—</div>
-    <div class="card-sub">-overtime-penalty-range</div>
-  </div>
-  <div class="card accent-mauve">
-    <div class="card-label">宿命卡数量</div>
-    <div class="card-value" id="val-countcard">—</div>
-    <div class="card-sub">-countcard snippet</div>
-  </div>
-</div>
-
-<!-- ── 阶段性节点 ── -->
-<div class="section-label">阶段性节点 &amp; 游戏状态</div>
-<div class="grid grid-2">
-  <div class="card stage-card">
-    <div class="card-label">当前阶段性节点状态</div>
-    <div class="card-value small" id="val-stage">—</div>
-  </div>
-  <div class="card accent-mauve">
-    <div class="card-label">违规次数</div>
-    <div class="card-value" id="val-violationcount">—</div>
-    <div class="card-sub">-violationcount snippet</div>
-  </div>
-</div>
-
-<!-- ── Setup Wizard Modal ── -->
-<div class="modal-overlay" id="wizard-overlay">
-  <div class="modal">
-    <button class="modal-close" onclick="closeWizard()">✕</button>
-    <div class="wizard-progress" id="wizard-progress"></div>
-    <div id="wizard-body"></div>
-  </div>
-</div>
-
-<script>
-// ── Wizard state ────────────────────────────────────────────────────────────
-let wData = {};      // collected answers
-let wSteps = [];     // built after hours is known
-let wCurrent = 0;    // current step index
-
-const MILESTONE_DEFS = [
-  { range: "0 ~ 3小时",  record: "第18条记录", hours: 3 },
-  { range: "3 ~ 6小时",  record: "第36条记录", hours: 6 },
-  { range: "6 ~ 9小时",  record: "第54条记录", hours: 9 },
-];
-
-function buildSteps(hours) {
-  const steps = [];
-
-  // Step 0: hours (already collected, we rebuild after)
-  steps.push({ id: "hours", type: "number",
-    title: "计划学习时长", heading: "今天计划学习几小时？",
-    hint: "请输入 1 ~ 14 之间的整数。",
-    min: 1, max: 14, placeholder: "例：9",
-  });
-
-  // Milestone steps
-  MILESTONE_DEFS.forEach((m, i) => {
-    if (hours >= m.hours) {
-      steps.push({ id: `milestone_${i}`, type: "text",
-        title: `阶段目标 ${i+1} / ${Math.floor(hours/3)}`,
-        heading: `${m.range} 阶段最低完成指标`,
-        hint: `${m.range}（${m.record}）达到时，你希望完成什么任务？`,
-        placeholder: "例：完成 3 道算法题",
-      });
-    }
-  });
-
-  // Max rest
-  steps.push({ id: "max_rest", type: "number",
-    title: "休息设置", heading: "今天允许的最长休息时间",
-    hint: "单位：分钟。",
-    min: 1, max: 300, placeholder: "例：120",
-  });
-
-  // Difficulty
-  steps.push({ id: "difficulty", type: "select",
-    title: "游戏难度", heading: "请选择今天的游戏难度",
-    hint: "难度影响阶段性节点检查和 Boss 战规则。",
-    options: ["硬核难度", "平衡难度", "探索者难度"],
-  });
-
-  // Theme
-  steps.push({ id: "theme", type: "textarea",
-    title: "故事主题", heading: "今天的模拟人生故事主题",
-    hint: "描述你希望 AI 为今天的学习旅程设定的故事背景与主角。",
-    placeholder: "例：主人公是一个降生在 “KK诈骗园区” 的1岁婴儿，并且被一群诈骗犯养大。",
-    required: false,
-  });
-
-  // Result
-  steps.push({ id: "result", type: "result",
-    title: "初始化完成", heading: "你的初始化 Prompt 已生成",
-    hint: "以下内容已自动写入 -max_rest_time 与 -difficulty。请将 Prompt 复制给 AI 聊天工具开始今天的学习。",
-  });
-
-  return steps;
-}
-
-// ── Modal open/close ────────────────────────────────────────────────────────
-function openWizard() {
-  wData = {};
-  wCurrent = 0;
-  wSteps = buildSteps(0); // start with step 0 only until hours known
-  document.getElementById("wizard-overlay").classList.add("open");
-  renderStep();
-}
-function closeWizard() {
-  document.getElementById("wizard-overlay").classList.remove("open");
-}
-document.getElementById("wizard-overlay").addEventListener("click", e => {
-  if (e.target === e.currentTarget) closeWizard();
-});
-
-// ── Render current step ──────────────────────────────────────────────────────
-function renderProgress() {
-  const prog = document.getElementById("wizard-progress");
-  prog.innerHTML = wSteps.map((_, i) => {
-    let cls = "wizard-dot";
-    if (i < wCurrent) cls += " done";
-    else if (i === wCurrent) cls += " active";
-    return `<div class="${cls}"></div>`;
-  }).join("");
-}
-
-function renderStep() {
-  renderProgress();
-  const step = wSteps[wCurrent];
-  const body = document.getElementById("wizard-body");
-  const isLast = wCurrent === wSteps.length - 1;
-  const isFirst = wCurrent === 0;
-  const savedVal = wData[step.id] ?? "";
-
-  let inputHTML = "";
-  if (step.type === "number") {
-    inputHTML = `<input id="w-input" class="wizard-input" type="number"
-      min="${step.min}" max="${step.max}" placeholder="${step.placeholder}"
-      value="${savedVal}" />`;
-  } else if (step.type === "text") {
-    inputHTML = `<input id="w-input" class="wizard-input" type="text"
-      placeholder="${step.placeholder}" value="${savedVal}" />`;
-  } else if (step.type === "select") {
-    const opts = step.options.map(o =>
-      `<option value="${o}" ${o === savedVal ? "selected" : ""}>${o}</option>`
-    ).join("");
-    inputHTML = `<select id="w-input" class="wizard-select">${opts}</select>`;
-  } else if (step.type === "textarea") {
-    inputHTML = `<textarea id="w-input" class="wizard-textarea"
-      placeholder="${step.placeholder}">${savedVal}</textarea>`;
-  } else if (step.type === "result") {
-    inputHTML = `<textarea id="w-result" class="prompt-result" readonly></textarea>
-      <div class="copy-success" id="copy-msg"></div>`;
-  }
-
-  const prevBtn = isFirst ? "" :
-    `<button class="btn-prev" onclick="wizardPrev()">← 上一步</button>`;
-
-  let nextBtn = "";
-  if (step.type === "result") {
-    nextBtn = `<button class="btn-copy" onclick="copyPrompt()">📋 复制 Prompt</button>`;
-  } else {
-    nextBtn = `<button class="btn-next" onclick="wizardNext()">
-      ${isLast ? "完成" : "下一步 →"}</button>`;
-  }
-
-  body.innerHTML = `
-    <div class="wizard-step-title">步骤 ${wCurrent + 1} / ${wSteps.length}</div>
-    <div class="wizard-step-heading">${step.heading}</div>
-    <div class="wizard-step-hint">${step.hint}</div>
-    ${inputHTML}
-    <div class="wizard-error" id="w-error"></div>
-    <div class="wizard-btns">${prevBtn}${nextBtn}</div>
-  `;
-
-  // If result step, fetch prompt from backend
-  if (step.type === "result") {
-    submitSetup();
-  }
-
-  // Auto-focus input
-  const inp = document.getElementById("w-input");
-  if (inp) { inp.focus(); inp.addEventListener("keydown", e => { if (e.key === "Enter" && step.type !== "textarea") wizardNext(); }); }
-}
-
-// ── Validate and advance ────────────────────────────────────────────────────
-function wizardNext() {
-  const step = wSteps[wCurrent];
-  const errEl = document.getElementById("w-error");
-  errEl.textContent = "";
-
-  if (step.type === "number") {
-    const inp = document.getElementById("w-input");
-    const val = parseInt(inp.value);
-    if (isNaN(val) || val < step.min || val > step.max) {
-      inp.classList.add("error");
-      errEl.textContent = `请输入 ${step.min} ~ ${step.max} 之间的整数。`;
-      return;
-    }
-    inp.classList.remove("error");
-    wData[step.id] = val;
-    // After hours step, rebuild full step list
-    if (step.id === "hours") {
-      wSteps = buildSteps(val);
-    }
-  } else if (step.type === "text") {
-    const inp = document.getElementById("w-input");
-    const val = inp.value.trim();
-    if (!val) {
-      inp.classList.add("error");
-      errEl.textContent = "请输入内容。";
-      return;
-    }
-    inp.classList.remove("error");
-    wData[step.id] = val;
-  } else if (step.type === "select") {
-    wData[step.id] = document.getElementById("w-input").value;
-  } else if (step.type === "textarea") {
-    wData[step.id] = (document.getElementById("w-input").value || "").trim();
-  }
-
-  wCurrent++;
-  renderStep();
-}
-
-function wizardPrev() {
-  wCurrent--;
-  renderStep();
-}
-
-// ── Submit to backend ────────────────────────────────────────────────────────
-function submitSetup() {
-  const milestones = [];
-  wSteps.forEach(s => {
-    if (s.id.startsWith("milestone_")) milestones.push(wData[s.id] || "");
-  });
-
-  fetch("/api/setup", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      hours:      wData.hours,
-      max_rest:   wData.max_rest,
-      difficulty: wData.difficulty,
-      milestones: milestones,
-      theme:      wData.theme || "",
-    }),
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.ok) {
-      document.getElementById("w-result").value = d.prompt;
-    } else {
-      document.getElementById("w-result").value = "生成失败：" + d.error;
-    }
-  })
-  .catch(err => {
-    document.getElementById("w-result").value = "网络错误：" + err;
-  });
-}
-
-function copyPrompt() {
-  const text = document.getElementById("w-result").value;
-  navigator.clipboard.writeText(text).then(() => {
-    const msg = document.getElementById("copy-msg");
-    msg.textContent = "✅ 已复制到剪贴板！";
-    setTimeout(() => { msg.textContent = ""; }, 3000);
-  });
-}
-
-// ── Alfred triggers ──────────────────────────────────────────────────────────
-function _alfredTrigger(btn, endpoint) {
-  const orig = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = "⏳ 发送中...";
-  fetch(endpoint, { method: "POST" })
-    .then(r => r.json())
-    .then(d => {
-      btn.innerHTML = d.ok ? "✅ 已发送！" : "❌ 失败：" + d.error;
-      setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2500);
-    })
-    .catch(() => {
-      btn.innerHTML = "❌ 网络错误";
-      setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2500);
-    });
-}
-
-function triggerNextPomodoro(btn) { _alfredTrigger(btn, "/api/next-pomodoro"); }
-function triggerStayPomodoro(btn)  { _alfredTrigger(btn, "/api/stay-pomodoro"); }
-function triggerPause(btn)         { _alfredTrigger(btn, "/api/pause"); }
-function triggerContinue(btn)      { _alfredTrigger(btn, "/api/continue"); }
-function triggerGetCard(btn)       { _alfredTrigger(btn, "/api/getcard"); }
-function triggerUseCard(btn)       { _alfredTrigger(btn, "/api/usecard"); }
-
-// ── Dashboard data refresh ───────────────────────────────────────────────────
-const REFRESH_MS = 5000;
-let countdown = REFRESH_MS / 1000;
-let currTsRaw = null; // Store ISO string for the timer
-
-function setVal(id, text) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = text ?? "—";
-}
-
-function applyClass(id, cls) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.className = el.className.replace(/\bval-\w+/g, "");
-  if (cls) el.classList.add(cls);
-}
-
-function refreshData() {
-  fetch("/api/state")
-    .then(r => r.json())
-    .then(d => {
-      // timestamps
-      currTsRaw = d.curr_ts_raw;
-      setVal("val-curr_ts",  d.curr_ts);
-      setVal("val-prev_ts",  d.prev_ts);
-      setVal("val-first_ts", d.first_ts);
-
-      // elapsed
-      if (d.elapsed_minutes !== null && d.elapsed_minutes !== undefined) {
-        const h = Math.floor(d.elapsed_minutes / 60);
-        const m = Math.round(d.elapsed_minutes % 60);
-        setVal("val-elapsed_minutes", h > 0 ? `${h}h ${m}m` : `${m} 分钟`);
-      } else {
-        setVal("val-elapsed_minutes", "—");
-      }
-
-      // prompt count
-      setVal("val-current_prompt_count", d.current_prompt_count);
-
-      // difficulty
-      setVal("val-difficulty", d.difficulty);
-
-      // interval — color by >15
-      const ivl = parseFloat(d.interval);
-      setVal("val-interval", isNaN(ivl) ? d.interval : ivl.toFixed(1) + " 分钟");
-      const ivlCard = document.querySelector(".card.accent-peach");
-      if (!isNaN(ivl)) {
-        applyClass("val-interval", ivl > 15 ? "val-red" : "val-green");
-      }
-
-      // fortune
-      const fortune = d.fortunevalue || "";
-      setVal("val-fortunevalue", fortune);
-      applyClass("val-fortunevalue",
-        fortune.includes("凶") ? "val-red" : fortune.includes("合规") ? "val-green" : null
-      );
-
-      // offset — color by >60
-      const off = parseFloat(d.offset);
-      setVal("val-offset", isNaN(off) ? d.offset : off.toFixed(1));
-      applyClass("val-offset",
-        isNaN(off) ? null : off > 60 ? "val-red" : off > 40 ? "val-yellow" : "val-green"
-      );
-
-      // rest
-      setVal("val-max_rest_time",    d.max_rest_time);
-      setVal("val-total_rest_time",  d.total_rest_time);
-
-      // last rest action — colour by pause/continue state
-      setVal("val-last_rest_action", d.last_rest_action);
-      const restCard = document.getElementById("card-last-rest");
-      if (restCard) {
-        restCard.className = "card " + (d.last_rest_is_paused ? "accent-yellow" : "accent-green");
-      }
-      applyClass("val-last_rest_action", d.last_rest_is_paused ? "val-yellow" : "val-green");
-
-      // penalty
-      const hv = parseFloat(d.h_value);
-      setVal("val-h_value", isNaN(hv) ? d.h_value : hv.toFixed(1) + " 分钟");
-      applyClass("val-h_value", !isNaN(hv) && hv > 0 ? "val-red" : "val-green");
-
-      setVal("val-overtime_penalty_range", d.overtime_penalty_range);
-      applyClass("val-overtime_penalty_range",
-        d.overtime_penalty_range === "{random:0..0}" ? "val-green" : "val-yellow"
-      );
-
-      // cards
-      setVal("val-countcard",      d.countcard);
-      setVal("val-violationcount", d.violationcount);
-      applyClass("val-violationcount",
-        parseInt(d.violationcount) > 0 ? "val-red" : "val-green"
-      );
-
-      // stage
-      const stage = d.stage || "";
-      const stageEl = document.getElementById("val-stage");
-      if (stageEl) {
-        stageEl.textContent = stage;
-        stageEl.className = "card-value small";
-        if (stage.includes("达到阶段性节点") && !stage.includes("没有")) {
-          stageEl.classList.add("val-yellow");
-        } else if (stage.includes("没有")) {
-          stageEl.classList.add("stage-ok");
-        } else if (stage.includes("不适用")) {
-          stageEl.classList.add("stage-na");
-        }
-      }
-
-      // update time
-      document.getElementById("last-update").textContent =
-        new Date().toLocaleTimeString("zh-CN");
-      countdown = REFRESH_MS / 1000;
-    })
-    .catch(err => {
-      document.getElementById("last-update").textContent = "读取失败";
-    });
-}
-
-// countdown display and tomato timer
-setInterval(() => {
-  countdown = Math.max(0, countdown - 1);
-  
-  if (currTsRaw) {
-    const startDt = new Date(currTsRaw);
-    const nowDt = new Date();
-    const diffSecs = Math.floor((nowDt - startDt) / 1000);
-    
-    const timerEl = document.getElementById("tomato-timer");
-    if (diffSecs >= 0 && timerEl) {
-      if (diffSecs < 60) {
-        timerEl.textContent = `${diffSecs}秒`;
-      } else {
-        const m = Math.floor(diffSecs / 60);
-        const s = diffSecs % 60;
-        timerEl.textContent = `${m}分钟${s}秒`;
-      }
-    }
-  }
-}, 1000);
-
-// data refresh
-refreshData();
-setInterval(refreshData, REFRESH_MS);
-</script>
-</body>
-</html>
-"""
 
 # ── entry point ──────────────────────────────────────────────────────────────
 
@@ -1732,9 +1259,26 @@ def main() -> int:
     # 1. Write continue timestamp (used by move.py for interval deduction)
     CONT_TS_FILE.write_text(now.isoformat(), encoding="utf-8")
 
+    # 同步写入 -time-cont snippet（本地时间，人类可读格式）
+    time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        _snip = SNIPPETS["time_cont"]
+        with sqlite3.connect(DB_FILE) as _con:
+            _con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (time_str, _snip.uid))
+        if _snip.json_path.exists():
+            import json as _json
+            _payload = _json.loads(_snip.json_path.read_text(encoding="utf-8"))
+            _payload["alfredsnippet"]["snippet"] = time_str
+            _snip.json_path.write_text(
+                _json.dumps(_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+    except (RuntimeError, OSError) as exc:
+        print(f"time_cont write failed: {exc}", file=sys.stderr)
+
     # 2. Calculate this rest's duration
     if not PAUSE_TS_FILE.exists():
-        print(f"休息结束记录：{now.isoformat()}（未找到对应的 pause 记录）")
+        print(f"休息结束记录：{time_str}（未找到对应的 pause 记录）")
         return 0
 
     pause_text = PAUSE_TS_FILE.read_text(encoding="utf-8").strip()
@@ -1780,17 +1324,41 @@ if __name__ == "__main__":
 """=pause handler — record the start of a rest period."""
 from __future__ import annotations
 
+import json
+import sqlite3
 import sys
 from datetime import datetime, timezone
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import PAUSE_TS_FILE  # noqa: E402
+from config import DB_FILE, PAUSE_TS_FILE, SNIPPETS  # noqa: E402
+
+
+def write_snippet(key: str, value: str) -> None:
+    """Update both SQLite and JSON for the given snippet key."""
+    snip = SNIPPETS[key]
+    with sqlite3.connect(DB_FILE) as con:
+        con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, snip.uid))
+    if snip.json_path.exists():
+        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
+        payload["alfredsnippet"]["snippet"] = value
+        snip.json_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
 
 def main() -> int:
     now = datetime.now(tz=timezone.utc)
     PAUSE_TS_FILE.write_text(now.isoformat(), encoding="utf-8")
-    print(f"休息开始记录：{now.isoformat()}")
+
+    # 同步写入 -time-pause snippet（本地时间，人类可读格式）
+    time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        write_snippet("time_pause", time_str)
+    except (RuntimeError, OSError) as exc:
+        print(f"time_pause write failed: {exc}", file=sys.stderr)
+
+    print(f"休息开始记录：{time_str}")
     return 0
 
 
@@ -1814,10 +1382,14 @@ On each call:
   4. Write interval minutes to Alfred snippet  -interval  (DB + JSON)
   5. Write +1 or -1 to Alfred snippet  -fortunevalue     (DB + JSON)
      rule: interval > 15 min  →  -1 (凶),  else  +1 (吉)
+  6. Generate a fresh 1-100 random number and write to -random-num (DB + JSON)
+     每条番茄钟绑定一个唯一随机数；用户多次展开 -go 不会刷新，
+     只有下次推进番茄钟才刷新。
 """
 from __future__ import annotations
 
 import json
+import random
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -1825,8 +1397,8 @@ from pathlib import Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
 from config import (  # noqa: E402
-    CONT_TS_FILE, CURR_TS_FILE, DB_FILE, FIRST_TS_FILE,
-    PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,
+    CONT_TS_FILE, CURR_TS_FILE, DB_FILE, FINAL_FATE_FILE, FIRST_TS_FILE,
+    HEALTH_FILE, PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,
 )
 import update_h  # noqa: E402
 
@@ -1866,6 +1438,76 @@ def write_snippet(key: str, value: str) -> None:
     )
 
 
+def probability_check(health: int) -> bool:
+    """
+    输入健康度（0-10整数），以 health*10% 的概率返回 True（吉）。
+    与 rand_num（原始随机数）完全无关，使用独立的 random.random() 抽取。
+    """
+    if not (0 <= health <= 10):
+        health = max(0, min(health, 10))
+    return random.random() < health / 10.0
+
+
+def read_health() -> int:
+    """从 health.txt 读取健康度，缺失时默认 9。"""
+    if not HEALTH_FILE.exists():
+        return 9
+    text = HEALTH_FILE.read_text(encoding="utf-8").strip()
+    try:
+        return max(0, min(int(text), 10))
+    except ValueError:
+        return 9
+
+
+def read_overtime_penalty() -> int:
+    """从 Alfred DB 读取当前 -overtime-penalty-random-num 数值，缺失时为 0。"""
+    snip = SNIPPETS["overtime_penalty_random_num"]
+    with sqlite3.connect(DB_FILE) as con:
+        row = con.execute(
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
+        ).fetchone()
+    if row:
+        val = str(row[0]).strip()
+        if val.lstrip("-").isdigit():
+            return int(val)
+    return 0
+
+
+def write_final_fate(value: int) -> None:
+    """将最终命运值写入 data/final_fate.txt。"""
+    FINAL_FATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    FINAL_FATE_FILE.write_text(str(value), encoding="utf-8")
+
+
+def fate_category(fate: int) -> str:
+    """根据最终命运值返回对应的事件等级标签。
+
+    区间与 prompt.md 7.4.3 节事件预判系统一致：
+      -100 ~ -90 → FAIL     失败事件
+       -89 ~ -60 → NEG_HIGH 严重负面事件
+       -60 ~ -30 → NEG_MID  中等负面事件
+       -30 ~  -1 → NEG_LOW  轻度负面事件
+         1 ~  49 → POS_LOW  轻度正面事件
+        50 ~  84 → POS_MID  中等正面事件
+        85 ~ 100 → POS_HIGH 高度正面事件
+    0 不在任何预设区间（理论上概率极低），返回 POS_LOW 作安全兜底。
+    """
+    if fate <= -90:
+        return "FAIL(-100~-90) 失败事件"
+    elif fate <= -60:
+        return "NEG_HIGH(-89~-60) 严重负面事件"
+    elif fate <= -30:
+        return "NEG_MID(-60~-30) 中等负面事件"
+    elif fate <= -1:
+        return "NEG_LOW(-30~-1) 轻度负面事件"
+    elif fate <= 49:
+        return "POS_LOW(1~49) 轻度正面事件"
+    elif fate <= 84:
+        return "POS_MID(50~84) 中等正面事件"
+    else:
+        return "POS_HIGH(85~100) 高度正面事件"
+
+
 # ── main ────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -1879,8 +1521,32 @@ def main() -> int:
 
     if prev is None:
         write_ts(FIRST_TS_FILE, now)
-        print("First =move recorded. No interval computed yet.")
+        # 第1条记录：生成随机数 + 吉凶判定（interval=0，必然 < 15min）
+        health      = read_health()
+        is_lucky    = probability_check(health)      # 独立概率抽取
+        fortune_val = 1 if is_lucky else -1
+        fortune_str = "吉" if is_lucky else "凶"
+        rand_num    = random.randint(1, 100)          # 原始随机数，独立抽取
+        overtime    = read_overtime_penalty()         # 首条通常为 0
+        final_fate  = rand_num * fortune_val - overtime
+        try:
+            write_snippet("current_time",          now.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
+            write_snippet("random_num",             str(rand_num))
+            write_snippet("fortunevalue",           fortune_str)
+            write_snippet("healthy",               str(health))
+            write_snippet("fortune_and_misfortune", fortune_str)
+            write_snippet("final_fate_value",      str(final_fate))
+            write_snippet("foretold",              SNIPPETS["foretold"].default)  # 第一条无上一轮JSON
+        except (RuntimeError, OSError) as exc:
+            print(f"snippet write failed: {exc}", file=sys.stderr)
+        write_final_fate(final_fate)
+        print(
+            f"First =move recorded.\n"
+            f"  健康度={health}  概率判定={fortune_str}  原始随机数={rand_num}\n"
+            f"  超时惩罚={overtime}  最终命运值={final_fate}"
+        )
         return 0
+
 
     # 2. Compute raw interval
     raw_minutes = (now - prev).total_seconds() / 60
@@ -1896,36 +1562,59 @@ def main() -> int:
 
     interval_minutes = raw_minutes - rest_minutes
 
-    # 4. Determine 吉凶 (fortune value)
-    fortune_snippet = (
-        "超出15分钟，不合规，应判断为凶(-1)"
-        if interval_minutes > 15
-        else "未到15分钟，合规"
-    )
-    fortune = "-1" if interval_minutes > 15 else "1"
+    # 4. 吉凶判定（两步独立随机）
+    health = read_health()
+    if interval_minutes >= 15:
+        fortune_val = -1
+        fortune_str = "凶 (超时)"
+    else:
+        is_lucky    = probability_check(health)   # 独立概率抽取，与 rand_num 无关
+        fortune_val = 1 if is_lucky else -1
+        fortune_str = "吉" if is_lucky else "凶 (命运不佳)"
 
-    # 5. Write interval + fortune to Alfred snippets
-    interval_str = f"{interval_minutes:.1f}"
+    # 5. 原始随机数（独立抽取，仅用于命运值公式）
+    rand_num = random.randint(1, 100)
+
+    # 6. Write all snippets to Alfred
+    interval_str     = f"{interval_minutes:.1f}"
+    current_time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    fortune_label    = "吉" if fortune_val == 1 else "凶"   # 纯结果，不含原因备注
     try:
-        write_snippet("interval",    interval_str)
-        write_snippet("fortunevalue", fortune_snippet)
+        write_snippet("interval",               interval_str)
+        write_snippet("fortunevalue",           fortune_str)      # 含原因备注（时间差合规状态）
+        write_snippet("current_time",           current_time_str)
+        write_snippet("random_num",             str(rand_num))
+        write_snippet("healthy",                str(health))
+        write_snippet("fortune_and_misfortune", fortune_label)    # 纯吉/凶
     except (RuntimeError, OSError) as exc:
         print(f"Write failed: {exc}", file=sys.stderr)
         return 1
 
-    # 6. H penalty: interval > 20 min charges the excess
+    # 7. H penalty: interval > 20 min charges the excess
     h_info = ""
     if interval_minutes > 20:
         delta = interval_minutes - 20
         new_h = update_h.accumulate_h(delta)
-        h_info = f"  |  H += {delta:.1f} → H = {new_h:.1f}，range 已更新"
+        h_info = f"  |  H += {delta:.1f} → H = {new_h:.1f}"
 
-    # 7. Report
+    # 8. 最终命运值 = 原始随机数 × 吉凶值 - 超时惩罚随机数
+    overtime   = read_overtime_penalty()
+    final_fate = rand_num * fortune_val - overtime
+    write_final_fate(final_fate)
+    category   = fate_category(final_fate)
+    try:
+        write_snippet("final_fate_value", str(final_fate))
+        write_snippet("foretold",         category)
+    except (RuntimeError, OSError) as exc:
+        print(f"final_fate_value/foretold write failed: {exc}", file=sys.stderr)
+
+
+    # 9. Report
     rest_info = f" (休息扣除 {rest_minutes:.1f} 分钟)" if rest_minutes > 0 else ""
-    verdict   = "凶 (-1)" if fortune == "-1" else "吉 (+1)"
     print(
-        f"区间时间差：{interval_minutes:.1f} 分钟{rest_info}  →  {verdict}{h_info}\n"
-        f"-interval = {interval_str}，-fortunevalue = {fortune}"
+        f"区间：{interval_minutes:.1f} min{rest_info}  健康度={health}{h_info}\n"
+        f"吉凶={fortune_str}（概率判定独立）  原始随机数={rand_num}\n"
+        f"超时惩罚={overtime}  最终命运值={final_fate}"
     )
     return 0
 
@@ -2022,15 +1711,15 @@ if __name__ == "__main__":
 
 --- update_h.py ---
 #!/usr/bin/env python3
-"""update_h.py — shared module for accumulating H and writing -overtime-penalty-range.
+"""update_h.py — shared module for accumulating H and writing -overtime-penalty-random-num.
 
 H (超时惩罚数字) accumulates from two sources:
   1. move.py   : interval > 20 min  →  H += (interval - 20)
   2. continue.py: total_rest > max_rest  →  H += (total_rest - penalized_rest_up_to)
 
--overtime-penalty-range format:
-  H == 0  →  "{random:0..0}"   (no penalty, Alfred expands to 0)
-  H >  0  →  "{random:1..2H}"  e.g. H=11 → "{random:1..22}"
+-overtime-penalty-random-num format:
+  H == 0  →  "0"   (无惩罚)
+  H >  0  →  Python random.randint(1, 2H)  e.g. H=11 → randint(1, 22)
 
 State files (in data/):
   h_value.txt               : current H (float, minutes), default 0
@@ -2040,6 +1729,7 @@ State files (in data/):
 from __future__ import annotations
 
 import json
+import random
 import sqlite3
 import sys
 
@@ -2096,29 +1786,35 @@ def read_max_rest() -> float:
 
 # ── snippet writer ────────────────────────────────────────────────────────────
 
-def write_overtime_range(h: float) -> None:
-    """Write the Alfred dynamic placeholder for -overtime-penalty-range."""
+def write_overtime_range(h: float) -> str:
+    """
+    Compute a deterministic penalty random number and write to -overtime-penalty-random-num.
+    H == 0 → writes "0" (no penalty)
+    H >  0 → writes random.randint(1, h_int * 2)
+    Returns the value written as a string.
+    """
     h_int = int(h)
     if h_int <= 0:
-        range_str = "{random:0..0}"
+        value = "0"
     else:
-        range_str = "{random:1.." + str(h_int * 2) + "}"
+        value = str(random.randint(1, h_int * 2))
 
-    snip = SNIPPETS["overtime_penalty_range"]
+    snip = SNIPPETS["overtime_penalty_random_num"]
 
     with sqlite3.connect(DB_FILE) as con:
         con.execute(
             "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (range_str, snip.uid),
+            (value, snip.uid),
         )
 
     if snip.json_path.exists():
         payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-        payload["alfredsnippet"]["snippet"] = range_str
+        payload["alfredsnippet"]["snippet"] = value
         snip.json_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+    return value
 
 
 # ── public API ────────────────────────────────────────────────────────────────
@@ -2153,8 +1849,8 @@ if __name__ == "__main__":
     print(f"H = {h:.1f} 分钟")
     print(f"已计入休息惩罚截止：{p:.1f} 分钟  |  max_rest = {m:.1f} 分钟")
     h_int = int(h)
-    rng = "{random:0..0}" if h_int == 0 else "{random:1.." + str(h_int * 2) + "}"
-    print(f"-overtime-penalty-range = {rng}")
+    rng = "0" if h_int == 0 else f"randint(1, {h_int * 2})"
+    print(f"-overtime-penalty-random-num range = {rng}")
 
 
 --- update_stage.py ---

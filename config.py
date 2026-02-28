@@ -56,6 +56,8 @@ SNIPPETS: dict[str, Snippet] = {
     # ── 学习进度 ──────────────────────────────────────────────────────────────
     "current_prompt_count":   Snippet("F1ABD0D4-576F-4CA6-B9A9-BB1715B961DB", "-current_prompt_count",   "0",
                                       panel_label="当前学习记录条数"),
+    "total_count":            Snippet("378F254A-D42A-42F2-82C1-52861B01648E", "-total-count",            "0",
+                                      panel_label="学习记录总条数"),
     # ── 健康度（概率吉凶系统） ────────────────────────────────────────────────
     "healthy":                Snippet("1186A78C-D0B8-4F9A-880A-B039B1BBB5E9", "-healthy",                "9",
                                       panel_label="健康度"),
@@ -71,7 +73,7 @@ SNIPPETS: dict[str, Snippet] = {
     # ── 时间计算 ─────────────────────────────────────────────────────────────
     "interval":               Snippet("0352B20F-33EE-44A0-B570-FAAF2FA1E8E8", "-interval",               "0",
                                       panel_label="时间差"),
-    "fortunevalue":           Snippet("8BD89037-57B3-4964-A204-3D2D1F1250FA", "-fortunevalue",           "未到15分钟，合规",
+    "is_time_within_limit":   Snippet("8BD89037-57B3-4964-A204-3D2D1F1250FA", "-is-time-difference-within-the-limit", "未到15分钟，合规",
                                       panel_label="时间差是否合规的状态"),
     "fortune_and_misfortune": Snippet("5BBAE44F-7BEC-4F9B-A578-58A9F7F84CF4", "-fortune-and-misfortune", "吉",
                                       panel_label="吉凶结果"),
@@ -85,6 +87,9 @@ SNIPPETS: dict[str, Snippet] = {
     # ── Boss战 ───────────────────────────────────────────────────────────────
     "bossfight_stage":        Snippet("4899268D-842C-4BD9-A455-FBF75DB89993", "-bossfight-stage",        "当前没有进入boss战节点",
                                       panel_label="当前是否进入boss战节点？"),
+    # ── 命运预设事件 ─────────────────────────────────────────────────────────
+    "foretold":               Snippet("FDAF9504-8D5C-41CF-8286-1B62AA250B7D", "-foretold",               "当前为第一条记录，没有预设事件",
+                                      panel_label="应该加载的预设事件，上一轮的"),
     # ── 休息 & 统计 ───────────────────────────────────────────────────────────
     "total_rest_time":        Snippet("B3689D50-EEDD-42FC-A4E5-D19A70BA709B", "-total_rest_time",        "0",
                                       panel_label="累计休息时间"),

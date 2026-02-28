@@ -15,7 +15,7 @@ Resets:
     - -countcard             → "0"
     - -violationcount        → "0"
     - -interval              → "0"
-    - -fortunevalue          → "未到15分钟，合规"
+    - -is-time-difference-within-the-limit → "未到15分钟，合规"
     - -current_prompt_count  → "0"
     - -stage                 → "当前没有达到阶段性节点"
     - -bossfight-stage       → "当前没有进入boss战节点"

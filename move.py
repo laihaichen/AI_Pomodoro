@@ -110,6 +110,35 @@ def write_final_fate(value: int) -> None:
     FINAL_FATE_FILE.write_text(str(value), encoding="utf-8")
 
 
+def fate_category(fate: int) -> str:
+    """根据最终命运值返回对应的事件等级标签。
+
+    区间与 prompt.md 7.4.3 节事件预判系统一致：
+      -100 ~ -90 → FAIL     失败事件
+       -89 ~ -60 → NEG_HIGH 严重负面事件
+       -60 ~ -30 → NEG_MID  中等负面事件
+       -30 ~  -1 → NEG_LOW  轻度负面事件
+         1 ~  49 → POS_LOW  轻度正面事件
+        50 ~  84 → POS_MID  中等正面事件
+        85 ~ 100 → POS_HIGH 高度正面事件
+    0 不在任何预设区间（理论上概率极低），返回 POS_LOW 作安全兜底。
+    """
+    if fate <= -90:
+        return "FAIL(-100~-90) 失败事件"
+    elif fate <= -60:
+        return "NEG_HIGH(-89~-60) 严重负面事件"
+    elif fate <= -30:
+        return "NEG_MID(-60~-30) 中等负面事件"
+    elif fate <= -1:
+        return "NEG_LOW(-30~-1) 轻度负面事件"
+    elif fate <= 49:
+        return "POS_LOW(1~49) 轻度正面事件"
+    elif fate <= 84:
+        return "POS_MID(50~84) 中等正面事件"
+    else:
+        return "POS_HIGH(85~100) 高度正面事件"
+
+
 # ── main ────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -134,10 +163,11 @@ def main() -> int:
         try:
             write_snippet("current_time",          now.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
             write_snippet("random_num",             str(rand_num))
-            write_snippet("fortunevalue",           fortune_str)
+            write_snippet("is_time_within_limit",   "未到15分钟，合规")  # 首条到00间隔，必然合规
             write_snippet("healthy",               str(health))
             write_snippet("fortune_and_misfortune", fortune_str)
             write_snippet("final_fate_value",      str(final_fate))
+            write_snippet("foretold",              SNIPPETS["foretold"].default)  # 第一条无上一轮JSON
         except (RuntimeError, OSError) as exc:
             print(f"snippet write failed: {exc}", file=sys.stderr)
         write_final_fate(final_fate)
@@ -177,12 +207,17 @@ def main() -> int:
     rand_num = random.randint(1, 100)
 
     # 6. Write all snippets to Alfred
-    interval_str     = f"{interval_minutes:.1f}"
-    current_time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
-    fortune_label    = "吉" if fortune_val == 1 else "凶"   # 纯结果，不含原因备注
+    interval_str       = f"{interval_minutes:.1f}"
+    current_time_str   = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    fortune_label      = "吉" if fortune_val == 1 else "凶"   # 纯结果，不含原因备注
+    time_limit_str     = (
+        "超出15分钟，系统自动判断为凶"
+        if interval_minutes >= 15
+        else "未到15分钟，合规"
+    )
     try:
         write_snippet("interval",               interval_str)
-        write_snippet("fortunevalue",           fortune_str)      # 含原因备注（时间差合规状态）
+        write_snippet("is_time_within_limit",   time_limit_str)   # 仅反映时间是否超标
         write_snippet("current_time",           current_time_str)
         write_snippet("random_num",             str(rand_num))
         write_snippet("healthy",                str(health))
@@ -202,10 +237,12 @@ def main() -> int:
     overtime   = read_overtime_penalty()
     final_fate = rand_num * fortune_val - overtime
     write_final_fate(final_fate)
+    category   = fate_category(final_fate)
     try:
         write_snippet("final_fate_value", str(final_fate))
+        write_snippet("foretold",         category)
     except (RuntimeError, OSError) as exc:
-        print(f"final_fate_value write failed: {exc}", file=sys.stderr)
+        print(f"final_fate_value/foretold write failed: {exc}", file=sys.stderr)
 
 
     # 9. Report

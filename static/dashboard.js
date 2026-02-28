@@ -380,7 +380,7 @@ function healthAdjust(delta) {
 }
 
 // ── Dashboard data refresh ───────────────────────────────────────────────────
-const REFRESH_MS = 5000;
+const REFRESH_MS = 1000;
 
 let countdown = REFRESH_MS / 1000;
 let currTsRaw = null; // Store ISO string for the timer
@@ -583,6 +583,19 @@ function refreshData() {
                     ffEl.textContent = "—";
                     ffEl.style.color = "var(--dim)";
                 }
+            }
+
+            // foretold — 本轮加载的预设事件区间
+            const ftEl = document.getElementById("val-foretold");
+            if (ftEl) {
+                const ft = d.foretold || "—";
+                ftEl.textContent = ft;
+                ftEl.style.color = ft.startsWith("FAIL") ? "#f87171"
+                    : ft.startsWith("NEG_HIGH") ? "#fb923c"
+                        : ft.startsWith("NEG_MID") ? "#fbbf24"
+                            : ft.startsWith("NEG_LOW") ? "var(--bright)"
+                                : ft.startsWith("POS") ? "var(--green, #4ade80)"
+                                    : "var(--dim)";
             }
 
             // update time
