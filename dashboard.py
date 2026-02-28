@@ -583,13 +583,13 @@ def api_boss_defeated():
         BOSS_DEFEATED_FILE.parent.mkdir(parents=True, exist_ok=True)
         BOSS_DEFEATED_FILE.write_text(result, encoding="utf-8")
         if result == "true":
-            # Boss胜利 → +1000
-            update_total_score(delta=1000)
+            # Boss胜利 → +800
+            update_total_score(delta=800)
         else:
-            # Boss失败 → 写入游戏失败状态，-1000，再 ×0.8
+            # Boss失败 → 写入游戏失败状态，-300，再 ×0.9
             write_snippet_value("is_victory", "已失败，失败来源：boss战失败")
-            update_total_score(delta=-1000)
-            update_total_score(factor=0.8)
+            update_total_score(delta=-300)
+            update_total_score(factor=0.9)
         return jsonify({"ok": True, "boss_defeated": result})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -602,7 +602,7 @@ def api_declare_victory():
     try:
         write_snippet_value("is_victory", "已胜利")
         # 胜利结算 → ×1.2
-        final_score = update_total_score(factor=1.2)
+        final_score = update_total_score(factor=1.1)
 
         # ── 写入游戏存档 ────────────────────────────────────────────────────
         def _read_snip(key: str) -> str:

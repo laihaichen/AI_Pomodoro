@@ -187,11 +187,11 @@ def main() -> int:
                 write_snippet("is_victory", "已失败，失败来源：命运值")
         except (RuntimeError, OSError) as exc:
             print(f"snippet write failed: {exc}", file=sys.stderr)
-        # 积分：累加命运值；失败时再 ×0.8
+        # 积分：累加命运值；失败时再 ×0.9
         try:
             new_score = update_total_score(delta=final_fate)
             if final_fate <= -90:
-                new_score = update_total_score(factor=0.8)
+                new_score = update_total_score(factor=0.9)
             print(f"  总积分={new_score}")
         except Exception as exc:
             print(f"total_score update failed: {exc}", file=sys.stderr)
@@ -271,11 +271,11 @@ def main() -> int:
     except (RuntimeError, OSError) as exc:
         print(f"final_fate_value/foretold write failed: {exc}", file=sys.stderr)
 
-    # 积分：累加命运值；失败时再 ×0.8
+    # 积分：累加命运值；失败时再 ×0.9
     try:
         new_score = update_total_score(delta=final_fate)
         if final_fate <= -90:
-            new_score = update_total_score(factor=0.8)
+            new_score = update_total_score(factor=0.9)
     except Exception as exc:
         print(f"total_score update failed: {exc}", file=sys.stderr)
         new_score = None

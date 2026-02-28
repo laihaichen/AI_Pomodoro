@@ -149,7 +149,7 @@ def adjust_health(delta: int) -> int:
 
 def check_and_set_milestone() -> None:
     """读取进度指示器，根据结果写入 -stage，未达成时自动扣除 -5 健康度。
-    达成时：+300 总积分。"""
+    达成时：+200 总积分。"""
     indicator = read_progress_indicator()
     if is_progress_reached(indicator):
         _write_stage(STAGE_MILESTONE_SUCCESS)
@@ -159,7 +159,7 @@ def check_and_set_milestone() -> None:
             with sqlite3.connect(DB_FILE) as con:
                 row = con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
             current = int(row[0]) if row else 0
-            new_score = current + 300
+            new_score = current + 200
             with sqlite3.connect(DB_FILE) as con:
                 con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (str(new_score), snip.uid))
             if snip.json_path.exists():

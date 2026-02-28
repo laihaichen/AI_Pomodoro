@@ -104,17 +104,17 @@ def compute_and_write_offset(new_count: int) -> str:
             print(f"⚠️  offset={offset:.1f} > 60，游戏失败：is_victory → 已失败")
         except Exception as exc:
             print(f"is_victory 写入失败: {exc}", file=sys.stderr)
-        # 积分 ×0.8
+        # 积分 ×0.9
         try:
             snip = SNIPPETS["total_score"]
             with sqlite3.connect(DB_FILE) as _con:
                 _row = _con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
             _cur = int(_row[0]) if _row else 0
-            _new = round(_cur * 0.8)
+            _new = round(_cur * 0.9)
             write_snippet("total_score", str(_new))
-            print(f"  总积分 ×0.8 → {_new}")
+            print(f"  总积分 ×0.9 → {_new}")
         except Exception as exc:
-            print(f"total_score ×0.8 失败: {exc}", file=sys.stderr)
+            print(f"total_score ×0.9 失败: {exc}", file=sys.stderr)
 
     return f"-offset = {offset:.1f} 分钟（期望 {expect_total:.1f} - 真实 {real_total:.1f}）"
 
