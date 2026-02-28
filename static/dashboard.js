@@ -428,6 +428,74 @@ const DIVINE_RULE = `【关于神圣干预作用的游戏规则提示】
 
 let _divineOld = "";
 
+// ── 违规报告辅助填写器 ────────────────────────────────────────────────────────
+function openViolationModal() {
+    document.getElementById("violation-step1").style.display = "";
+    document.getElementById("violation-step2").style.display = "none";
+    document.getElementById("violation-step3").style.display = "none";
+    document.getElementById("violation-violations").value = "";
+    document.getElementById("violation-expected").value = "";
+    const btn = document.getElementById("violation-send-btn");
+    if (btn) { btn.textContent = "📋 复制并发送"; btn.disabled = false; }
+    document.getElementById("violation-overlay").style.display = "flex";
+}
+
+function closeViolationModal() {
+    document.getElementById("violation-overlay").style.display = "none";
+}
+
+function violationNext() {
+    const v = document.getElementById("violation-violations").value.trim();
+    if (!v) { alert("请先填写违规描述"); return; }
+    document.getElementById("violation-step1").style.display = "none";
+    document.getElementById("violation-step2").style.display = "";
+    document.getElementById("violation-expected").focus();
+}
+
+function violationBack() {
+    document.getElementById("violation-step2").style.display = "none";
+    document.getElementById("violation-step1").style.display = "";
+}
+
+function violationBack2() {
+    document.getElementById("violation-step3").style.display = "none";
+    document.getElementById("violation-step2").style.display = "";
+}
+
+function violationGenerate() {
+    const e = document.getElementById("violation-expected").value.trim();
+    if (!e) { alert("请先填写正确规则"); return; }
+    const v = document.getElementById("violation-violations").value.trim();
+    document.getElementById("violation-preview-violations").textContent = v;
+    document.getElementById("violation-preview-expected").textContent = e;
+    document.getElementById("violation-step2").style.display = "none";
+    document.getElementById("violation-step3").style.display = "";
+}
+
+function violationSend() {
+    const violations = document.getElementById("violation-violations").value.trim();
+    const expected = document.getElementById("violation-expected").value.trim();
+    const btn = document.getElementById("violation-send-btn");
+    btn.textContent = "发送中…";
+    btn.disabled = true;
+    fetch("/api/violation-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ violations, expected }),
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                btn.textContent = "✅ 已复制并发送";
+                setTimeout(() => closeViolationModal(), 1200);
+            } else {
+                btn.textContent = "❌ " + (d.error || "未知错误");
+                btn.disabled = false;
+            }
+        })
+        .catch(() => { btn.textContent = "📋 复制并发送"; btn.disabled = false; });
+}
+
 function openDivineModal() {
     // 重置到第一步
     document.getElementById("divine-step1").style.display = "";

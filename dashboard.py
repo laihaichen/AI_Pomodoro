@@ -385,6 +385,48 @@ def api_divine_intervention():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/violation-report", methods=["POST"])
+def api_violation_report():
+    """Build 违规通告 prompt (with prompt.md appended), copy to clipboard,
+    run increment_violation_count_snippet.py, then run stay.applescript."""
+    data       = request.get_json(silent=True) or {}
+    violations = data.get("violations", "").strip()
+    expected   = data.get("expected", "").strip()
+    try:
+        # 读取 prompt.md
+        prompt_md_path = BASE / "prompt.md"
+        prompt_md = prompt_md_path.read_text(encoding="utf-8") \
+                    if prompt_md_path.exists() else "（prompt.md 文件不存在）"
+
+        full_prompt = (
+            "【违规通告】\n"
+            "AI 已违反《学习时间追踪系统》核心游戏规则\n\n"
+            f"涉事条款：{expected}\n"
+            f"违规描述：{violations}\n"
+            "提出警告：\n"
+            "（1）在AI修改其违规行为之前，游戏无法继续\n"
+            "（2）AI必须重新阅读prompt.md，确保没有遗忘或误解重要游戏规则\n"
+            "（3）对于已经发生的人生事件，AI可以无需修改自己的错判，但是必须警醒自己的错误\n\n"
+            "---\n\n"
+            + prompt_md
+        )
+
+        # ① 写入剪切板
+        subprocess.run(["pbcopy"], input=full_prompt.encode("utf-8"),
+                       check=True, timeout=5)
+        # ② 增加违规计数
+        subprocess.run(
+            ["python3", str(BASE / "increment_violation_count_snippet.py")],
+            check=True, timeout=10,
+        )
+        # ③ 运行 stay.applescript
+        stay_script = str(BASE / "applescript" / "stay.applescript")
+        subprocess.run(["osascript", stay_script], check=True, timeout=10)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/pause", methods=["POST"])
 def api_pause():
     script = (

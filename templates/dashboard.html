@@ -85,6 +85,11 @@
                 onclick="openDivineModal()" title="神圣干预辅助填写器">
                 ✨ 神圣干预辅助填写器
             </button>
+            <button class="next-pomodoro-btn"
+                style="flex:0 0 auto;min-width:80px;background:rgba(251,146,60,0.12);border:1px solid rgba(251,146,60,0.4);color:#fb923c;"
+                onclick="openViolationModal()" title="人工智能违规报告辅助填写器">
+                ⚠️ 违规报告辅助填写器
+            </button>
         </div>
     </div>
 
@@ -321,6 +326,67 @@
                 </button>
             </div>
             <div class="card-sub" style="margin-top:4px;">-is-victory snippet · 后台自动写入</div>
+        </div>
+    </div>
+
+    <!-- ── 违规报告 Modal ── -->
+    <div class="modal-overlay" id="violation-overlay" style="display:none;">
+        <div class="modal" style="max-width:560px;width:95%;">
+            <button class="modal-close" onclick="closeViolationModal()">✕</button>
+            <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:#fb923c;">⚠️ 人工智能违规报告辅助填写器</h2>
+
+            <!-- Step 1: 违规描述 -->
+            <div id="violation-step1">
+                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">人工智能产生了什么违规？</div>
+                <textarea id="violation-violations" rows="5" placeholder="在此描述 AI 的违规行为…"
+                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+                           color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+                <button onclick="violationNext()" style="margin-top:12px;width:100%;padding:9px;
+                        background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.5);
+                        border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">
+                    下一步 →
+                </button>
+            </div>
+
+            <!-- Step 2: 正确规则 -->
+            <div id="violation-step2" style="display:none;">
+                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">它本来应该遵守的正确规则是什么？</div>
+                <textarea id="violation-expected" rows="5" placeholder="在此描述正确的游戏规则…"
+                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+                           color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button onclick="violationBack()" style="flex:1;padding:9px;
+                            background:transparent;border:1px solid var(--border);
+                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 返回</button>
+                    <button onclick="violationGenerate()"
+                        style="flex:2;padding:9px;
+                            background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.5);
+                            border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">生成违规通告</button>
+                </div>
+            </div>
+
+            <!-- Step 3: 预览 + 发送 -->
+            <div id="violation-step3" style="display:none;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">即将发送的内容（包含prompt.md，由后台拼接）：</div>
+                <div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.3);
+                            border-radius:6px;padding:12px;font-size:12px;line-height:1.7;color:var(--bright);">
+                    <div>【违规通告】</div>
+                    <div>AI 已违反《学习时间追踪系统》核心游戏规则</div>
+                    <div style="margin-top:8px;">涉事条款：<span id="violation-preview-expected"
+                            style="color:#fb923c"></span></div>
+                    <div>违规描述：<span id="violation-preview-violations" style="color:#fb923c"></span></div>
+                    <div style="margin-top:8px;color:var(--dim);">&#8942; 提出警告…（并自动附加完整 prompt.md）</div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button onclick="violationBack2()" style="flex:1;padding:9px;
+                            background:transparent;border:1px solid var(--border);
+                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 修改</button>
+                    <button id="violation-send-btn" onclick="violationSend()" style="flex:2;padding:9px;
+                            background:rgba(251,146,60,0.2);border:1px solid rgba(251,146,60,0.6);
+                            border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">📋
+                        复制并发送</button>
+                </div>
+            </div>
         </div>
     </div>
 
