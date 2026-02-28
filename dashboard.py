@@ -516,7 +516,19 @@ def api_boss_defeated():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/declare-victory", methods=["POST"])
+def api_declare_victory():
+    """Settle the game as a victory. No server-side re-validation needed —
+    all failure paths are auto-written by backend scripts before this point."""
+    try:
+        write_snippet_value("is_victory", "已胜利")
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/reset", methods=["POST"])
+
 
 def api_reset():
     """Run reset.py to wipe all game state back to Day-0 defaults."""

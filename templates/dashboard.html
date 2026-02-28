@@ -292,7 +292,17 @@
     <div class="grid grid-1" style="margin-top:10px;">
         <div class="card" id="card-is-victory">
             <div class="card-label">🏆 游戏胜利状态</div>
-            <div id="val-is_victory" style="font-size:16px;font-weight:700;margin-top:6px;letter-spacing:0.02em;">—
+            <div style="display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;">
+                <div id="val-is_victory" style="font-size:16px;font-weight:700;letter-spacing:0.02em;">—</div>
+                <!-- 结算按钮：3条件同时满足才显示 -->
+                <button id="btn-declare-victory" onclick="declareVictory()" style="display:none;background:linear-gradient(135deg,rgba(74,222,128,0.2),rgba(34,197,94,0.15));
+                               border:1px solid rgba(74,222,128,0.5);border-radius:6px;
+                               color:#4ade80;font-size:13px;font-weight:700;padding:6px 16px;
+                               cursor:pointer;transition:all 0.15s;letter-spacing:0.02em;"
+                    onmouseover="this.style.background='linear-gradient(135deg,rgba(74,222,128,0.35),rgba(34,197,94,0.25))'"
+                    onmouseout="this.style.background='linear-gradient(135deg,rgba(74,222,128,0.2),rgba(34,197,94,0.15))'">
+                    🎉 结算胜利
+                </button>
             </div>
             <div class="card-sub" style="margin-top:4px;">-is-victory snippet · 后台自动写入</div>
         </div>

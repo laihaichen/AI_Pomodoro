@@ -59,6 +59,8 @@ SNIPPETS: dict[str, Snippet] = {
                                       panel_label="当前学习记录条数"),
     "total_count":            Snippet("378F254A-D42A-42F2-82C1-52861B01648E", "-total-count",            "0",
                                       panel_label="学习记录总条数"),
+    "total_score":            Snippet("41D7BAA8-D43B-4FEF-BF83-2A5B8A509979", "-total-score",            "0",
+                                      panel_label="当前总积分"),
     # ── 健康度（概率吉凶系统） ────────────────────────────────────────────────
     "healthy":                Snippet("1186A78C-D0B8-4F9A-880A-B039B1BBB5E9", "-healthy",                "9",
                                       panel_label="健康度"),

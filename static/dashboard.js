@@ -395,6 +395,25 @@ function recordBossResult(result) {
         });
 }
 
+function declareVictory() {
+    fetch("/api/declare-victory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                // 即时更新 UI，无需等待下一次轮询
+                const ivEl = document.getElementById("val-is_victory");
+                const ivCard = document.getElementById("card-is-victory");
+                const ivBtn = document.getElementById("btn-declare-victory");
+                if (ivEl) { ivEl.textContent = "已胜利"; ivEl.style.color = "var(--green, #4ade80)"; }
+                if (ivCard) { ivCard.style.borderColor = "rgba(74,222,128,0.5)"; }
+                if (ivBtn) { ivBtn.style.display = "none"; }
+            }
+        });
+}
+
 // ── Dashboard data refresh ───────────────────────────────────────────────────
 const REFRESH_MS = 1000;
 
@@ -648,6 +667,7 @@ function refreshData() {
             // is_victory — 游戏胜利状态
             const ivEl = document.getElementById("val-is_victory");
             const ivCard = document.getElementById("card-is-victory");
+            const ivBtn = document.getElementById("btn-declare-victory");
             if (ivEl) {
                 const iv = d.is_victory || "尚未胜利";
                 ivEl.textContent = iv;
@@ -660,6 +680,17 @@ function refreshData() {
                     ivCard.style.borderColor = isFailed ? "rgba(248,113,113,0.5)"
                         : isVictory ? "rgba(74,222,128,0.5)"
                             : "";
+                }
+                // 结算胜利按钮显示条件
+                if (ivBtn) {
+                    const cur = parseInt(d.current_prompt_count) || 0;
+                    const tot = parseInt(d.total_count) || 0;
+                    const isHardcore = (d.difficulty || "") === "硬核难度";
+                    const bossOk = !isHardcore || (d.boss_defeated === "true");
+                    const canSettle = !isFailed && !isVictory
+                        && tot > 0 && cur >= tot
+                        && bossOk;
+                    ivBtn.style.display = canSettle ? "inline-block" : "none";
                 }
             }
 
