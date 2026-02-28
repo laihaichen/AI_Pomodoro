@@ -22,6 +22,7 @@ from config import (  # noqa: E402
     PENALIZED_REST_FILE, H_FILE,
     DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
     HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE,
+    BASE,
 )
 
 from flask import Flask, jsonify, render_template, request
@@ -542,8 +543,47 @@ def api_declare_victory():
     try:
         write_snippet_value("is_victory", "已胜利")
         # 胜利结算 → ×1.2
-        update_total_score(factor=1.2)
-        return jsonify({"ok": True})
+        final_score = update_total_score(factor=1.2)
+
+        # ── 写入游戏存档 ────────────────────────────────────────────────────
+        def _read_snip(key: str) -> str:
+            try:
+                s = SNIPPETS[key]
+                with sqlite3.connect(DB_FILE) as _c:
+                    row = _c.execute("SELECT snippet FROM snippets WHERE uid = ?", (s.uid,)).fetchone()
+                return (row[0] or "").strip() if row else ""
+            except Exception:
+                return ""
+
+        # 里程碑列表：hour3 / hour6 / hour9 / hour12 对应任务文字（过滤空槽位）
+        milestone_keys  = ["hour3", "hour6", "hour9", "hour12"]
+        milestone_slots = ["3小时节点", "6小时节点", "9小时节点", "12小时节点"]
+        milestones = []
+        for label, key in zip(milestone_slots, milestone_keys):
+            text = _read_snip(key)
+            if text and text not in ("0", ""):
+                milestones.append({"节点": label, "任务": text})
+
+        save_data = {
+            "当天预期总条数":   int(_read_snip("total_count") or 0),
+            "当天设置的休息总时长": _read_snip("max_rest_time"),
+            "总积分":           final_score,
+            "是否胜利":         "已胜利",
+            "当前游戏难度":     _read_snip("difficulty"),
+            "今日里程碑任务总览": milestones,
+            "今日学习助手列表": [],
+            "存档时间":         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        save_dir = BASE / "saved"
+        save_dir.mkdir(parents=True, exist_ok=True)
+        saves_jsonl = save_dir / "saves.jsonl"
+        # 追加一行（JSONL格式）—— 永不覆盖历史，pandas 可直接 read_json(lines=True)
+        with saves_jsonl.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(save_data, ensure_ascii=False) + "\n")
+        print(f"💾  游戏存档已追加至 saves.jsonl（当前共 {sum(1 for _ in saves_jsonl.open())} 条）")
+
+        return jsonify({"ok": True, "save_file": "saves.jsonl"})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 

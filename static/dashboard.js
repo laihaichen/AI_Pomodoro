@@ -21,7 +21,7 @@ function buildSteps(hours, difficulty) {
         id: "hours", type: "number",
         title: "计划学习时长", heading: "今天计划学习几小时？",
         hint: "请输入 1 ~ 14 之间的整数。",
-        min: 1, max: 14, placeholder: "例：9",
+        min: 1, max: 14, placeholder: "例：10",
     });
 
     // Step 1: difficulty（移到最前，决定是否需要里程碑步骤）
