@@ -148,15 +148,32 @@ def adjust_health(delta: int) -> int:
 
 
 def check_and_set_milestone() -> None:
-    """读取进度指示器，根据结果写入 -stage，未达成时自动扣除 -5 健康度。"""
+    """读取进度指示器，根据结果写入 -stage，未达成时自动扣除 -5 健康度。
+    达成时：+300 总积分。"""
     indicator = read_progress_indicator()
     if is_progress_reached(indicator):
         _write_stage(STAGE_MILESTONE_SUCCESS)
-        print(f"✅ 进度已达成（{indicator}  -stage → 奖励模式")
+        # 积分奖励 +300
+        try:
+            snip = SNIPPETS["total_score"]
+            with sqlite3.connect(DB_FILE) as con:
+                row = con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
+            current = int(row[0]) if row else 0
+            new_score = current + 300
+            with sqlite3.connect(DB_FILE) as con:
+                con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (str(new_score), snip.uid))
+            if snip.json_path.exists():
+                payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
+                payload["alfredsnippet"]["snippet"] = str(new_score)
+                snip.json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"✅ 进度已达成（{indicator}）  -stage → 奖励模式  总积分 +300 → {new_score}")
+        except Exception as exc:
+            print(f"⚠️  总积分写入失败: {exc}")
+            print(f"✅ 进度已达成（{indicator}）  -stage → 奖励模式")
     else:
         new_health = adjust_health(-5)
         _write_stage(STAGE_MILESTONE_FAIL)
-        print(f"⚠️  进度未达成（{indicator}  -5 健康度 → {new_health}，-stage → 惩罚模式")
+        print(f"⚠️  进度未达成（{indicator}）  -5 健康度 → {new_health}，-stage → 惩罚模式")
 
 
 def set_milestone() -> None:
