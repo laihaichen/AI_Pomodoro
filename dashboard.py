@@ -21,7 +21,7 @@ from config import (  # noqa: E402
     PAUSE_TS_FILE, CONT_TS_FILE,
     PENALIZED_REST_FILE, H_FILE,
     DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
-    HEALTH_FILE, FINAL_FATE_FILE,
+    HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE,
 )
 
 from flask import Flask, jsonify, render_template, request
@@ -171,7 +171,7 @@ def collect_state() -> dict:
         "current_prompt_count", "stage", "overtime_penalty_random_num",
         "offset", "difficulty", "max_rest_time", "violationcount",
         "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
-        "random_num", "foretold",
+        "random_num", "foretold", "total_count",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
@@ -305,6 +305,13 @@ def collect_state() -> dict:
         state["final_fate"] = int(ff_text) if ff_text.lstrip("-").isdigit() else None
     except Exception:
         state["final_fate"] = None
+
+    # ── Boss战结果 ────────────────────────────────────────────────────
+    try:
+        bd_text = BOSS_DEFEATED_FILE.read_text(encoding="utf-8").strip() if BOSS_DEFEATED_FILE.exists() else "none"
+        state["boss_defeated"] = bd_text  # "none" / "true" / "false"
+    except Exception:
+        state["boss_defeated"] = "none"
 
     return state
 
@@ -458,6 +465,9 @@ def api_setup():
             else SNIPPETS["current_progress_indicator"].default
         )
 
+        # ── 学习记录总条数 ───────────────────────────────────────────────────
+        write_snippet_value("total_count", str(hours * 6))
+
         # ── Boss战节点初始化 ──────────────────────────────────────────────────
         if difficulty == "硬核难度":
             # 触发节点：倒数第2条prompt输出（即第 hours*6 - 1 条）
@@ -484,6 +494,21 @@ def api_health_adjust():
         HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
         HEALTH_FILE.write_text(str(new_val), encoding="utf-8")
         return jsonify({"ok": True, "health": new_val})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/boss-defeated", methods=["POST"])
+def api_boss_defeated():
+    """Record boss battle result. Payload: {result: 'true' | 'false'}"""
+    data   = request.get_json()
+    result = data.get("result", "").strip()
+    if result not in ("true", "false"):
+        return jsonify({"ok": False, "error": "result must be 'true' or 'false'"}), 400
+    try:
+        BOSS_DEFEATED_FILE.parent.mkdir(parents=True, exist_ok=True)
+        BOSS_DEFEATED_FILE.write_text(result, encoding="utf-8")
+        return jsonify({"ok": True, "boss_defeated": result})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 

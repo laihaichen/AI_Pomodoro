@@ -27,6 +27,7 @@ PENALIZED_REST_FILE = DATA_DIR / "penalized_rest_up_to.txt"
 MILESTONE_GOALS_FILE = DATA_DIR / "milestone_goals.json"   # 各阶段进度条分母
 HEALTH_FILE          = DATA_DIR / "health.txt"              # 健康度（初始9，只减不加）
 FINAL_FATE_FILE      = DATA_DIR / "final_fate.txt"          # 最终命运值
+BOSS_DEFEATED_FILE   = DATA_DIR / "is_boss_defeated.txt"    # Boss战结果（none/true/false）
 
 
 # ── snippet registry ─────────────────────────────────────────────────────────
@@ -99,6 +100,8 @@ SNIPPETS: dict[str, Snippet] = {
                                       panel_label="人工智能当前违规次数"),
     "offset":                 Snippet("E99CD789-4D10-4C17-9A3A-C5076BA33ADB", "-offset",                 "0.0",
                                       panel_label="当前时间偏移值(超过正60直接判负)"),
+    "is_victory":             Snippet("B58339D5-FF40-4734-BDDB-E5D3113AE066", "-is-victory",             "尚未胜利",
+                                      panel_label="游戏胜利状态"),
     # ── 设置（不出现在面板）─────────────────────────────────────────────────
     "difficulty":             Snippet("BDEE3C98-A4A1-4A2B-9046-18A12FD66083", "-difficulty",             "", resettable=False),
     "max_rest_time":          Snippet("D197E8BC-85F4-45D0-82D4-814FA0DCA629", "-max_rest_time",          "0", resettable=False),

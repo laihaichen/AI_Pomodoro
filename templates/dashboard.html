@@ -218,6 +218,23 @@
         <div class="card" id="card-bossfight">
             <div class="card-label">⚔️ Boss战节点状态</div>
             <div class="card-value small" id="val-bossfight_stage">—</div>
+            <!-- 录入按钮：仅在硬核难度的最后一条记录时显示 -->
+            <div id="boss-record-area" style="display:none;margin-top:10px;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">录入Boss战结果：</div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button id="btn-boss-win" onclick="recordBossResult('true')" style="background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.4);
+                                   border-radius:4px;color:#4ade80;font-size:12px;padding:5px 12px;
+                                   cursor:pointer;transition:background 0.15s;"
+                        onmouseover="this.style.background='rgba(74,222,128,0.3)'"
+                        onmouseout="this.style.background='rgba(74,222,128,0.15)'">✅ 胜利</button>
+                    <button id="btn-boss-fail" onclick="recordBossResult('false')" style="background:rgba(220,50,50,0.15);border:1px solid rgba(220,50,50,0.4);
+                                   border-radius:4px;color:#f87171;font-size:12px;padding:5px 12px;
+                                   cursor:pointer;transition:background 0.15s;"
+                        onmouseover="this.style.background='rgba(220,50,50,0.3)'"
+                        onmouseout="this.style.background='rgba(220,50,50,0.15)'">❌ 失败</button>
+                    <span id="val-boss-defeated" style="font-size:12px;color:var(--dim);">尚未录入</span>
+                </div>
+            </div>
             <div class="card-sub">-bossfight-stage snippet</div>
         </div>
         <div class="card accent-blue">

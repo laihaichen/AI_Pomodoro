@@ -379,6 +379,22 @@ function healthAdjust(delta) {
         });
 }
 
+function recordBossResult(result) {
+    fetch("/api/boss-defeated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ result }),
+    })
+        .then(r => r.json())
+        .then(d => {
+            const statusEl = document.getElementById("val-boss-defeated");
+            if (d.ok && statusEl) {
+                statusEl.textContent = result === "true" ? "✅ 已录入：胜利" : "❌ 已录入：失败";
+                statusEl.style.color = result === "true" ? "var(--green, #4ade80)" : "#f87171";
+            }
+        });
+}
+
 // ── Dashboard data refresh ───────────────────────────────────────────────────
 const REFRESH_MS = 1000;
 
@@ -552,6 +568,26 @@ function refreshData() {
                 } else if (bfs.includes("等待")) {
                     bfsEl.classList.add("val-green");
                 }
+            }
+
+            // boss recording buttons — 仅硬核难度且当前是最后一条记录时显示
+            const bossArea = document.getElementById("boss-record-area");
+            const bossStatus = document.getElementById("val-boss-defeated");
+            if (bossArea) {
+                const isHardcore = (d.difficulty || "") === "硬核难度";
+                const curCount = parseInt(d.current_prompt_count) || 0;
+                const totalCount = parseInt(d.total_count) || 0;
+                const isLastEntry = totalCount > 0 && curCount >= totalCount;
+                bossArea.style.display = (isHardcore && isLastEntry) ? "block" : "none";
+            }
+            if (bossStatus) {
+                const bd = d.boss_defeated || "none";
+                bossStatus.textContent = bd === "true" ? "✅ 已录入：胜利"
+                    : bd === "false" ? "❌ 已录入：失败"
+                        : "尚未录入";
+                bossStatus.style.color = bd === "true" ? "var(--green, #4ade80)"
+                    : bd === "false" ? "#f87171"
+                        : "var(--dim)";
             }
 
             // random num
