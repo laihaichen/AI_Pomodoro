@@ -28,8 +28,8 @@ from pathlib import Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
 from config import (  # noqa: E402
-    CONT_TS_FILE, CURR_TS_FILE, DB_FILE, FIRST_TS_FILE,
-    PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,
+    CONT_TS_FILE, CURR_TS_FILE, DB_FILE, FINAL_FATE_FILE, FIRST_TS_FILE,
+    HEALTH_FILE, PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,
 )
 import update_h  # noqa: E402
 
@@ -69,6 +69,47 @@ def write_snippet(key: str, value: str) -> None:
     )
 
 
+def probability_check(health: int) -> bool:
+    """
+    输入健康度（0-10整数），以 health*10% 的概率返回 True（吉）。
+    与 rand_num（原始随机数）完全无关，使用独立的 random.random() 抽取。
+    """
+    if not (0 <= health <= 10):
+        health = max(0, min(health, 10))
+    return random.random() < health / 10.0
+
+
+def read_health() -> int:
+    """从 health.txt 读取健康度，缺失时默认 9。"""
+    if not HEALTH_FILE.exists():
+        return 9
+    text = HEALTH_FILE.read_text(encoding="utf-8").strip()
+    try:
+        return max(0, min(int(text), 10))
+    except ValueError:
+        return 9
+
+
+def read_overtime_penalty() -> int:
+    """从 Alfred DB 读取当前 -overtime-penalty-random-num 数值，缺失时为 0。"""
+    snip = SNIPPETS["overtime_penalty_random_num"]
+    with sqlite3.connect(DB_FILE) as con:
+        row = con.execute(
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
+        ).fetchone()
+    if row:
+        val = str(row[0]).strip()
+        if val.lstrip("-").isdigit():
+            return int(val)
+    return 0
+
+
+def write_final_fate(value: int) -> None:
+    """将最终命运值写入 data/final_fate.txt。"""
+    FINAL_FATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    FINAL_FATE_FILE.write_text(str(value), encoding="utf-8")
+
+
 # ── main ────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -82,14 +123,29 @@ def main() -> int:
 
     if prev is None:
         write_ts(FIRST_TS_FILE, now)
-        # 第1条记录：写入当前时间 + 生成随机数
-        rand_num = random.randint(1, 100)
+        # 第1条记录：生成随机数 + 吉凶判定（interval=0，必然 < 15min）
+        health      = read_health()
+        is_lucky    = probability_check(health)      # 独立概率抽取
+        fortune_val = 1 if is_lucky else -1
+        fortune_str = "吉" if is_lucky else "凶"
+        rand_num    = random.randint(1, 100)          # 原始随机数，独立抽取
+        overtime    = read_overtime_penalty()         # 首条通常为 0
+        final_fate  = rand_num * fortune_val - overtime
         try:
-            write_snippet("current_time", now.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
-            write_snippet("random_num",   str(rand_num))
+            write_snippet("current_time",          now.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
+            write_snippet("random_num",             str(rand_num))
+            write_snippet("fortunevalue",           fortune_str)
+            write_snippet("healthy",               str(health))
+            write_snippet("fortune_and_misfortune", fortune_str)
+            write_snippet("final_fate_value",      str(final_fate))
         except (RuntimeError, OSError) as exc:
-            print(f"current_time/random_num write failed: {exc}", file=sys.stderr)
-        print(f"First =move recorded. No interval computed yet.  -random-num = {rand_num}")
+            print(f"snippet write failed: {exc}", file=sys.stderr)
+        write_final_fate(final_fate)
+        print(
+            f"First =move recorded.\n"
+            f"  健康度={health}  概率判定={fortune_str}  原始随机数={rand_num}\n"
+            f"  超时惩罚={overtime}  最终命运值={final_fate}"
+        )
         return 0
 
 
@@ -107,40 +163,57 @@ def main() -> int:
 
     interval_minutes = raw_minutes - rest_minutes
 
-    # 4. Determine 吉凶 (fortune value)
-    fortune_snippet = (
-        "超出15分钟，不合规，应判断为凶(-1)"
-        if interval_minutes > 15
-        else "未到15分钟，合规"
-    )
-    fortune = "-1" if interval_minutes > 15 else "1"
+    # 4. 吉凶判定（两步独立随机）
+    health = read_health()
+    if interval_minutes >= 15:
+        fortune_val = -1
+        fortune_str = "凶 (超时)"
+    else:
+        is_lucky    = probability_check(health)   # 独立概率抽取，与 rand_num 无关
+        fortune_val = 1 if is_lucky else -1
+        fortune_str = "吉" if is_lucky else "凶 (命运不佳)"
 
-    # 5. Write interval + fortune + current-time to Alfred snippets
-    interval_str = f"{interval_minutes:.1f}"
+    # 5. 原始随机数（独立抽取，仅用于命运值公式）
+    rand_num = random.randint(1, 100)
+
+    # 6. Write all snippets to Alfred
+    interval_str     = f"{interval_minutes:.1f}"
     current_time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
-    rand_num = random.randint(1, 100)   # 每条番茄钟生成一个新随机数
+    fortune_label    = "吉" if fortune_val == 1 else "凶"   # 纯结果，不含原因备注
     try:
-        write_snippet("interval",     interval_str)
-        write_snippet("fortunevalue", fortune_snippet)
-        write_snippet("current_time", current_time_str)
-        write_snippet("random_num",   str(rand_num))
+        write_snippet("interval",               interval_str)
+        write_snippet("fortunevalue",           fortune_str)      # 含原因备注（时间差合规状态）
+        write_snippet("current_time",           current_time_str)
+        write_snippet("random_num",             str(rand_num))
+        write_snippet("healthy",                str(health))
+        write_snippet("fortune_and_misfortune", fortune_label)    # 纯吉/凶
     except (RuntimeError, OSError) as exc:
         print(f"Write failed: {exc}", file=sys.stderr)
         return 1
 
-    # 6. H penalty: interval > 20 min charges the excess
+    # 7. H penalty: interval > 20 min charges the excess
     h_info = ""
     if interval_minutes > 20:
         delta = interval_minutes - 20
         new_h = update_h.accumulate_h(delta)
-        h_info = f"  |  H += {delta:.1f} → H = {new_h:.1f}，range 已更新"
+        h_info = f"  |  H += {delta:.1f} → H = {new_h:.1f}"
 
-    # 7. Report
+    # 8. 最终命运值 = 原始随机数 × 吉凶值 - 超时惩罚随机数
+    overtime   = read_overtime_penalty()
+    final_fate = rand_num * fortune_val - overtime
+    write_final_fate(final_fate)
+    try:
+        write_snippet("final_fate_value", str(final_fate))
+    except (RuntimeError, OSError) as exc:
+        print(f"final_fate_value write failed: {exc}", file=sys.stderr)
+
+
+    # 9. Report
     rest_info = f" (休息扣除 {rest_minutes:.1f} 分钟)" if rest_minutes > 0 else ""
-    verdict   = "凶 (-1)" if fortune == "-1" else "吉 (+1)"
     print(
-        f"区间时间差：{interval_minutes:.1f} 分钟{rest_info}  →  {verdict}{h_info}\n"
-        f"-interval = {interval_str}，-fortunevalue = {fortune}，-random-num = {rand_num}"
+        f"区间：{interval_minutes:.1f} min{rest_info}  健康度={health}{h_info}\n"
+        f"吉凶={fortune_str}（概率判定独立）  原始随机数={rand_num}\n"
+        f"超时惩罚={overtime}  最终命运值={final_fate}"
     )
     return 0
 

@@ -358,8 +358,30 @@ function progressStep(delta) {
         });
 }
 
+// ── Health stepper ───────────────────────────────────────────────────────────
+function healthAdjust(delta) {
+    fetch("/api/health-adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delta }),
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                const el = document.getElementById("val-health");
+                if (el) {
+                    el.textContent = d.health;
+                    el.style.color = d.health >= 9 ? "var(--green, #4ade80)"
+                        : d.health >= 6 ? "var(--yellow, #facc15)"
+                            : "#f87171";
+                }
+            }
+        });
+}
+
 // ── Dashboard data refresh ───────────────────────────────────────────────────
 const REFRESH_MS = 5000;
+
 let countdown = REFRESH_MS / 1000;
 let currTsRaw = null; // Store ISO string for the timer
 
@@ -532,12 +554,35 @@ function refreshData() {
                 }
             }
 
-            // random num — 本轮原始随机数
+            // random num
             const rnEl = document.getElementById("val-random_num");
             if (rnEl) {
                 const rn = d.random_num || "0";
                 rnEl.textContent = rn;
                 rnEl.style.color = rn === "0" ? "var(--dim)" : "var(--bright)";
+            }
+
+            // health
+            const hEl = document.getElementById("val-health");
+            if (hEl && d.health !== undefined) {
+                hEl.textContent = d.health;
+                hEl.style.color = d.health >= 9 ? "var(--green, #4ade80)"
+                    : d.health >= 6 ? "var(--yellow, #facc15)"
+                        : "#f87171";
+            }
+
+            // final fate
+            const ffEl = document.getElementById("val-final_fate");
+            if (ffEl) {
+                if (d.final_fate !== null && d.final_fate !== undefined) {
+                    ffEl.textContent = d.final_fate > 0 ? "+" + d.final_fate : String(d.final_fate);
+                    ffEl.style.color = d.final_fate > 0 ? "var(--green, #4ade80)"
+                        : d.final_fate < -60 ? "#f87171"
+                            : "var(--bright)";
+                } else {
+                    ffEl.textContent = "—";
+                    ffEl.style.color = "var(--dim)";
+                }
             }
 
             // update time

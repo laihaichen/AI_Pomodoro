@@ -228,9 +228,32 @@
         </div>
     </div>
 
-
+    <!-- 健康度 + 最终命运值 -->
+    <div class="grid grid-2" style="margin-top:10px;">
+        <div class="card accent-teal">
+            <div class="card-label">❤️ 健康度</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                <button onclick="healthAdjust(-1)" title="AI判差后手动−1" style="background:rgba(220,50,50,0.15);border:1px solid rgba(220,50,50,0.4);
+                               border-radius:4px;color:#f87171;font-size:12px;padding:4px 9px;
+                               cursor:pointer;transition:background 0.15s;"
+                    onmouseover="this.style.background='rgba(220,50,50,0.3)'"
+                    onmouseout="this.style.background='rgba(220,50,50,0.15)'">▼ −1</button>
+                <span id="val-health"
+                    style="font-size:32px;font-weight:800;color:var(--bright);font-variant-numeric:tabular-nums;">9</span>
+                <span style="font-size:13px;color:var(--dim);">/ 10</span>
+            </div>
+            <div class="card-sub" style="margin-top:6px;">AI判差后在此减少；健康度只减不增</div>
+        </div>
+        <div class="card" id="card-final-fate">
+            <div class="card-label">⚡ 最终命运值</div>
+            <div class="card-value" id="val-final_fate"
+                style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;">—</div>
+            <div class="card-sub">原始随机数 × 吉凶值 − 超时惩罚</div>
+        </div>
+    </div>
 
     <!-- ── Setup Wizard Modal ── -->
+
     <div class="modal-overlay" id="wizard-overlay">
         <div class="modal">
             <button class="modal-close" onclick="closeWizard()">✕</button>

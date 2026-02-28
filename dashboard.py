@@ -21,6 +21,7 @@ from config import (  # noqa: E402
     PAUSE_TS_FILE, CONT_TS_FILE,
     PENALIZED_REST_FILE, H_FILE,
     DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
+    HEALTH_FILE, FINAL_FATE_FILE,
 )
 
 from flask import Flask, jsonify, render_template, request
@@ -286,6 +287,19 @@ def collect_state() -> dict:
     else:
         state["elapsed_minutes"] = None
 
+    # ── 健康度 & 最终命运值 ────────────────────────────────────────────
+    try:
+        h_text = HEALTH_FILE.read_text(encoding="utf-8").strip() if HEALTH_FILE.exists() else "9"
+        state["health"] = int(h_text) if h_text.isdigit() else 9
+    except Exception:
+        state["health"] = 9
+
+    try:
+        ff_text = FINAL_FATE_FILE.read_text(encoding="utf-8").strip() if FINAL_FATE_FILE.exists() else ""
+        state["final_fate"] = int(ff_text) if ff_text.lstrip("-").isdigit() else None
+    except Exception:
+        state["final_fate"] = None
+
     return state
 
 
@@ -452,7 +466,24 @@ def api_setup():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/health-adjust", methods=["POST"])
+def api_health_adjust():
+    """Decrease (or increase) health by delta, clamped to [0, 10]."""
+    data  = request.get_json()
+    delta = int(data.get("delta", 0))
+    try:
+        current = int(HEALTH_FILE.read_text(encoding="utf-8").strip()) \
+                  if HEALTH_FILE.exists() else 9
+        new_val = max(0, min(current + delta, 10))
+        HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
+        HEALTH_FILE.write_text(str(new_val), encoding="utf-8")
+        return jsonify({"ok": True, "health": new_val})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/reset", methods=["POST"])
+
 def api_reset():
     """Run reset.py to wipe all game state back to Day-0 defaults."""
     try:

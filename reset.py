@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import DATA_DIR, DB_FILE, SNIPPETS, SNIPPETS_DIR, MILESTONE_GOALS_FILE  # noqa: E402
+from config import DATA_DIR, DB_FILE, SNIPPETS, SNIPPETS_DIR, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────
 DATA_FILES_TO_CLEAR = [
@@ -123,6 +123,21 @@ def main() -> int:
         print("  ✓ milestone_goals.json → all zeros")
     except Exception as exc:
         print(f"  ✗ milestone_goals.json 重置失败：{exc}", file=sys.stderr)
+
+    # Reset health.txt → 9
+    try:
+        HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
+        HEALTH_FILE.write_text("9", encoding="utf-8")
+        print("  ✓ health.txt → 9")
+    except Exception as exc:
+        print(f"  ✗ health.txt 重置失败：{exc}", file=sys.stderr)
+
+    # Clear final_fate.txt
+    try:
+        FINAL_FATE_FILE.write_text("", encoding="utf-8")
+        print("  ✓ final_fate.txt → cleared")
+    except Exception as exc:
+        print(f"  ✗ final_fate.txt 清空失败：{exc}", file=sys.stderr)
 
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0
