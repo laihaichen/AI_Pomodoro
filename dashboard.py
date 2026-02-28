@@ -647,6 +647,60 @@ def api_declare_victory():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/declare-defeat", methods=["POST"])
+def api_declare_defeat():
+    """Settle the game as a defeat. Writes the same save fields as declare-victory."""
+    try:
+        def _read_snip(key: str) -> str:
+            try:
+                s = SNIPPETS[key]
+                with sqlite3.connect(DB_FILE) as _c:
+                    row = _c.execute("SELECT snippet FROM snippets WHERE uid = ?", (s.uid,)).fetchone()
+                return (row[0] or "").strip() if row else ""
+            except Exception:
+                return ""
+
+        # 当前积分（失败结算不额外乘以系数，惩罚已在触发时执行）
+        snip = SNIPPETS["total_score"]
+        with sqlite3.connect(DB_FILE) as _c:
+            row = _c.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
+        final_score = int((row[0] or "0").strip()) if row else 0
+
+        # 里程碑列表
+        milestone_keys  = ["hour3", "hour6", "hour9", "hour12"]
+        milestone_slots = ["3小时节点", "6小时节点", "9小时节点", "12小时节点"]
+        milestones = []
+        for label, key in zip(milestone_slots, milestone_keys):
+            text = _read_snip(key)
+            if text and text not in ("0", ""):
+                milestones.append({"节点": label, "任务": text})
+
+        # 读取当前失败状态（保留失败来源文字）
+        is_victory_val = _read_snip("is_victory") or "已失败"
+
+        save_data = {
+            "当天预期总条数":    int(_read_snip("total_count") or 0),
+            "当天设置的休息总时长": _read_snip("max_rest_time"),
+            "总积分":            final_score,
+            "是否胜利":          is_victory_val,
+            "当前游戏难度":      _read_snip("difficulty"),
+            "今日里程碑任务总览": milestones,
+            "今日学习助手列表":  [],
+            "存档时间":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        save_dir = BASE / "saved"
+        save_dir.mkdir(parents=True, exist_ok=True)
+        saves_jsonl = save_dir / "saves.jsonl"
+        with saves_jsonl.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(save_data, ensure_ascii=False) + "\n")
+        print(f"💾  失败存档已追加至 saves.jsonl")
+
+        return jsonify({"ok": True, "save_file": "saves.jsonl"})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/reset", methods=["POST"])
 
 

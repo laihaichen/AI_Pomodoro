@@ -149,7 +149,7 @@ function renderStep() {
 
     let nextBtn = "";
     if (step.type === "result") {
-        nextBtn = `<button class="btn-copy" onclick="copyPrompt()">📋 复制 Prompt</button>`;
+        nextBtn = `<button class="btn-copy" onclick="copyPrompt()">📋 复制 Prompt 并发送</button>`;
     } else {
         nextBtn = `<button class="btn-next" onclick="wizardNext()">
       ${isLast ? "完成" : "下一步 →"}</button>`;
@@ -277,8 +277,18 @@ function copyPrompt() {
     const text = document.getElementById("w-result").value;
     navigator.clipboard.writeText(text).then(() => {
         const msg = document.getElementById("copy-msg");
-        msg.textContent = "✅ 已复制到剪贴板！";
-        setTimeout(() => { msg.textContent = ""; }, 3000);
+        msg.textContent = "✅ 已复制！正在发送…";
+        // 同时调用 stay.applescript（复用 divine-intervention 的 stay 路径）
+        fetch("/api/stay-pomodoro", { method: "POST" })
+            .then(r => r.json())
+            .then(d => {
+                msg.textContent = d.ok ? "✅ 已复制并发送！" : "✅ 已复制（发送失败）";
+                setTimeout(() => { msg.textContent = ""; }, 3000);
+            })
+            .catch(() => {
+                msg.textContent = "✅ 已复制（AppleScript 调用失败）";
+                setTimeout(() => { msg.textContent = ""; }, 3000);
+            });
     });
 }
 
@@ -411,6 +421,26 @@ function declareVictory() {
                 if (ivCard) { ivCard.style.borderColor = "rgba(74,222,128,0.5)"; }
                 if (ivBtn) { ivBtn.style.display = "none"; }
             }
+        });
+}
+
+function declareDefeat() {
+    const dfBtn = document.getElementById("btn-declare-defeat");
+    if (dfBtn) { dfBtn.textContent = "保存中…"; dfBtn.disabled = true; }
+    fetch("/api/declare-defeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                if (dfBtn) { dfBtn.textContent = "✅ 已结算"; dfBtn.disabled = true; }
+            } else {
+                if (dfBtn) { dfBtn.textContent = "❌ 失败：" + (d.error || "未知"); dfBtn.disabled = false; }
+            }
+        })
+        .catch(() => {
+            if (dfBtn) { dfBtn.textContent = "📁 结算失败"; dfBtn.disabled = false; }
         });
 }
 
@@ -830,6 +860,7 @@ function refreshData() {
             const ivEl = document.getElementById("val-is_victory");
             const ivCard = document.getElementById("card-is-victory");
             const ivBtn = document.getElementById("btn-declare-victory");
+            const dfBtn = document.getElementById("btn-declare-defeat");
             if (ivEl) {
                 const iv = d.is_victory || "尚未胜利";
                 ivEl.textContent = iv;
@@ -853,6 +884,10 @@ function refreshData() {
                         && tot > 0 && cur >= tot
                         && bossOk;
                     ivBtn.style.display = canSettle ? "inline-block" : "none";
+                }
+                // 结算失败按钮：当前状态是已失败时显示
+                if (dfBtn) {
+                    dfBtn.style.display = isFailed ? "inline-block" : "none";
                 }
             }
 

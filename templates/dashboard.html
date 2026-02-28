@@ -324,6 +324,15 @@
                     onmouseout="this.style.background='linear-gradient(135deg,rgba(74,222,128,0.2),rgba(34,197,94,0.15))'">
                     🎉 结算胜利
                 </button>
+                <!-- 结算失败：游戏状态为已失败时显示 -->
+                <button id="btn-declare-defeat" onclick="declareDefeat()" style="display:none;background:linear-gradient(135deg,rgba(248,113,113,0.2),rgba(220,50,50,0.15));
+                               border:1px solid rgba(248,113,113,0.5);border-radius:6px;
+                               color:#f87171;font-size:13px;font-weight:700;padding:6px 16px;
+                               cursor:pointer;transition:all 0.15s;letter-spacing:0.02em;"
+                    onmouseover="this.style.background='linear-gradient(135deg,rgba(248,113,113,0.35),rgba(220,50,50,0.25))'"
+                    onmouseout="this.style.background='linear-gradient(135deg,rgba(248,113,113,0.2),rgba(220,50,50,0.15))'">
+                    📁 结算失败
+                </button>
             </div>
             <div class="card-sub" style="margin-top:4px;">-is-victory snippet · 后台自动写入</div>
         </div>
