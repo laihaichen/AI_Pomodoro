@@ -1,21 +1,13 @@
 #!/usr/bin/env python3
-"""=move handler.
+"""=move handler（整合自 increase_current_prompt_count.py）。
 
 On each call:
   1. Move curr_timestamp → prev_timestamp
   2. Write current time → curr_timestamp
-  3. If there is a prev timestamp, compute the interval:
-       - Check whether a pause/continue pair falls inside [prev, curr].
-         (If pause_time <= prev_time the rest happened BEFORE this interval
-          and is safely ignored — no reset needed.)
-       - interval = (curr − prev) − (continue − pause)  [if rest inside]
-       - interval = (curr − prev)                        [otherwise]
-  4. Write interval minutes to Alfred snippet  -interval  (DB + JSON)
-  5. Write +1 or -1 to Alfred snippet  -fortunevalue     (DB + JSON)
-     rule: interval > 15 min  →  -1 (凶),  else  +1 (吉)
-  6. Generate a fresh 1-100 random number and write to -random-num (DB + JSON)
-     每条番茄钟绑定一个唯一随机数；用户多次展开 -go 不会刷新，
-     只有下次推进番茄钟才刷新。
+  3. Compute interval, 吉凶, 命运值, write all Alfred snippets
+  4. Increment -current_prompt_count
+  5. Check milestone state machine (every 18 prompts)
+  6. Compute and write time offset (-offset)
 """
 from __future__ import annotations
 
@@ -32,7 +24,8 @@ from config import (  # noqa: E402
     HEALTH_FILE, PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,
     read_snippet, write_snippet, update_total_score,
 )
-import update_h  # noqa: E402
+import update_h     # noqa: E402
+import update_stage # noqa: E402
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -123,6 +116,50 @@ def fate_category(fate: int) -> str:
         return "POS_HIGH(85~100) 高度正面事件"
 
 
+# ── count / offset helpers (merged from increase_current_prompt_count.py) ──
+
+def _read_count() -> int:
+    """Read -current_prompt_count from Alfred DB."""
+    val = read_snippet("current_prompt_count")
+    if not val:
+        raise RuntimeError("current_prompt_count not found in DB")
+    try:
+        return int(val)
+    except ValueError:
+        raise RuntimeError(f"snippet value {val!r} is not an integer")
+
+
+def _compute_and_write_offset(new_count: int) -> str:
+    """
+    offset = 期望总时间 - 真实总时间
+           = ((new_count - 1) × 10 + total_rest) - (curr_ts - first_ts)
+    Returns a short status string.
+    """
+    try:
+        first_raw = FIRST_TS_FILE.read_text(encoding="utf-8").strip() if FIRST_TS_FILE.exists() else ""
+        curr_raw  = CURR_TS_FILE.read_text(encoding="utf-8").strip()  if CURR_TS_FILE.exists()  else ""
+        if not first_raw or not curr_raw:
+            return "(offset 误差：时间戳文件缺失)"
+        real_total   = (datetime.fromisoformat(curr_raw) - datetime.fromisoformat(first_raw)).total_seconds() / 60
+        total_rest   = float(read_snippet("total_rest_time") or "0")
+        expect_total = (new_count - 1) * 10 + total_rest
+        offset       = expect_total - real_total
+        write_snippet("offset", f"{offset:.1f}")
+        if offset > 60:
+            try:
+                write_snippet("is_victory", "已失败，失败来源：时间偏移量超限")
+                print(f"⚠️  offset={offset:.1f} > 60，游戏失败：is_victory → 已失败")
+                _cur = int(read_snippet("total_score") or "0")
+                _new = round(_cur * 0.9)
+                write_snippet("total_score", str(_new))
+                print(f"  总积分 ×0.9 → {_new}")
+            except Exception as exc:
+                print(f"offset 惩罚写入失败: {exc}", file=sys.stderr)
+        return f"-offset = {offset:.1f} 分钟（期望 {expect_total:.1f} - 真实 {real_total:.1f}）"
+    except Exception as exc:
+        return f"(offset 计算异常: {exc})"
+
+
 # ── main ────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -193,6 +230,25 @@ def main() -> int:
             f"  健康度={health}  概率判定={fortune_str}  原始随机数={rand_num}\n"
             f"  超时惩罚={overtime}  最终命运值={final_fate}"
         )
+        # ── 计数 + 里程碑 + offset（首条）──────────────────────────────────
+        try:
+            current = _read_count()
+            new_count = current + 1
+            write_snippet("current_prompt_count", str(new_count))
+            print(f"prompt count: {current} → {new_count}")
+            # 里程碑状态机
+            if not update_stage.is_milestone_difficulty():
+                update_stage.set_not_applicable()
+            elif new_count % 18 == 0:
+                update_stage.set_milestone()
+            elif new_count % 18 == 1 and new_count > 1:
+                update_stage.reset_stage()
+            else:
+                if update_stage.read_stage() == update_stage.STAGE_NOT_APPLICABLE:
+                    update_stage.reset_stage()
+        except Exception as exc:
+            print(f"count/milestone failed: {exc}", file=sys.stderr)
+        print(_compute_and_write_offset(new_count if 'new_count' in dir() else 1))
         return 0
 
 
@@ -302,6 +358,31 @@ def main() -> int:
         f"吉凶={fortune_str}（概率判定独立）  原始随机数={rand_num}\n"
         f"超时惩罚={overtime}  最终命运值={final_fate}  总积分={new_score}"
     )
+
+    # 10. 计数 + 里程碑 + offset
+    try:
+        current   = _read_count()
+        new_count = current + 1
+        write_snippet("current_prompt_count", str(new_count))
+        print(f"prompt count: {current} → {new_count}")
+        # 里程碑状态机
+        if not update_stage.is_milestone_difficulty():
+            update_stage.set_not_applicable()
+            print("ℹ️  探索者难度，阶段性节点不适用")
+        elif new_count % 18 == 0:
+            update_stage.set_milestone()
+            print(f"🎯 阶段性节点触发：第 {new_count} 条记录")
+        elif new_count % 18 == 1 and new_count > 1:
+            update_stage.reset_stage()
+            print(f"🔄 阶段性节点已过，-stage 重置")
+        else:
+            if update_stage.read_stage() == update_stage.STAGE_NOT_APPLICABLE:
+                update_stage.reset_stage()
+                print("ℹ️  难度已切换回 milestone 模式，-stage 已还原")
+    except Exception as exc:
+        print(f"count/milestone failed: {exc}", file=sys.stderr)
+
+    print(_compute_and_write_offset(new_count if 'new_count' in locals() else 1))
     return 0
 
 
