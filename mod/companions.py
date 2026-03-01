@@ -80,11 +80,21 @@ class BaseCompanion:
 
     name: str = "unnamed_companion"
     description: str = ""
-    rarity: str = "common"  # common / rare / epic / legendary
+    avatar: str = ""   # 图片文件名，存于 static/companions/ 目录下，例如 "yui.png"
+                       # 留空表示无头像（dashboard 可显示默认占位图）
 
     def __init__(self, **kwargs: Any) -> None:
         self._params = kwargs
         self.skills: list = []  # 挂载的 Skill 实例列表
+
+    @property
+    def avatar_url(self) -> str:
+        """返回可供 dashboard 直接使用的 URL 路径。
+        若未设置头像，返回空字符串（由前端决定显示默认图）。
+        """
+        if not self.avatar:
+            return ""
+        return f"/static/companions/{self.avatar}"
 
     # ------------------------------------------------------------------
     # 内部：按 trigger_event 筛选并激活
@@ -125,4 +135,4 @@ class BaseCompanion:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(name={self.name!r}, rarity={self.rarity!r})"
+        return f"{self.__class__.__name__}(name={self.name!r}, avatar={self.avatar!r})"

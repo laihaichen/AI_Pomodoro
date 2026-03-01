@@ -52,9 +52,12 @@ def reset_files() -> list[str]:
         lines.append(f"  ✓ {f.name} → cleared")
     # JSON 文件重置（需保持合法 JSON）
     for json_file, empty_val in [
-        ("active_companions.json",   "[]"),
-        ("pending_active_skills.json", "[]"),
-        ("used_skills.json",         "{}"),
+        ("active_companions.json",    "[]"),
+        ("pending_active_skills.json","[]"),
+        ("used_skills.json",          "{}"),
+        ("companion_log.json",        "[]"),
+        ("skill_cooldowns.json",      "{}"),
+        ("skill_effects.json",        "{}"),
     ]:
         p = DATA_DIR / json_file
         p.write_text(empty_val, encoding="utf-8")

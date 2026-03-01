@@ -1,25 +1,26 @@
 """
 skills.py — 技能类
 ======================================
-Skill 永远是 Condition + Effect 的组合结构。
-自身不含业务逻辑，只负责：
-  1. 检查所有 Condition 是否满足（AND 逻辑）
-  2. 检查全局触发次数是否未超限（写入磁盘持久化）
-  3. 若满足，按序执行所有 Effect
+Skill 是 Condition + Effect 的组合结构，包含三个独立的限制维度：
 
-trigger_event 字段声明技能在哪个时机被触发：
-  "on_move"     → 每次推进番茄钟时（move.py）
-  "on_victory"  → 宣布胜利结算时（dashboard）
-  "on_defeat"   → 宣布失败结算时（dashboard）
-  "on_rest_end" → 休息结束时（continue.py）
-  "on_milestone"→ 里程碑达成时（update_stage.py）
+  global_uses      整局最多触发 N 次（None = 无限）
+  cooldown_turns   每次触发后 N 回合内不可再激活（None = 无 CD）
+  effect_duration  每次触发后效果持续 N 回合（None = 即时，无持续期）
 
-global_uses：全局触发次数上限（跨进程持久化到 data/used_skills.json）
-  None  → 无限制（默认）
-  N > 0 → 整局游戏最多触发 N 次，超过后永久失效
+这三者互相独立，不能互相取代：
+  "生效6回合，CD10回合"的技能 → effect_duration=6, cooldown_turns=10, global_uses=None
 
-注意：因为 move.py 每次调用都是新进程，纯内存的 duration_turns 方案
-      无法跨进程保留状态，因此统一使用磁盘计数器（global_uses）。
+持久化文件（均存于 data/）：
+  used_skills.json       → {技能名: 已触发次数}       （global_uses 追踪）
+  skill_cooldowns.json   → {技能名: 上次触发时 count}  （CD 追踪）
+  skill_effects.json     → {技能名: {started_at: count, duration: N}}  （生效期追踪）
+
+trigger_event 字段声明触发时机：
+  "on_move"     → 每次推进番茄钟（move.py）
+  "on_victory"  → 宣布胜利结算（dashboard）
+  "on_defeat"   → 宣布失败结算（dashboard）
+  "on_rest_end" → 休息结束（continue.py）
+  "on_milestone"→ 里程碑达成（update_stage.py）
 """
 
 from __future__ import annotations
@@ -32,22 +33,40 @@ if TYPE_CHECKING:
     from mod.conditions import BaseCondition
     from mod.effects import BaseEffect
 
-_USED_SKILLS_FILE = Path(__file__).parent.parent / "data" / "used_skills.json"
+_DATA = Path(__file__).parent.parent / "data"
+_USED_SKILLS_FILE    = _DATA / "used_skills.json"
+_COOLDOWNS_FILE      = _DATA / "skill_cooldowns.json"
+_EFFECTS_FILE        = _DATA / "skill_effects.json"
+_COMPANION_LOG_FILE  = _DATA / "companion_log.json"
 
 
-def _load_used_skills() -> dict[str, int]:
+# ── 磁盘 IO 工具 ─────────────────────────────────────────────────────────────
+
+def _read(path: Path, default):
     try:
-        return json.loads(_USED_SKILLS_FILE.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        return {}
+        return default
 
 
-def _save_used_skills(data: dict[str, int]) -> None:
-    _USED_SKILLS_FILE.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+def _write(path: Path, data) -> None:
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
+
+def _append_companion_log(companion: str, skill: str, description: str) -> None:
+    """向 companion_log.json 追加一条技能触发记录，供 dashboard 展示 Toast。"""
+    from datetime import datetime
+    logs = _read(_COMPANION_LOG_FILE, [])
+    logs.append({
+        "companion":   companion,
+        "skill":       skill,
+        "description": description,
+        "ts":          datetime.now().strftime("%H:%M:%S"),
+    })
+    _write(_COMPANION_LOG_FILE, logs)
+
+
+# ── 类型别名 ─────────────────────────────────────────────────────────────────
 
 TriggerEvent = Literal[
     "on_move",
@@ -58,22 +77,19 @@ TriggerEvent = Literal[
 ]
 
 
+# ── Skill 类 ─────────────────────────────────────────────────────────────────
+
 class Skill:
     """技能 = Condition 列表（AND）+ Effect 列表（顺序执行）。
 
-    属性说明：
-        trigger_event:
-            声明该技能在哪个游戏时机被触发（见模块顶部注释）。
-            默认 "on_move"。
+    三个独立限制维度（均可为 None 表示"无此限制"）：
+        global_uses     : 整局最多触发 N 次
+        cooldown_turns  : 单次触发后 N 回合 CD
+        effect_duration : 单次触发后效果持续 N 回合（影响 context["skill_active_*"]）
 
-        active_or_passive:
-            "passive" → 条件满足时自动触发（无需玩家操作）
-            "active"  → 需要玩家主动选择；
-                        context["player_used_skills"] 中需包含 self.name。
-
-        global_uses:
-            None  → 无次数限制，可无限触发。
-            N > 0 → 整局游戏最多触发 N 次（磁盘持久化计数，跨进程安全）。
+    active_or_passive:
+        "passive" → 条件满足时自动触发
+        "active"  → 需 context["player_used_skills"] 中包含 self.name
     """
 
     def __init__(
@@ -83,8 +99,10 @@ class Skill:
         effects: "list[BaseEffect]",
         description: str = "",
         trigger_event: TriggerEvent = "on_move",
-        active_or_passive: str = "passive",      # "passive" | "active"
-        global_uses: "int | None" = None,        # None = 无限；正整数 = 全局限制次数
+        active_or_passive: str = "passive",
+        global_uses: "int | None" = None,       # 整局触发上限
+        cooldown_turns: "int | None" = None,    # 触发后 CD 回合数
+        effect_duration: "int | None" = None,   # 效果持续回合数
     ) -> None:
         self.name = name
         self.conditions: list[BaseCondition] = list(conditions)
@@ -93,31 +111,49 @@ class Skill:
         self.trigger_event: TriggerEvent = trigger_event
         self.active_or_passive = active_or_passive
         self.global_uses = global_uses
+        self.cooldown_turns = cooldown_turns
+        self.effect_duration = effect_duration
 
     # ------------------------------------------------------------------
-    # 磁盘持久化：次数查询 / 记录
+    # 磁盘查询
     # ------------------------------------------------------------------
 
     def used_count(self) -> int:
-        """从磁盘读取该技能已触发的次数。"""
-        return _load_used_skills().get(self.name, 0)
+        return _read(_USED_SKILLS_FILE, {}).get(self.name, 0)
 
-    def _record_use(self) -> None:
-        """在磁盘计数器里将该技能的触发次数 +1。"""
-        data = _load_used_skills()
-        data[self.name] = data.get(self.name, 0) + 1
-        _save_used_skills(data)
+    def last_used_at(self) -> int:
+        """上次触发时的 prompt_count（-1 表示从未使用）。"""
+        return _read(_COOLDOWNS_FILE, {}).get(self.name, -1)
+
+    def effect_started_at(self) -> int:
+        """本次效果开始时的 prompt_count（-1 表示当前无生效中的效果）。"""
+        return _read(_EFFECTS_FILE, {}).get(self.name, {}).get("started_at", -1)
 
     # ------------------------------------------------------------------
-    # 状态查询
+    # 状态查询（依赖 context 中的 current_prompt_count）
     # ------------------------------------------------------------------
 
-    @property
-    def is_expired(self) -> bool:
-        """技能是否已耗尽全局次数限制（从磁盘读取）。"""
+    def is_global_expired(self) -> bool:
         if self.global_uses is None:
             return False
         return self.used_count() >= self.global_uses
+
+    def is_on_cooldown(self, current_count: int) -> bool:
+        if self.cooldown_turns is None:
+            return False
+        last = self.last_used_at()
+        if last < 0:   # 从未使用过 → 不在 CD 中
+            return False
+        return current_count - last < self.cooldown_turns
+
+    def is_in_effect(self, current_count: int) -> bool:
+        """效果是否仍在持续（用于阻止重复激活，或向 effects 传递"当前生效"信号）。"""
+        if self.effect_duration is None:
+            return False
+        started = self.effect_started_at()
+        if started < 0:
+            return False
+        return current_count - started < self.effect_duration
 
     # ------------------------------------------------------------------
     # 核心接口
@@ -126,10 +162,18 @@ class Skill:
     def can_activate(self, context: dict) -> bool:
         """检查技能是否可以触发：
           1. 全局次数未超限
-          2. 若为主动技能，玩家本次明确选择了它
-          3. 所有 Condition 满足（AND 逻辑）
+          2. 不在 CD 中
+          3. 效果未在生效中（有 effect_duration 的技能不可重叠激活）
+          4. 若为主动技能，玩家本次明确选择了它
+          5. 所有 Condition 满足（AND 逻辑）
         """
-        if self.is_expired:
+        count = context.get("current_prompt_count", 0)
+
+        if self.is_global_expired():
+            return False
+        if self.is_on_cooldown(count):
+            return False
+        if self.effect_duration is not None and self.is_in_effect(count):
             return False
         if self.active_or_passive == "active":
             if self.name not in context.get("player_used_skills", []):
@@ -137,16 +181,41 @@ class Skill:
         return all(cond.is_met(context) for cond in self.conditions)
 
     def activate(self, context: dict) -> dict:
-        """若条件满足则依序执行所有效果，并将触发次数写入磁盘。
-
-        若条件不满足或次数已超限，直接返回原 context（无副作用）。
-        """
+        """若条件满足则依序执行所有效果，并将状态写入磁盘。"""
         if not self.can_activate(context):
             return context
+
+        count = context.get("current_prompt_count", 0)
+
         for effect in self.effects:
             context = effect.apply(context)
+
+        # ── 磁盘持久化 ───────────────────────────────────────────────
+        # global_uses 计数
         if self.global_uses is not None:
-            self._record_use()
+            data = _read(_USED_SKILLS_FILE, {})
+            data[self.name] = data.get(self.name, 0) + 1
+            _write(_USED_SKILLS_FILE, data)
+
+        # CD 记录
+        if self.cooldown_turns is not None:
+            data = _read(_COOLDOWNS_FILE, {})
+            data[self.name] = count
+            _write(_COOLDOWNS_FILE, data)
+
+        # 生效期记录
+        if self.effect_duration is not None:
+            data = _read(_EFFECTS_FILE, {})
+            data[self.name] = {"started_at": count, "duration": self.effect_duration}
+            _write(_EFFECTS_FILE, data)
+
+        # companion log（Toast 通知）
+        _append_companion_log(
+            companion=context.get("companion_name", "助手"),
+            skill=self.name,
+            description=self.description or self.name,
+        )
+
         return context
 
     # ------------------------------------------------------------------
@@ -154,18 +223,12 @@ class Skill:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
-        cond_names = [c.__class__.__name__ for c in self.conditions]
-        eff_names  = [e.__class__.__name__ for e in self.effects]
-        if self.global_uses is None:
-            uses_str = "∞"
-        else:
-            used = self.used_count()
-            uses_str = f"{used}/{self.global_uses}次"
-        return (
-            f"Skill(name={self.name!r}, "
-            f"trigger={self.trigger_event}, "
-            f"{self.active_or_passive}, "
-            f"uses={uses_str}, "
-            f"conditions={cond_names}, "
-            f"effects={eff_names})"
-        )
+        parts = [f"Skill(name={self.name!r}", f"trigger={self.trigger_event}",
+                 self.active_or_passive]
+        if self.global_uses is not None:
+            parts.append(f"uses={self.used_count()}/{self.global_uses}")
+        if self.cooldown_turns is not None:
+            parts.append(f"cd={self.cooldown_turns}回合")
+        if self.effect_duration is not None:
+            parts.append(f"duration={self.effect_duration}回合")
+        return ", ".join(parts) + ")"

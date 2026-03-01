@@ -23,6 +23,7 @@ from config import (  # noqa: E402
     DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
     HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE,
     BASE,
+    DATA_DIR,
     read_snippet, write_snippet, update_total_score,
 )
 
@@ -309,6 +310,19 @@ def collect_state() -> dict:
 @app.route("/api/state")
 def api_state():
     return jsonify(collect_state())
+
+
+@app.route("/api/companion-log")
+def api_companion_log():
+    """Return pending companion skill log entries, then clear the file."""
+    log_file = DATA_DIR / "companion_log.json"
+    try:
+        entries = json.loads(log_file.read_text(encoding="utf-8"))
+    except Exception:
+        entries = []
+    if entries:
+        log_file.write_text("[]", encoding="utf-8")
+    return jsonify(entries)
 
 
 @app.route("/api/next-pomodoro", methods=["POST"])

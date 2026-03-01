@@ -24,6 +24,7 @@ from config import (  # noqa: E402
 )
 import update_h     # noqa: E402
 import update_stage # noqa: E402
+from mod.companions import load_active_companions, consume_pending_skills  # noqa: E402
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -177,6 +178,27 @@ def main() -> int:
     rand_num   = random.randint(1, 100)
     overtime   = read_overtime_penalty()
     final_fate = rand_num * fortune_val - overtime
+
+    # ── 4.5 Companion on_move 钩子（在 snippet 写入前，允许技能修改 final_fate）──
+    try:
+        companions = load_active_companions()
+        if companions:
+            ctx = {
+                "final_fate":         final_fate,
+                "rand_num":           rand_num,
+                "fortune_val":        fortune_val,
+                "overtime":           overtime,
+                "health":             health,
+                "interval_minutes":   interval_minutes,
+                "is_first":           is_first,
+                "player_used_skills": consume_pending_skills(),
+            }
+            for companion in companions:
+                ctx = companion.on_move(ctx)
+            final_fate = ctx["final_fate"]   # 读回可能被技能修改后的值
+    except Exception as exc:
+        print(f"companion on_move failed: {exc}", file=sys.stderr)
+
     write_final_fate(final_fate)
 
     # ── 5. 写入所有 snippets ──────────────────────────────────────────────────

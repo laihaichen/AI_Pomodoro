@@ -999,3 +999,48 @@ setInterval(() => {
 // data refresh
 refreshData();
 setInterval(refreshData, REFRESH_MS);
+
+// ── Companion skill Toast 通知 ────────────────────────────────────────────────
+
+function showCompanionToast(entry) {
+    const container = document.getElementById("companion-toast-container");
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = "companion-toast";
+    toast.innerHTML = `
+        <div class="companion-toast-header">
+            <span class="companion-toast-icon">✨</span>
+            <span class="companion-toast-name">${entry.companion}</span>
+            <span class="companion-toast-skill">· ${entry.skill}</span>
+            <span class="companion-toast-time">${entry.ts}</span>
+        </div>
+        <div class="companion-toast-body">${entry.description}</div>
+    `;
+
+    container.appendChild(toast);
+
+    // 触发进场动画
+    requestAnimationFrame(() => toast.classList.add("companion-toast-enter"));
+
+    // 4秒后退场
+    setTimeout(() => {
+        toast.classList.add("companion-toast-exit");
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+}
+
+function pollCompanionLog() {
+    fetch("/api/companion-log")
+        .then(r => r.json())
+        .then(entries => {
+            entries.forEach((entry, i) => {
+                // 多条时错开显示，避免堆叠
+                setTimeout(() => showCompanionToast(entry), i * 600);
+            });
+        })
+        .catch(() => { }); // 静默失败
+}
+
+// 每3秒检查一次 companion log（比 refreshData 稍慢，避免冲突）
+setInterval(pollCompanionLog, 3000);
