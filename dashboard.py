@@ -534,6 +534,23 @@ def api_usecard():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/usecard-zone", methods=["POST"])
+def api_usecard_zone():
+    """接收用户选择的区间 → 复制到剪切板 → 运行 usecard.applescript。"""
+    data = request.get_json(silent=True) or {}
+    zone = data.get("zone", "").strip()
+    try:
+        # ① 将区间写入剪切板
+        subprocess.run(["pbcopy"], input=zone.encode("utf-8"),
+                       check=True, timeout=5)
+        # ② 运行 usecard.applescript
+        usecard_script = str(BASE / "applescript" / "usecard.applescript")
+        subprocess.run(["osascript", usecard_script], check=True, timeout=15)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/setup", methods=["POST"])
 def api_setup():
     data = request.get_json()

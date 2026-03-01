@@ -64,10 +64,9 @@
                 title="执行 AppleScript：btn_getcard">
                 获得一张宿命卡
             </button>
-            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerUseCard(this)"
-                title="执行 AppleScript：btn_usecard">
-                <span>使用一张宿命卡</span>
-                <span class="btn-sub">（请将想锁定的区间复制到剪切板）</span>
+            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="openUseCardModal()"
+                title="使用一张宿命卡">
+                使用一张宿命卡
             </button>
             <button id="btn-reset-all" onclick="triggerReset(this)" title="重置所有游戏状态（二次确认）" style="flex:1;min-width:80px;background:rgba(220,50,50,0.12);
                        border:1px solid rgba(220,50,50,0.4);border-radius:8px;
@@ -396,6 +395,29 @@
                         复制并发送</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ── 宿命卡使用 Modal ── -->
+    <div class="modal-overlay" id="usecard-overlay" style="display:none;">
+        <div class="modal" style="max-width:480px;width:95%;">
+            <button class="modal-close" onclick="closeUseCardModal()">✕</button>
+            <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--bright);">🃏 使用一张宿命卡</h2>
+            <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请选择你希望锁定的命运值区间：</div>
+            <select id="usecard-zone" style="width:100%;padding:10px;background:var(--surface);border:1px solid var(--border);
+                       border-radius:6px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
+                <option value="高度正面（85~100）">高度正面（85~100）</option>
+                <option value="中等正面（50~84）">中等正面（50~84）</option>
+                <option value="轻度正面（1~49）">轻度正面（1~49）</option>
+                <option value="轻度负面（-1~-30）">轻度负面（-1~-30）</option>
+                <option value="中等负面（-31~-60）">中等负面（-31~-60）</option>
+                <option value="严重负面（-61~-89）">严重负面（-61~-89）</option>
+            </select>
+            <button id="usecard-send-btn" onclick="useCardSend()" style="margin-top:12px;width:100%;padding:9px;
+                    background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.5);
+                    border-radius:6px;color:#a855f7;font-size:13px;font-weight:700;cursor:pointer;">
+                确认使用 →
+            </button>
         </div>
     </div>
 

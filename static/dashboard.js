@@ -314,7 +314,37 @@ function triggerStayPomodoro(btn) { _alfredTrigger(btn, "/api/stay-pomodoro"); }
 function triggerPause(btn) { _alfredTrigger(btn, "/api/pause"); }
 function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
 function triggerGetCard(btn) { _alfredTrigger(btn, "/api/getcard"); }
-function triggerUseCard(btn) { _alfredTrigger(btn, "/api/usecard"); }
+
+function openUseCardModal() {
+    document.getElementById("usecard-overlay").style.display = "flex";
+    const btn = document.getElementById("usecard-send-btn");
+    if (btn) { btn.textContent = "确认使用 →"; btn.disabled = false; }
+}
+function closeUseCardModal() {
+    document.getElementById("usecard-overlay").style.display = "none";
+}
+function useCardSend() {
+    const zone = document.getElementById("usecard-zone").value;
+    const btn = document.getElementById("usecard-send-btn");
+    btn.textContent = "执行中…";
+    btn.disabled = true;
+    fetch("/api/usecard-zone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zone }),
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                btn.textContent = "✅ 已发送";
+                setTimeout(() => closeUseCardModal(), 1200);
+            } else {
+                btn.textContent = "❌ " + (d.error || "未知错误");
+                btn.disabled = false;
+            }
+        })
+        .catch(() => { btn.textContent = "确认使用 →"; btn.disabled = false; });
+}
 
 function triggerReset(btn) {
     const confirmed = window.confirm("⚠️ 你确定要重置所有状态吗？\n\n这将清空所有番茄钟记录、时间戳、Snippets 数据，操作无法撤销。");
