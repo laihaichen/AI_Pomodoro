@@ -50,6 +50,9 @@ def reset_files() -> list[str]:
     for f in DATA_FILES_TO_CLEAR:
         f.write_text("", encoding="utf-8")
         lines.append(f"  ✓ {f.name} → cleared")
+    # 纯文本状态文件重置
+    (DATA_DIR / "companions_locked.txt").write_text("false", encoding="utf-8")
+    lines.append("  ✓ companions_locked.txt → false")
     # JSON 文件重置（需保持合法 JSON）
     for json_file, empty_val in [
         ("active_companions.json",    "[]"),

@@ -325,6 +325,67 @@ def api_companion_log():
     return jsonify(entries)
 
 
+@app.route("/api/companion-registry")
+def api_companion_registry():
+    """Return list of all available companions for the dropdown."""
+    from mod.companions import get_registry_list
+    return jsonify(get_registry_list())
+
+
+@app.route("/api/companion-status")
+def api_companion_status():
+    """Return loaded companions with skill statuses."""
+    from mod.companions import get_companion_status, is_locked, _read_active_names
+    try:
+        count = int(read_snippet("current_prompt_count") or "0")
+    except Exception:
+        count = 0
+    return jsonify({
+        "locked": is_locked(),
+        "active_names": _read_active_names(),
+        "companions": get_companion_status(count),
+    })
+
+
+@app.route("/api/companion-add", methods=["POST"])
+def api_companion_add():
+    """Add a companion to a slot."""
+    from mod.companions import add_companion
+    name = (request.json or {}).get("name", "")
+    ok, msg = add_companion(name)
+    return jsonify({"ok": ok, "msg": msg}), 200 if ok else 400
+
+
+@app.route("/api/companion-remove", methods=["POST"])
+def api_companion_remove():
+    """Remove a companion from a slot."""
+    from mod.companions import remove_companion
+    name = (request.json or {}).get("name", "")
+    ok, msg = remove_companion(name)
+    return jsonify({"ok": ok, "msg": msg}), 200 if ok else 400
+
+
+@app.route("/api/companion-lock", methods=["POST"])
+def api_companion_lock():
+    """Lock the companion lineup."""
+    from mod.companions import lock, is_locked
+    if is_locked():
+        return jsonify({"ok": False, "msg": "已锁定"}), 400
+    lock()
+    return jsonify({"ok": True, "msg": "阵容已锁定"})
+
+
+@app.route("/api/companion-use-skill", methods=["POST"])
+def api_companion_use_skill():
+    """Queue an active skill for next move."""
+    from mod.companions import write_pending_skill
+    skill_name = (request.json or {}).get("skill", "")
+    if not skill_name:
+        return jsonify({"ok": False, "msg": "技能名为空"}), 400
+    write_pending_skill(skill_name)
+    return jsonify({"ok": True, "msg": f"{skill_name} 已排队"})
+
+
 @app.route("/api/next-pomodoro", methods=["POST"])
 def api_next_pomodoro():
     script = (

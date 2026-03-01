@@ -1000,6 +1000,174 @@ setInterval(() => {
 refreshData();
 setInterval(refreshData, REFRESH_MS);
 
+// ── Companion Slot System ─────────────────────────────────────────────────────
+
+function renderSlot(comp, locked) {
+    const slot = document.createElement("div");
+    slot.className = "companion-slot loaded" + (locked ? " locked-slot" : "");
+
+    // header: name + remove button
+    const hdr = document.createElement("div");
+    hdr.className = "companion-slot-header";
+    hdr.innerHTML = `
+        <span class="companion-slot-name">${comp.name}</span>
+        <button class="companion-remove-btn"
+                ${locked ? "disabled" : ""}
+                onclick="removeCompanion('${comp.name}')">✕</button>
+    `;
+    slot.appendChild(hdr);
+
+    // avatar
+    const av = document.createElement("div");
+    av.className = "companion-avatar-area";
+    if (comp.avatar_url) {
+        av.innerHTML = `<img src="${comp.avatar_url}" alt="${comp.name}">`;
+    } else {
+        av.textContent = "🤖";
+    }
+    slot.appendChild(av);
+
+    // skills
+    const skillsDiv = document.createElement("div");
+    skillsDiv.className = "companion-skills";
+    (comp.skills || []).forEach(sk => {
+        if (sk.type === "passive") {
+            const tag = document.createElement("div");
+            tag.className = "skill-tag";
+            tag.textContent = sk.name;
+            if (sk.description) tag.title = sk.description;
+            skillsDiv.appendChild(tag);
+        } else {
+            const btn = document.createElement("button");
+            btn.className = "skill-btn";
+            const disabled = sk.status !== "available";
+            btn.disabled = disabled;
+            btn.innerHTML = sk.name +
+                (disabled ? `<span class="skill-status-label">${sk.label}</span>` : "");
+            btn.onclick = () => useSkill(sk.name);
+            skillsDiv.appendChild(btn);
+        }
+    });
+    slot.appendChild(skillsDiv);
+    return slot;
+}
+
+function renderEmptySlot() {
+    const slot = document.createElement("div");
+    slot.className = "companion-slot";
+    slot.innerHTML = `<div class="companion-slot-empty">空槽位</div>`;
+    return slot;
+}
+
+function refreshCompanionSlots() {
+    fetch("/api/companion-status")
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById("companion-slots");
+            if (!container) return;
+            container.innerHTML = "";
+
+            const comps = data.companions || [];
+            const locked = data.locked;
+
+            // render loaded companions
+            comps.forEach(c => container.appendChild(renderSlot(c, locked)));
+            // fill remaining slots as empty
+            for (let i = comps.length; i < 3; i++) {
+                container.appendChild(renderEmptySlot());
+            }
+
+            // update controls
+            const addBtn = document.getElementById("companion-add-btn");
+            const selectEl = document.getElementById("companion-select");
+            const lockBtn = document.getElementById("companion-lock-btn");
+            const controlsEl = document.getElementById("companion-controls");
+
+            if (locked) {
+                if (controlsEl) {
+                    controlsEl.innerHTML = `<span class="companion-locked-badge">🔒 阵容已锁定</span>`;
+                }
+            } else {
+                if (addBtn) addBtn.disabled = comps.length >= 3;
+                if (selectEl) selectEl.disabled = comps.length >= 3;
+            }
+        })
+        .catch(() => { });
+}
+
+function loadCompanionRegistry() {
+    fetch("/api/companion-registry")
+        .then(r => r.json())
+        .then(list => {
+            const sel = document.getElementById("companion-select");
+            if (!sel) return;
+            // preserve first option
+            sel.innerHTML = `<option value="">选择助手…</option>`;
+            list.forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = c.name;
+                opt.textContent = c.name;
+                sel.appendChild(opt);
+            });
+        })
+        .catch(() => { });
+}
+
+function addCompanion() {
+    const sel = document.getElementById("companion-select");
+    const name = sel ? sel.value : "";
+    if (!name) return;
+    fetch("/api/companion-add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+    })
+        .then(r => r.json())
+        .then(() => {
+            refreshCompanionSlots();
+            loadCompanionRegistry();
+        })
+        .catch(() => { });
+}
+
+function removeCompanion(name) {
+    fetch("/api/companion-remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+    })
+        .then(r => r.json())
+        .then(() => {
+            refreshCompanionSlots();
+            loadCompanionRegistry();
+        })
+        .catch(() => { });
+}
+
+function lockCompanions() {
+    if (!confirm("锁定阵容后无法更改助手，确认？")) return;
+    fetch("/api/companion-lock", { method: "POST" })
+        .then(r => r.json())
+        .then(() => refreshCompanionSlots())
+        .catch(() => { });
+}
+
+function useSkill(skillName) {
+    fetch("/api/companion-use-skill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skill: skillName }),
+    })
+        .then(r => r.json())
+        .then(() => refreshCompanionSlots())
+        .catch(() => { });
+}
+
+// Initial load + periodic refresh
+loadCompanionRegistry();
+refreshCompanionSlots();
+setInterval(refreshCompanionSlots, 3000);
+
 // ── Companion skill Toast 通知 ────────────────────────────────────────────────
 
 function showCompanionToast(entry) {
