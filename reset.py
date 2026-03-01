@@ -25,13 +25,11 @@ Resets:
 """
 from __future__ import annotations
 
-import json
-import sqlite3
 import sys
 from pathlib import Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import DATA_DIR, DB_FILE, SNIPPETS, SNIPPETS_DIR, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE  # noqa: E402
+from config import DATA_DIR, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, write_snippet  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────
 DATA_FILES_TO_CLEAR = [
@@ -58,30 +56,14 @@ def reset_files() -> list[str]:
 def reset_snippets() -> list[str]:
     """Reset all resettable Alfred snippets to their default values."""
     lines = []
-    errors = []
-
-    with sqlite3.connect(DB_FILE) as con:
-        for snip in (s for s in SNIPPETS.values() if s.resettable):
-            con.execute(
-                "UPDATE snippets SET snippet = ? WHERE uid = ?",
-                (snip.default, snip.uid),
-            )
-            if con.total_changes == 0:
-                errors.append(f"  ✗ {snip.name}: UID not found in DB")
-                continue
-
-            if not snip.json_path.exists():
-                errors.append(f"  ✗ {snip.name}: JSON file not found")
-                continue
-            payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-            payload["alfredsnippet"]["snippet"] = snip.default
-            snip.json_path.write_text(
-                json.dumps(payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+    for key, snip in SNIPPETS.items():
+        if not snip.resettable:
+            continue
+        try:
+            write_snippet(key, snip.default)
             lines.append(f"  ✓ {snip.name} → \"{snip.default}\"")
-
-    lines.extend(errors)
+        except Exception as exc:
+            lines.append(f"  ✗ {snip.name}: {exc}")
     return lines
 
 

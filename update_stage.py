@@ -10,12 +10,10 @@ Usage:
 """
 from __future__ import annotations
 
-import json
-import sqlite3
 import sys
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import DB_FILE, HEALTH_FILE, SNIPPETS  # noqa: E402
+from config import HEALTH_FILE, SNIPPETS, read_snippet, write_snippet  # noqa: E402
 
 # ── stage strings ───────────────────────────────────────────────────────────
 
@@ -77,38 +75,18 @@ MILESTONE_DIFFICULTIES = {"平衡难度", "硬核难度"}
 # ── helpers ─────────────────────────────────────────────────────────────────
 
 def _write_stage(value: str) -> None:
-    """Update SQLite (live) and JSON (backup) for -stage."""
-    snip = SNIPPETS["stage"]
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, snip.uid))
-        if con.total_changes == 0:
-            raise RuntimeError(f"UID {snip.uid!r} not found in DB")
-    payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-    payload["alfredsnippet"]["snippet"] = value
-    snip.json_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    """Update -stage snippet."""
+    write_snippet("stage", value)
 
 
 def read_stage() -> str:
-    """Return the current -stage snippet value, or empty string on failure."""
-    snip = SNIPPETS["stage"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-        ).fetchone()
-    return row[0].strip() if row else ""
+    """Return the current -stage snippet value."""
+    return read_snippet("stage").strip()
 
 
 def read_difficulty() -> str:
-    """Return the current -difficulty snippet value, or empty string on failure."""
-    snip = SNIPPETS["difficulty"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-        ).fetchone()
-    return row[0].strip() if row else ""
+    """Return the current -difficulty snippet value."""
+    return read_snippet("difficulty").strip()
 
 
 def is_milestone_difficulty() -> bool:
@@ -117,13 +95,8 @@ def is_milestone_difficulty() -> bool:
 
 
 def read_progress_indicator() -> str:
-    """Return the current -current-progress-indicator value from Alfred DB."""
-    snip = SNIPPETS["current_progress_indicator"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-        ).fetchone()
-    return row[0].strip() if row else ""
+    """Return the current -current-progress-indicator value."""
+    return read_snippet("current_progress_indicator").strip()
 
 
 def is_progress_reached(indicator: str) -> bool:
@@ -153,19 +126,11 @@ def check_and_set_milestone() -> None:
     indicator = read_progress_indicator()
     if is_progress_reached(indicator):
         _write_stage(STAGE_MILESTONE_SUCCESS)
-        # 积分奖励 +300
+        # 积分奖励 +200
         try:
-            snip = SNIPPETS["total_score"]
-            with sqlite3.connect(DB_FILE) as con:
-                row = con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
-            current = int(row[0]) if row else 0
+            current = int(read_snippet("total_score") or "0")
             new_score = current + 200
-            with sqlite3.connect(DB_FILE) as con:
-                con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (str(new_score), snip.uid))
-            if snip.json_path.exists():
-                payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-                payload["alfredsnippet"]["snippet"] = str(new_score)
-                snip.json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            write_snippet("total_score", str(new_score))
             print(f"✅ 进度已达成（{indicator}）  -stage → 奖励模式  总积分 +300 → {new_score}")
         except Exception as exc:
             print(f"⚠️  总积分写入失败: {exc}")

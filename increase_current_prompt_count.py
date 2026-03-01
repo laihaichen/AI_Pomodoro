@@ -10,65 +10,17 @@ every time a new prompt record is created.
 """
 from __future__ import annotations
 
-import json
-import sqlite3
 import sys
 from datetime import datetime
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import CURR_TS_FILE, DB_FILE, FIRST_TS_FILE, SNIPPETS  # noqa: E402
+from config import CURR_TS_FILE, FIRST_TS_FILE, SNIPPETS, read_snippet, write_snippet  # noqa: E402
 import update_stage  # noqa: E402
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
-def read_snippet_float(key: str) -> float:
-    """Read a float value from Alfred SQLite by snippet key. Returns 0.0 on failure."""
-    snip = SNIPPETS[key]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-        ).fetchone()
-    if row is None:
-        return 0.0
-    try:
-        return float(row[0])
-    except ValueError:
-        return 0.0
-
-
-def write_offset(value: float) -> None:
-    """Write offset minutes to -offset snippet (DB + JSON)."""
-    str_value = f"{value:.1f}"
-    snip = SNIPPETS["offset"]
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute(
-            "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (str_value, snip.uid),
-        )
-    if snip.json_path.exists():
-        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-        payload["alfredsnippet"]["snippet"] = str_value
-        snip.json_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-
-def write_snippet(key: str, value: str) -> None:
-    """Write a single snippet value to Alfred SQLite DB + JSON file."""
-    snip = SNIPPETS[key]
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute(
-            "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (value, snip.uid),
-        )
-    if snip.json_path.exists():
-        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-        payload["alfredsnippet"]["snippet"] = value
-        snip.json_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+# read_snippet / write_snippet — imported from config
 
 def compute_and_write_offset(new_count: int) -> str:
     """
@@ -91,11 +43,11 @@ def compute_and_write_offset(new_count: int) -> str:
         return "(offset 误差：时间戳文件缺失)"
 
     real_total   = (curr_ts - first_ts).total_seconds() / 60
-    total_rest   = read_snippet_float("total_rest_time")
+    total_rest   = float(read_snippet("total_rest_time") or "0")
     expect_total = (new_count - 1) * 10 + total_rest   # 第1条时 expect=0
     offset       = expect_total - real_total
 
-    write_offset(offset)
+    write_snippet("offset", f"{offset:.1f}")
 
     # 偏移量超过 +60 分钟 → 游戏直接判负
     if offset > 60:
@@ -106,10 +58,7 @@ def compute_and_write_offset(new_count: int) -> str:
             print(f"is_victory 写入失败: {exc}", file=sys.stderr)
         # 积分 ×0.9
         try:
-            snip = SNIPPETS["total_score"]
-            with sqlite3.connect(DB_FILE) as _con:
-                _row = _con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
-            _cur = int(_row[0]) if _row else 0
+            _cur = int(read_snippet("total_score") or "0")
             _new = round(_cur * 0.9)
             write_snippet("total_score", str(_new))
             print(f"  总积分 ×0.9 → {_new}")
@@ -122,38 +71,18 @@ def compute_and_write_offset(new_count: int) -> str:
 
 def read_count() -> int:
     """Read current -current_prompt_count from Alfred SQLite DB."""
-    snip = SNIPPETS["current_prompt_count"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-        ).fetchone()
-    if row is None:
-        raise RuntimeError(f"UID {snip.uid!r} not found in DB")
+    val = read_snippet("current_prompt_count")
+    if not val:
+        raise RuntimeError("current_prompt_count not found in DB")
     try:
-        return int(row[0])
+        return int(val)
     except ValueError:
-        raise RuntimeError(f"snippet value {row[0]!r} is not an integer")
+        raise RuntimeError(f"snippet value {val!r} is not an integer")
 
 
 def write_count(value: int) -> None:
     """Update SQLite + JSON for -current_prompt_count."""
-    str_value = str(value)
-    snip = SNIPPETS["current_prompt_count"]
-
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute(
-            "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (str_value, snip.uid),
-        )
-
-    if not snip.json_path.exists():
-        raise RuntimeError("-current_prompt_count JSON file not found")
-    payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-    payload["alfredsnippet"]["snippet"] = str_value
-    snip.json_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    write_snippet("current_prompt_count", str(value))
 
 
 # ── main ────────────────────────────────────────────────────────────────────

@@ -16,13 +16,11 @@ State files (in data/):
 """
 from __future__ import annotations
 
-import json
 import random
-import sqlite3
 import sys
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import DB_FILE, H_FILE, PENALIZED_REST_FILE, SNIPPETS  # noqa: E402
+from config import H_FILE, PENALIZED_REST_FILE, SNIPPETS, read_snippet, write_snippet  # noqa: E402
 
 
 # ── state helpers ────────────────────────────────────────────────────────────
@@ -58,16 +56,10 @@ def write_penalized_rest(value: float) -> None:
 
 
 def read_max_rest() -> float:
-    """Read -max_rest_time snippet from SQLite."""
-    snip = SNIPPETS["max_rest_time"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-        ).fetchone()
-    if row is None:
-        return 0.0
+    """Read -max_rest_time snippet."""
+    val = read_snippet("max_rest_time")
     try:
-        return float(row[0])
+        return float(val) if val else 0.0
     except ValueError:
         return 0.0
 
@@ -86,22 +78,7 @@ def write_overtime_range(h: float) -> str:
         value = "0"
     else:
         value = str(random.randint(1, h_int * 2))
-
-    snip = SNIPPETS["overtime_penalty_random_num"]
-
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute(
-            "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (value, snip.uid),
-        )
-
-    if snip.json_path.exists():
-        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-        payload["alfredsnippet"]["snippet"] = value
-        snip.json_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+    write_snippet("overtime_penalty_random_num", value)
     return value
 
 

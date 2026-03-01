@@ -30,6 +30,7 @@ sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
 from config import (  # noqa: E402
     CONT_TS_FILE, CURR_TS_FILE, DB_FILE, FINAL_FATE_FILE, FIRST_TS_FILE,
     HEALTH_FILE, PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,
+    read_snippet, write_snippet, update_total_score,
 )
 import update_h  # noqa: E402
 
@@ -54,33 +55,7 @@ def write_ts(path: Path, dt: datetime) -> None:
     path.write_text(dt.isoformat(), encoding="utf-8")
 
 
-def write_snippet(key: str, value: str) -> None:
-    """Update both SQLite (live) and JSON (sync/backup) for the given snippet key."""
-    snip = SNIPPETS[key]
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, snip.uid))
-        if con.total_changes == 0:
-            raise RuntimeError(f"UID {snip.uid!r} not found in DB")
-    payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-    payload["alfredsnippet"]["snippet"] = value
-    snip.json_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-
-def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
-    """Read current -total-score, add delta, multiply by factor, write back. Returns new value."""
-    snip = SNIPPETS["total_score"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
-    try:
-        current = int(row[0]) if row else 0
-    except (ValueError, TypeError):
-        current = 0
-    new_val = round((current + delta) * factor)
-    write_snippet("total_score", str(new_val))
-    return new_val
+# write_snippet / read_snippet / update_total_score — imported from config
 
 
 
@@ -107,15 +82,9 @@ def read_health() -> int:
 
 def read_overtime_penalty() -> int:
     """从 Alfred DB 读取当前 -overtime-penalty-random-num 数值，缺失时为 0。"""
-    snip = SNIPPETS["overtime_penalty_random_num"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-        ).fetchone()
-    if row:
-        val = str(row[0]).strip()
-        if val.lstrip("-").isdigit():
-            return int(val)
+    val = read_snippet("overtime_penalty_random_num").strip()
+    if val.lstrip("-").isdigit():
+        return int(val)
     return 0
 
 
@@ -205,11 +174,7 @@ def main() -> int:
                 write_snippet("is_eligible_for_reward", _LUCKY_MSG)
             else:
                 # 仅当当前值不是默认值时才写，避免多余写入
-                import sqlite3 as _sql
-                _snip = SNIPPETS["is_eligible_for_reward"]
-                with _sql.connect(DB_FILE) as _c:
-                    _row = _c.execute("SELECT snippet FROM snippets WHERE uid=?", (_snip.uid,)).fetchone()
-                _cur_val = (_row[0] or "").strip() if _row else ""
+                _cur_val = read_snippet("is_eligible_for_reward").strip()
                 if _cur_val != _DEFAULT:
                     write_snippet("is_eligible_for_reward", _DEFAULT)
         except Exception as exc:
@@ -315,11 +280,7 @@ def main() -> int:
         if final_fate >= 85:
             write_snippet("is_eligible_for_reward", _LUCKY_MSG)
         else:
-            import sqlite3 as _sql
-            _snip = SNIPPETS["is_eligible_for_reward"]
-            with _sql.connect(DB_FILE) as _c:
-                _row = _c.execute("SELECT snippet FROM snippets WHERE uid=?", (_snip.uid,)).fetchone()
-            _cur_val = (_row[0] or "").strip() if _row else ""
+            _cur_val = read_snippet("is_eligible_for_reward").strip()
             if _cur_val != _DEFAULT:
                 write_snippet("is_eligible_for_reward", _DEFAULT)
     except Exception as exc:

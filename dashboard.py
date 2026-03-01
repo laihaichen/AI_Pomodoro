@@ -23,6 +23,7 @@ from config import (  # noqa: E402
     DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
     HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE,
     BASE,
+    read_snippet, write_snippet, update_total_score,
 )
 
 from flask import Flask, jsonify, render_template, request
@@ -56,37 +57,7 @@ _BOSSFIGHT_ACTIVE_TEXT = """\
 4. 评分标准：出题时需同时说明客观的评分标准，以便判定答案的正确性\
 """
 
-# ── snippet writer (for setup wizard) ────────────────────────────────────────
-
-def write_snippet_value(key: str, value: str) -> None:
-    """Write a snippet value to both Alfred SQLite DB and JSON backup file."""
-    snip = SNIPPETS[key]
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute(
-            "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (value, snip.uid),
-        )
-    if snip.json_path.exists():
-        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-        payload["alfredsnippet"]["snippet"] = value
-        snip.json_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-
-
-def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
-    """Read -total-score, add delta, multiply by factor, write back. Returns new value."""
-    snip = SNIPPETS["total_score"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
-    try:
-        current = int(row[0]) if row else 0
-    except (ValueError, TypeError):
-        current = 0
-    new_val = round((current + delta) * factor)
-    write_snippet_value("total_score", str(new_val))
-    return new_val
+# write_snippet / read_snippet / update_total_score — imported from config
 
 
 def generate_launch_prompt(
@@ -239,7 +210,7 @@ def collect_state() -> dict:
     # 每次 /api/state 轮询时自动将「当前阶段任务」同步进 Alfred snippet
     try:
         _task_to_write = state["current_milestone_text"] or SNIPPETS["current_task"].default
-        write_snippet_value("current_task", _task_to_write)
+        write_snippet("current_task", _task_to_write)
     except Exception:
         pass  # 写入失败不影响 Dashboard 展示
 
@@ -253,13 +224,7 @@ def collect_state() -> dict:
         _goal_key = current_key or "hour3"
         _denominator = int(_goals.get(_goal_key, 0))
         # 读取当前 snippet 值，解析分子（格式：「N/M ...」）
-        _cur_indicator = ""
-        with sqlite3.connect(DB_FILE) as _con:
-            _row = _con.execute(
-                "SELECT snippet FROM snippets WHERE uid = ?",
-                (SNIPPETS["current_progress_indicator"].uid,)
-            ).fetchone()
-            _cur_indicator = _row[0] if _row else ""
+        _cur_indicator = read_snippet("current_progress_indicator")
         try:
             _parts        = _cur_indicator.split("/")
             _numerator    = int(_parts[0])
@@ -275,7 +240,7 @@ def collect_state() -> dict:
             _progress_str = f"{_numerator}/{_denominator} {_label}"
         else:
             _progress_str = SNIPPETS["current_progress_indicator"].default  # "0/0 未到达进度"
-        write_snippet_value("current_progress_indicator", _progress_str)
+        write_snippet("current_progress_indicator", _progress_str)
         state["current_progress_indicator"] = _progress_str
         state["current_milestone_denominator"] = _denominator
     except Exception:
@@ -291,7 +256,7 @@ def collect_state() -> dict:
         if _diff == "硬核难度" and _bfs_cur not in ("当前难度不适用", _BOSSFIGHT_ACTIVE_TEXT):
             _m = _re.search(r"第(\d+)条", _bfs_cur)
             if _m and count == int(_m.group(1)):
-                write_snippet_value("bossfight_stage", _BOSSFIGHT_ACTIVE_TEXT)
+                write_snippet("bossfight_stage", _BOSSFIGHT_ACTIVE_TEXT)
                 state["bossfight_stage"] = _BOSSFIGHT_ACTIVE_TEXT
     except Exception:
         pass
@@ -566,8 +531,8 @@ def api_setup():
         milestones = data.get("milestones", [])
         theme      = data.get("theme", "").strip()
 
-        write_snippet_value("max_rest_time", max_rest)
-        write_snippet_value("difficulty",    difficulty)
+        write_snippet("max_rest_time", max_rest)
+        write_snippet("difficulty",    difficulty)
 
         # ── 写入里程碑阶段任务 ────────────────────────────────────────────
         # 与 JS MILESTONE_DEFS 保持一致：门槛 3/6/9/12 小时对应 hour3/6/9/12
@@ -580,13 +545,13 @@ def api_setup():
         # 先全部重置为默认值（防止旧数据残留）
         default_milestone = SNIPPETS["hour3"].default  # "当前无阶段性任务"
         for _, key in _MILESTONE_MAP:
-            write_snippet_value(key, default_milestone)
+            write_snippet(key, default_milestone)
 
         # 再按学习时长写入用户填写的内容
         applicable_keys = [key for threshold, key in _MILESTONE_MAP if hours >= threshold]
         for key, text in zip(applicable_keys, milestones):
             if text:  # 跳过空字符串
-                write_snippet_value(key, text)
+                write_snippet(key, text)
 
         # ── 写入进度条分母到 milestone_goals.json ────────────────────────────
         denominators = data.get("denominators", [])  # 与 milestones[] 等长的整数列表
@@ -602,22 +567,22 @@ def api_setup():
         )
         # 同步重置 -current-progress-indicator（分子清零）
         _init_denom = goals.get("hour3", 0)
-        write_snippet_value(
+        write_snippet(
             "current_progress_indicator",
             f"0/{_init_denom} 未到达进度" if _init_denom > 0
             else SNIPPETS["current_progress_indicator"].default
         )
 
         # ── 学习记录总条数 ───────────────────────────────────────────────────
-        write_snippet_value("total_count", str(hours * 6))
+        write_snippet("total_count", str(hours * 6))
 
         # ── Boss战节点初始化 ──────────────────────────────────────────────────
         if difficulty == "硬核难度":
             # 触发节点：倒数第2条prompt输出（即第 hours*6 - 1 条）
             bossfight_target = hours * 6 - 1
-            write_snippet_value("bossfight_stage", f"等待Boss战节点（第{bossfight_target}条）")
+            write_snippet("bossfight_stage", f"等待Boss战节点（第{bossfight_target}条）")
         else:
-            write_snippet_value("bossfight_stage", "当前难度不适用")
+            write_snippet("bossfight_stage", "当前难度不适用")
 
         # ── 今日故事主题 ─────────────────────────────────────────────────────
         THEME_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -660,7 +625,7 @@ def api_boss_defeated():
             update_total_score(delta=800)
         else:
             # Boss失败 → 写入游戏失败状态，-300，再 ×0.9
-            write_snippet_value("is_victory", "已失败，失败来源：boss战失败")
+            write_snippet("is_victory", "已失败，失败来源：boss战失败")
             update_total_score(delta=-300)
             update_total_score(factor=0.9)
         return jsonify({"ok": True, "boss_defeated": result})
@@ -673,7 +638,7 @@ def api_declare_victory():
     """Settle the game as a victory. No server-side re-validation needed —
     all failure paths are auto-written by backend scripts before this point."""
     try:
-        write_snippet_value("is_victory", "已胜利")
+        write_snippet("is_victory", "已胜利")
         # 胜利结算 → ×1.2
         final_score = update_total_score(factor=1.1)
 
@@ -817,7 +782,7 @@ def api_progress_step():
         label   = "已到达进度" if new_num >= denominator > 0 else "未到达进度"
         new_str = f"{new_num}/{denominator} {label}"
 
-        write_snippet_value("current_progress_indicator", new_str)
+        write_snippet("current_progress_indicator", new_str)
         return jsonify({"ok": True, "value": new_str})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500

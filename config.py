@@ -5,6 +5,8 @@ All other scripts import constants from here instead of defining them locally.
 """
 from __future__ import annotations
 
+import json
+import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -121,3 +123,42 @@ SNIPPETS: dict[str, Snippet] = {
                                       panel_label="是否应该触发幸运系统"),
 }
 
+
+# ── snippet IO（公共读写函数）────────────────────────────────────────────────
+
+def read_snippet(key: str) -> str:
+    """从 Alfred SQLite 读取 snippet 值。找不到则返回空字符串。"""
+    snip = SNIPPETS[key]
+    with sqlite3.connect(DB_FILE) as con:
+        row = con.execute(
+            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
+        ).fetchone()
+    return row[0] if row else ""
+
+
+def write_snippet(key: str, value: str) -> None:
+    """同时写入 Alfred SQLite + JSON 备份文件。"""
+    snip = SNIPPETS[key]
+    with sqlite3.connect(DB_FILE) as con:
+        con.execute(
+            "UPDATE snippets SET snippet = ? WHERE uid = ?",
+            (value, snip.uid),
+        )
+    if snip.json_path.exists():
+        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
+        payload["alfredsnippet"]["snippet"] = value
+        snip.json_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+
+def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
+    """读取 -total-score，加 delta，乘 factor，写回。返回新值。"""
+    try:
+        current = int(read_snippet("total_score"))
+    except (ValueError, TypeError):
+        current = 0
+    new_val = round((current + delta) * factor)
+    write_snippet("total_score", str(new_val))
+    return new_val

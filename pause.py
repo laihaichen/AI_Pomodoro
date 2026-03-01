@@ -2,27 +2,11 @@
 """=pause handler — record the start of a rest period."""
 from __future__ import annotations
 
-import json
-import sqlite3
 import sys
 from datetime import datetime, timezone
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import DB_FILE, PAUSE_TS_FILE, SNIPPETS  # noqa: E402
-
-
-def write_snippet(key: str, value: str) -> None:
-    """Update both SQLite and JSON for the given snippet key."""
-    snip = SNIPPETS[key]
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (value, snip.uid))
-    if snip.json_path.exists():
-        payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-        payload["alfredsnippet"]["snippet"] = value
-        snip.json_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+from config import PAUSE_TS_FILE, write_snippet  # noqa: E402
 
 
 def main() -> int:
