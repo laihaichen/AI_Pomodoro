@@ -639,7 +639,7 @@ def api_declare_victory():
     all failure paths are auto-written by backend scripts before this point."""
     try:
         write_snippet("is_victory", "已胜利")
-        # 胜利结算 → ×1.2
+        # 胜利结算 → ×1.1
         final_score = update_total_score(factor=1.1)
 
         # ── 写入游戏存档 ────────────────────────────────────────────────────
