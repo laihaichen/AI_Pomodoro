@@ -841,7 +841,8 @@ function refreshData() {
             const themeEl = document.getElementById("val-theme");
             const themeCard = document.getElementById("card-theme");
             const themeVal = (d.theme || "").trim();
-            if (themeEl) themeEl.textContent = themeVal || "—";
+            const themeNew = themeVal || "—";
+            if (themeEl && themeEl.textContent !== themeNew) themeEl.textContent = themeNew;
             if (themeCard) themeCard.style.display = themeVal ? "" : "none";
 
             // bossfight stage
