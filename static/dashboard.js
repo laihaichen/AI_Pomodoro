@@ -746,17 +746,21 @@ function refreshData() {
             const msEl = document.getElementById("val-milestones-set");
             if (msEl) {
                 const set = d.milestones_set || [];
+                let newHTML;
                 if (set.length === 0) {
-                    msEl.textContent = "暂无已设置的阶段性任务";
-                    msEl.style.color = "var(--dim)";
+                    newHTML = "暂无已设置的阶段性任务";
                 } else {
-                    msEl.innerHTML = set.map(m =>
+                    newHTML = set.map(m =>
                         `<span style="display:block;">
               <span style="color:var(--dim);font-size:10px;">${m.label}</span>
               &nbsp;${m.text}
             </span>`
                     ).join("");
-                    msEl.style.color = "";
+                }
+                // 仅在内容变化时更新 DOM，避免破坏用户文本选区
+                if (msEl.innerHTML !== newHTML) {
+                    msEl.innerHTML = newHTML;
+                    msEl.style.color = set.length === 0 ? "var(--dim)" : "";
                 }
             }
 
