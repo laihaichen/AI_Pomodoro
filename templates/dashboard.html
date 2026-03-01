@@ -353,24 +353,22 @@
                 <button onclick="violationNext()" style="margin-top:12px;width:100%;padding:9px;
                         background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.5);
                         border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">
-                    下一步 →
+                    提交并启动规则调查 →
                 </button>
             </div>
 
-            <!-- Step 2: 正确规则 -->
+            <!-- Step 2: 等待 Agent 调查结果 -->
             <div id="violation-step2" style="display:none;">
-                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">它本来应该遵守的正确规则是什么？</div>
-                <textarea id="violation-expected" rows="5" placeholder="在此描述正确的游戏规则…"
-                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
-                           color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
-                <div style="display:flex;gap:8px;margin-top:10px;">
-                    <button onclick="violationBack()" style="flex:1;padding:9px;
-                            background:transparent;border:1px solid var(--border);
-                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 返回</button>
-                    <button onclick="violationGenerate()"
-                        style="flex:2;padding:9px;
-                            background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.5);
-                            border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">生成违规通告</button>
+                <div style="text-align:center;padding:32px 0;">
+                    <div style="font-size:28px;margin-bottom:16px;">🔍</div>
+                    <div id="violation-wait-msg" style="font-size:13px;color:var(--dim);line-height:1.8;">
+                        请等待游戏规则调查 Agent 返还结果…
+                    </div>
+                    <div
+                        style="margin-top:20px;width:100%;height:4px;background:var(--surface);border-radius:2px;overflow:hidden;">
+                        <div style="width:100%;height:100%;background:linear-gradient(90deg,#fb923c,#f97316);
+                                    animation:load-bar 2s linear infinite;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -381,16 +379,13 @@
                             border-radius:6px;padding:12px;font-size:12px;line-height:1.7;color:var(--bright);">
                     <div>【违规通告】</div>
                     <div>AI 已违反《学习时间追踪系统》核心游戏规则</div>
-                    <div style="margin-top:8px;">涉事条款：<span id="violation-preview-expected"
+                    <div style="margin-top:8px;">规则调查员的调查报告结果：<span id="violation-preview-expected"
                             style="color:#fb923c"></span></div>
                     <div>违规描述：<span id="violation-preview-violations" style="color:#fb923c"></span></div>
                     <div style="margin-top:8px;color:var(--dim);">&#8942; 提出警告…（并自动附加完整 prompt.md）</div>
                 </div>
-                <div style="display:flex;gap:8px;margin-top:10px;">
-                    <button onclick="violationBack2()" style="flex:1;padding:9px;
-                            background:transparent;border:1px solid var(--border);
-                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 修改</button>
-                    <button id="violation-send-btn" onclick="violationSend()" style="flex:2;padding:9px;
+                <div style="margin-top:10px;">
+                    <button id="violation-send-btn" onclick="violationSend()" style="width:100%;padding:9px;
                             background:rgba(251,146,60,0.2);border:1px solid rgba(251,146,60,0.6);
                             border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">📋
                         复制并发送</button>

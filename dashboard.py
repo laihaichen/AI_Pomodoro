@@ -385,15 +385,57 @@ def api_divine_intervention():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+AGENT_WORKSPACE    = BASE / "Agent_Workspace"
+COMPLAINTS_FILE    = AGENT_WORKSPACE / "complaints.txt"
+COMPLAINT_LOGIC    = AGENT_WORKSPACE / "complaint_logic.txt"
+PROMPTS_FILE       = AGENT_WORKSPACE / "prompts.txt"
+TERMINAL_SCRIPT    = BASE / "applescript" / "terminal.applescript"
+
+
+@app.route("/api/violation-start", methods=["POST"])
+def api_violation_start():
+    """Step 2 后台初始化：清空工作文件 → 写入 violations → 复制 prompts.txt → 运行 terminal.applescript。"""
+    data       = request.get_json(silent=True) or {}
+    violations = data.get("violations", "").strip()
+    try:
+        AGENT_WORKSPACE.mkdir(parents=True, exist_ok=True)
+        # ① 清空两个工作文件
+        COMPLAINTS_FILE.write_text("", encoding="utf-8")
+        COMPLAINT_LOGIC.write_text("", encoding="utf-8")
+        # ② 写入用户填写的违规描述
+        COMPLAINTS_FILE.write_text(violations, encoding="utf-8")
+        # ③ 将 prompts.txt 复制到剪切板
+        prompts_text = PROMPTS_FILE.read_text(encoding="utf-8") \
+                       if PROMPTS_FILE.exists() else ""
+        subprocess.run(["pbcopy"], input=prompts_text.encode("utf-8"),
+                       check=True, timeout=5)
+        # ④ 触发 terminal.applescript（唤醒规则调查 Agent）
+        subprocess.Popen(["osascript", str(TERMINAL_SCRIPT)])
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/violation-poll", methods=["GET"])
+def api_violation_poll():
+    """轮询：检查 complaint_logic.txt 是否已被 Agent 写入结果。"""
+    try:
+        content = COMPLAINT_LOGIC.read_text(encoding="utf-8").strip() \
+                  if COMPLAINT_LOGIC.exists() else ""
+        if content:
+            return jsonify({"ok": True, "ready": True, "expected": content})
+        return jsonify({"ok": True, "ready": False})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/violation-report", methods=["POST"])
 def api_violation_report():
-    """Build 违规通告 prompt (with prompt.md appended), copy to clipboard,
-    run increment_violation_count_snippet.py, then run stay.applescript."""
+    """构建违规通告 prompt（附完整 prompt.md），写入剪切板并触发 stay.applescript。"""
     data       = request.get_json(silent=True) or {}
     violations = data.get("violations", "").strip()
     expected   = data.get("expected", "").strip()
     try:
-        # 读取 prompt.md
         prompt_md_path = BASE / "prompt.md"
         prompt_md = prompt_md_path.read_text(encoding="utf-8") \
                     if prompt_md_path.exists() else "（prompt.md 文件不存在）"
@@ -401,7 +443,7 @@ def api_violation_report():
         full_prompt = (
             "【违规通告】\n"
             "AI 已违反《学习时间追踪系统》核心游戏规则\n\n"
-            f"涉事条款：{expected}\n"
+            f"规则调查员的调查报告结果：{expected}\n"
             f"违规描述：{violations}\n"
             "提出警告：\n"
             "（1）在AI修改其违规行为之前，游戏无法继续\n"
@@ -411,15 +453,12 @@ def api_violation_report():
             + prompt_md
         )
 
-        # ① 写入剪切板
         subprocess.run(["pbcopy"], input=full_prompt.encode("utf-8"),
                        check=True, timeout=5)
-        # ② 增加违规计数
         subprocess.run(
             ["python3", str(BASE / "increment_violation_count_snippet.py")],
             check=True, timeout=10,
         )
-        # ③ 运行 stay.applescript
         stay_script = str(BASE / "applescript" / "stay.applescript")
         subprocess.run(["osascript", stay_script], check=True, timeout=10)
         return jsonify({"ok": True})

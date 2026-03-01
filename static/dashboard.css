@@ -217,3 +217,8 @@ body {
   line-height: 1.7; resize: none; min-height: 200px; outline: none;
 }
 .copy-success { color: var(--text); font-size: 12px; margin-top: 8px; min-height: 20px; }
+
+@keyframes load-bar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

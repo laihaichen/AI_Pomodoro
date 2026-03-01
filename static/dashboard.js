@@ -459,59 +459,88 @@ const DIVINE_RULE = `【关于神圣干预作用的游戏规则提示】
 let _divineOld = "";
 
 // ── 违规报告辅助填写器 ────────────────────────────────────────────────────────
+let _violationExpected = "";   // 由 Agent 自动写入，非用户手填
+let _violationTimer = null;  // 轮询 interval ID
+
 function openViolationModal() {
+    _violationExpected = "";
+    _clearViolationTimer();
     document.getElementById("violation-step1").style.display = "";
     document.getElementById("violation-step2").style.display = "none";
     document.getElementById("violation-step3").style.display = "none";
     document.getElementById("violation-violations").value = "";
-    document.getElementById("violation-expected").value = "";
     const btn = document.getElementById("violation-send-btn");
     if (btn) { btn.textContent = "📋 复制并发送"; btn.disabled = false; }
     document.getElementById("violation-overlay").style.display = "flex";
 }
 
 function closeViolationModal() {
+    _clearViolationTimer();
     document.getElementById("violation-overlay").style.display = "none";
+}
+
+function _clearViolationTimer() {
+    if (_violationTimer !== null) { clearInterval(_violationTimer); _violationTimer = null; }
 }
 
 function violationNext() {
     const v = document.getElementById("violation-violations").value.trim();
     if (!v) { alert("请先填写违规描述"); return; }
+
+    // 显示等待界面
     document.getElementById("violation-step1").style.display = "none";
     document.getElementById("violation-step2").style.display = "";
-    document.getElementById("violation-expected").focus();
-}
+    document.getElementById("violation-wait-msg").textContent = "请等待游戏规则调查 Agent 返还结果…";
 
-function violationBack() {
-    document.getElementById("violation-step2").style.display = "none";
-    document.getElementById("violation-step1").style.display = "";
-}
+    // 后台启动：清空文件 → 写入违规 → 复制 prompts.txt → 触发 terminal.applescript
+    fetch("/api/violation-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ violations: v }),
+    }).catch(() => {
+        document.getElementById("violation-wait-msg").textContent = "❌ 启动失败，请关闭重试";
+    });
 
-function violationBack2() {
-    document.getElementById("violation-step3").style.display = "none";
-    document.getElementById("violation-step2").style.display = "";
-}
-
-function violationGenerate() {
-    const e = document.getElementById("violation-expected").value.trim();
-    if (!e) { alert("请先填写正确规则"); return; }
-    const v = document.getElementById("violation-violations").value.trim();
-    document.getElementById("violation-preview-violations").textContent = v;
-    document.getElementById("violation-preview-expected").textContent = e;
-    document.getElementById("violation-step2").style.display = "none";
-    document.getElementById("violation-step3").style.display = "";
+    // 开始轮询（每 5 秒，最多 60 秒 = 12 次）
+    let polls = 0;
+    const MAX_POLLS = 12;
+    _violationTimer = setInterval(() => {
+        polls++;
+        fetch("/api/violation-poll")
+            .then(r => r.json())
+            .then(d => {
+                if (d.ready) {
+                    _clearViolationTimer();
+                    _violationExpected = d.expected || "";
+                    // 进入 Step 3 预览
+                    const violations = document.getElementById("violation-violations").value.trim();
+                    document.getElementById("violation-preview-violations").textContent = violations;
+                    document.getElementById("violation-preview-expected").textContent = _violationExpected;
+                    document.getElementById("violation-step2").style.display = "none";
+                    document.getElementById("violation-step3").style.display = "";
+                } else if (polls >= MAX_POLLS) {
+                    _clearViolationTimer();
+                    document.getElementById("violation-wait-msg").textContent =
+                        "⏱ 调查超时（1分钟未收到结果），已自动关闭";
+                    setTimeout(() => closeViolationModal(), 2000);
+                } else {
+                    document.getElementById("violation-wait-msg").textContent =
+                        `请等待游戏规则调查 Agent 返还结果… (${polls * 5}s / 60s)`;
+                }
+            })
+            .catch(() => { /* 网络抖动忽略，继续轮询 */ });
+    }, 5000);
 }
 
 function violationSend() {
     const violations = document.getElementById("violation-violations").value.trim();
-    const expected = document.getElementById("violation-expected").value.trim();
     const btn = document.getElementById("violation-send-btn");
     btn.textContent = "发送中…";
     btn.disabled = true;
     fetch("/api/violation-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ violations, expected }),
+        body: JSON.stringify({ violations, expected: _violationExpected }),
     })
         .then(r => r.json())
         .then(d => {
@@ -525,6 +554,7 @@ function violationSend() {
         })
         .catch(() => { btn.textContent = "📋 复制并发送"; btn.disabled = false; });
 }
+
 
 function openDivineModal() {
     // 重置到第一步
