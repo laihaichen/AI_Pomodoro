@@ -277,9 +277,43 @@ class BaseCompanion:
 
 
 # ── 注册表 ───────────────────────────────────────────────────────────────────
-# 定义具体 Companion 子类后，在此注册：
-#   COMPANION_REGISTRY["结衣"] = Yui()
-#
-# 当前为空 — 下拉列表不会显示任何选项。
 
 COMPANION_REGISTRY: dict[str, BaseCompanion] = {}
+
+_COMPANIONS_DIR = Path(__file__).parent.parent / "static" / "companions"
+
+
+def _read_desc(filename: str) -> str:
+    """从 static/companions/ 下的 .md 文件读取描述文本。"""
+    p = _COMPANIONS_DIR / filename
+    try:
+        return p.read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
+# ── 能天使 ────────────────────────────────────────────────────────────────────
+
+def _make_exusiai() -> BaseCompanion:
+    from mod.skills import Skill
+    from mod.conditions import AlwaysCondition
+    from mod.effects import FinalFateEffect
+
+    comp = BaseCompanion()
+    comp.name = "能天使"
+    comp.avatar = "能天使.png"
+    comp.description = _read_desc("能天使.md")
+    comp.skills = [
+        Skill(
+            name="天使的祝福",
+            description="无条件提供 +6 额外幸运值",
+            conditions=[AlwaysCondition()],
+            effects=[FinalFateEffect(delta=+6)],
+            trigger_event="on_move",
+            active_or_passive="passive",
+        ),
+    ]
+    return comp
+
+
+COMPANION_REGISTRY["能天使"] = _make_exusiai()

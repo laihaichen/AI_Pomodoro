@@ -743,7 +743,7 @@ def api_declare_victory():
             "是否胜利":         "已胜利",
             "当前游戏难度":     _read_snip("difficulty"),
             "今日里程碑任务总览": milestones,
-            "今日学习助手列表": [],
+            "今日学习助手列表": json.loads((DATA_DIR / "active_companions.json").read_text(encoding="utf-8")) if (DATA_DIR / "active_companions.json").exists() else [],
             "存档时间":         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
@@ -798,7 +798,7 @@ def api_declare_defeat():
             "是否胜利":          is_victory_val,
             "当前游戏难度":      _read_snip("difficulty"),
             "今日里程碑任务总览": milestones,
-            "今日学习助手列表":  [],
+            "今日学习助手列表":  json.loads((DATA_DIR / "active_companions.json").read_text(encoding="utf-8")) if (DATA_DIR / "active_companions.json").exists() else [],
             "存档时间":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
