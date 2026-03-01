@@ -543,7 +543,12 @@ def api_usecard_zone():
         # ① 将区间写入剪切板
         subprocess.run(["pbcopy"], input=zone.encode("utf-8"),
                        check=True, timeout=5)
-        # ② 运行 usecard.applescript
+        # ② 扣减宿命卡数量
+        subprocess.run(
+            ["python3", str(BASE / "decrement_card_snippet.py")],
+            check=True, timeout=10,
+        )
+        # ③ 运行 usecard.applescript
         usecard_script = str(BASE / "applescript" / "usecard.applescript")
         subprocess.run(["osascript", usecard_script], check=True, timeout=15)
         return jsonify({"ok": True})
