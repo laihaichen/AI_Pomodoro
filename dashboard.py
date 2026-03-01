@@ -21,7 +21,7 @@ from config import (  # noqa: E402
     PAUSE_TS_FILE, CONT_TS_FILE,
     PENALIZED_REST_FILE, H_FILE,
     DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
-    HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE,
+    HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE,
     BASE,
 )
 
@@ -117,6 +117,7 @@ def generate_launch_prompt(
             lines.append(f"{label} ({record}) 最低完成指标：{task}")
         lines.append("全天将是 " + " + ".join(milestones))
     lines.append(f"\n今天的模拟人生游戏故事主题：{theme}")
+    lines.append("请从角色1岁开始叙述")
     return "\n".join(lines)
 
 
@@ -327,6 +328,13 @@ def collect_state() -> dict:
         state["boss_defeated"] = bd_text  # "none" / "true" / "false"
     except Exception:
         state["boss_defeated"] = "none"
+
+    # ── 今日故事主题 ──────────────────────────────────────────────────
+    try:
+        state["theme"] = THEME_FILE.read_text(encoding="utf-8").strip() \
+                         if THEME_FILE.exists() else ""
+    except Exception:
+        state["theme"] = ""
 
     return state
 
@@ -588,6 +596,10 @@ def api_setup():
             write_snippet_value("bossfight_stage", f"等待Boss战节点（第{bossfight_target}条）")
         else:
             write_snippet_value("bossfight_stage", "当前难度不适用")
+
+        # ── 今日故事主题 ─────────────────────────────────────────────────────
+        THEME_FILE.parent.mkdir(parents=True, exist_ok=True)
+        THEME_FILE.write_text(theme, encoding="utf-8")
 
         prompt = generate_launch_prompt(hours, max_rest, difficulty, milestones, theme)
         return jsonify({"ok": True, "prompt": prompt})

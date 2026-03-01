@@ -803,6 +803,13 @@ function refreshData() {
                 }
             }
 
+            // 今日故事主题
+            const themeEl = document.getElementById("val-theme");
+            const themeCard = document.getElementById("card-theme");
+            const themeVal = (d.theme || "").trim();
+            if (themeEl) themeEl.textContent = themeVal || "—";
+            if (themeCard) themeCard.style.display = themeVal ? "" : "none";
+
             // bossfight stage
             const bfs = d.bossfight_stage || "";
             const bfsEl = document.getElementById("val-bossfight_stage");
