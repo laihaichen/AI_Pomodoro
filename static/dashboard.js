@@ -274,22 +274,39 @@ function submitSetup() {
 
 
 function copyPrompt() {
-    const text = document.getElementById("w-result").value;
-    navigator.clipboard.writeText(text).then(() => {
-        const msg = document.getElementById("copy-msg");
-        msg.textContent = "✅ 已复制！正在发送…";
-        // 同时调用 stay.applescript（复用 divine-intervention 的 stay 路径）
+    const el = document.getElementById("w-result");
+    if (!el) return;
+    const text = el.value;
+    const msg = document.getElementById("copy-msg");
+
+    function afterCopy() {
+        if (msg) msg.textContent = "✅ 已复制！正在发送…";
         fetch("/api/stay-pomodoro", { method: "POST" })
             .then(r => r.json())
             .then(d => {
-                msg.textContent = d.ok ? "✅ 已复制并发送！" : "✅ 已复制（发送失败）";
-                setTimeout(() => { msg.textContent = ""; }, 3000);
+                if (msg) msg.textContent = d.ok ? "✅ 已复制并发送！" : "✅ 已复制（发送失败）";
+                setTimeout(() => { if (msg) msg.textContent = ""; }, 3000);
             })
             .catch(() => {
-                msg.textContent = "✅ 已复制（AppleScript 调用失败）";
-                setTimeout(() => { msg.textContent = ""; }, 3000);
+                if (msg) msg.textContent = "✅ 已复制（AppleScript 调用失败）";
+                setTimeout(() => { if (msg) msg.textContent = ""; }, 3000);
             });
-    });
+    }
+
+    // 首选 Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(afterCopy).catch(() => {
+            // fallback: execCommand
+            el.select();
+            document.execCommand("copy");
+            afterCopy();
+        });
+    } else {
+        // 极端 fallback
+        el.select();
+        document.execCommand("copy");
+        afterCopy();
+    }
 }
 
 // ── Alfred triggers ──────────────────────────────────────────────────────────
@@ -728,8 +745,8 @@ function refreshData() {
                 applyClass("val-interval", ivl > 15 ? "val-red" : "val-green");
             }
 
-            // fortune
-            const fortune = d.fortunevalue || "";
+            // fortune (is_time_within_limit)
+            const fortune = d.is_time_within_limit || "";
             setVal("val-fortunevalue", fortune);
             applyClass("val-fortunevalue",
                 fortune.includes("凶") ? "val-red" : fortune.includes("合规") ? "val-green" : null
