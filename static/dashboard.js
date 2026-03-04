@@ -512,13 +512,27 @@ let _violationTimer = null;  // 轮询 interval ID
 function openViolationModal() {
     _violationExpected = "";
     _clearViolationTimer();
-    document.getElementById("violation-step1").style.display = "";
+    document.getElementById("violation-step0").style.display = "";
+    document.getElementById("violation-step1").style.display = "none";
     document.getElementById("violation-step2").style.display = "none";
     document.getElementById("violation-step3").style.display = "none";
+    document.getElementById("violation-source").value = "";
     document.getElementById("violation-violations").value = "";
     const btn = document.getElementById("violation-send-btn");
     if (btn) { btn.textContent = "📋 复制并发送"; btn.disabled = false; }
     document.getElementById("violation-overlay").style.display = "flex";
+}
+
+function violationNextStep0() {
+    const src = document.getElementById("violation-source").value.trim();
+    if (!src) { alert("请先粘贴 AI 输出中违规的那段话"); return; }
+    document.getElementById("violation-step0").style.display = "none";
+    document.getElementById("violation-step1").style.display = "";
+}
+
+function violationBackToStep0() {
+    document.getElementById("violation-step1").style.display = "none";
+    document.getElementById("violation-step0").style.display = "";
 }
 
 function closeViolationModal() {
@@ -533,17 +547,18 @@ function _clearViolationTimer() {
 function violationNext() {
     const v = document.getElementById("violation-violations").value.trim();
     if (!v) { alert("请先填写违规描述"); return; }
+    const src = document.getElementById("violation-source").value.trim();
 
     // 显示等待界面
     document.getElementById("violation-step1").style.display = "none";
     document.getElementById("violation-step2").style.display = "";
     document.getElementById("violation-wait-msg").textContent = "请等待游戏规则调查 Agent 返还结果…";
 
-    // 后台启动：清空文件 → 写入违规 → 复制 prompts.txt → 触发 terminal.applescript
+    // 后台启动：清空文件 → 写入违规 → 复制 violation_agent_prompt.txt → 触发 terminal.applescript
     fetch("/api/violation-start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ violations: v }),
+        body: JSON.stringify({ violations: v, source: src }),
     }).catch(() => {
         document.getElementById("violation-wait-msg").textContent = "❌ 启动失败，请关闭重试";
     });
@@ -561,6 +576,8 @@ function violationNext() {
                     _violationExpected = d.expected || "";
                     // 进入 Step 3 预览
                     const violations = document.getElementById("violation-violations").value.trim();
+                    const source = document.getElementById("violation-source").value.trim();
+                    document.getElementById("violation-preview-source").textContent = source.length > 120 ? source.slice(0, 120) + "…" : source;
                     document.getElementById("violation-preview-violations").textContent = violations;
                     document.getElementById("violation-preview-expected").textContent = _violationExpected;
                     document.getElementById("violation-step2").style.display = "none";
@@ -581,13 +598,14 @@ function violationNext() {
 
 function violationSend() {
     const violations = document.getElementById("violation-violations").value.trim();
+    const source = document.getElementById("violation-source").value.trim();
     const btn = document.getElementById("violation-send-btn");
     btn.textContent = "发送中…";
     btn.disabled = true;
     fetch("/api/violation-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ violations, expected: _violationExpected }),
+        body: JSON.stringify({ violations, source, expected: _violationExpected }),
     })
         .then(r => r.json())
         .then(d => {

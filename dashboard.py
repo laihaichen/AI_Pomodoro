@@ -436,23 +436,28 @@ def api_divine_intervention():
 AGENT_WORKSPACE    = BASE / "Agent_Workspace"
 COMPLAINTS_FILE    = AGENT_WORKSPACE / "complaints.txt"
 COMPLAINT_LOGIC    = AGENT_WORKSPACE / "complaint_logic.txt"
-PROMPTS_FILE       = AGENT_WORKSPACE / "prompts.txt"
+PROMPTS_FILE       = AGENT_WORKSPACE / "violation_agent_prompt.txt"
 TERMINAL_SCRIPT    = BASE / "applescript" / "terminal.applescript"
 
 
 @app.route("/api/violation-start", methods=["POST"])
 def api_violation_start():
-    """Step 2 后台初始化：清空工作文件 → 写入 violations → 复制 prompts.txt → 运行 terminal.applescript。"""
+    """Step 2 后台初始化：清空工作文件 → 写入 violations+source → 复制 violation_agent_prompt.txt → 运行 terminal.applescript。"""
     data       = request.get_json(silent=True) or {}
     violations = data.get("violations", "").strip()
+    source     = data.get("source", "").strip()
     try:
         AGENT_WORKSPACE.mkdir(parents=True, exist_ok=True)
         # ① 清空两个工作文件
         COMPLAINTS_FILE.write_text("", encoding="utf-8")
         COMPLAINT_LOGIC.write_text("", encoding="utf-8")
-        # ② 写入用户填写的违规描述
-        COMPLAINTS_FILE.write_text(violations, encoding="utf-8")
-        # ③ 将 prompts.txt 复制到剪切板
+        # ② 写入用户填写的违规来源 + 违规描述（格式化两区块）
+        formatted = (
+            f"【违规来源（用户认为AI的输出中产生违规的那个文本块）】\n{source}\n\n"
+            f"【用户抱怨（为违规来源的抱怨）】\n{violations}"
+        )
+        COMPLAINTS_FILE.write_text(formatted, encoding="utf-8")
+        # ③ 将 violation_agent_prompt.txt 复制到剪切板
         prompts_text = PROMPTS_FILE.read_text(encoding="utf-8") \
                        if PROMPTS_FILE.exists() else ""
         subprocess.run(["pbcopy"], input=prompts_text.encode("utf-8"),
@@ -482,6 +487,7 @@ def api_violation_report():
     """构建违规通告 prompt（附完整 prompt.md），写入剪切板并触发 stay.applescript。"""
     data       = request.get_json(silent=True) or {}
     violations = data.get("violations", "").strip()
+    source     = data.get("source", "").strip()
     expected   = data.get("expected", "").strip()
     try:
         prompt_md_path = BASE / "prompt.md"
@@ -491,6 +497,7 @@ def api_violation_report():
         full_prompt = (
             "【违规通告】\n"
             "AI 已违反《学习时间追踪系统》核心游戏规则\n\n"
+            f"违规来源（AI输出中违规的文本块）：{source}\n\n"
             f"规则调查员的调查报告结果：{expected}\n"
             f"违规描述：{violations}\n"
             "提出警告：\n"

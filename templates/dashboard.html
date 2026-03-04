@@ -348,22 +348,43 @@
             <button class="modal-close" onclick="closeViolationModal()">✕</button>
             <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:#fb923c;">⚠️ 人工智能违规报告辅助填写器</h2>
 
+            <!-- Step 0: 违规来源（AI输出的违规文本块） -->
+            <div id="violation-step0">
+                <div style="font-size:13px;color:var(--dim);margin-bottom:4px;">步骤 1 / 4</div>
+                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请粘贴 AI 输出中违规的那段话：</div>
+                <textarea id="violation-source" rows="6" placeholder="复制 AI 产生违规的那个文本块，粘贴到这里…"
+                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+                           color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+                <button onclick="violationNextStep0()" style="margin-top:12px;width:100%;padding:9px;
+                        background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.5);
+                        border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">
+                    下一步 →
+                </button>
+            </div>
+
             <!-- Step 1: 违规描述 -->
-            <div id="violation-step1">
-                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">人工智能产生了什么违规？</div>
+            <div id="violation-step1" style="display:none;">
+                <div style="font-size:13px;color:var(--dim);margin-bottom:4px;">步骤 2 / 4</div>
+                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">你认为上述 AI 输出哪里违规了？</div>
                 <textarea id="violation-violations" rows="5" placeholder="在此描述 AI 的违规行为…"
                     style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
                            color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
-                <button onclick="violationNext()" style="margin-top:12px;width:100%;padding:9px;
-                        background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.5);
-                        border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">
-                    提交并启动规则调查 →
-                </button>
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                    <button onclick="violationBackToStep0()" style="flex:1;padding:9px;
+                            background:transparent;border:1px solid var(--border);
+                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 返回</button>
+                    <button onclick="violationNext()" style="flex:2;padding:9px;
+                            background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.5);
+                            border-radius:6px;color:#fb923c;font-size:13px;font-weight:700;cursor:pointer;">
+                        提交并启动规则调查 →
+                    </button>
+                </div>
             </div>
 
             <!-- Step 2: 等待 Agent 调查结果 -->
             <div id="violation-step2" style="display:none;">
                 <div style="text-align:center;padding:32px 0;">
+                    <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">步骤 3 / 4</div>
                     <div style="font-size:28px;margin-bottom:16px;">🔍</div>
                     <div id="violation-wait-msg" style="font-size:13px;color:var(--dim);line-height:1.8;">
                         请等待游戏规则调查 Agent 返还结果…
@@ -378,11 +399,14 @@
 
             <!-- Step 3: 预览 + 发送 -->
             <div id="violation-step3" style="display:none;">
+                <div style="font-size:13px;color:var(--dim);margin-bottom:4px;">步骤 4 / 4</div>
                 <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">即将发送的内容（包含prompt.md，由后台拼接）：</div>
                 <div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.3);
                             border-radius:6px;padding:12px;font-size:12px;line-height:1.7;color:var(--bright);">
                     <div>【违规通告】</div>
                     <div>AI 已违反《学习时间追踪系统》核心游戏规则</div>
+                    <div style="margin-top:8px;">违规来源：<span id="violation-preview-source" style="color:#fb923c"></span>
+                    </div>
                     <div style="margin-top:8px;">规则调查员的调查报告结果：<span id="violation-preview-expected"
                             style="color:#fb923c"></span></div>
                     <div>违规描述：<span id="violation-preview-violations" style="color:#fb923c"></span></div>
