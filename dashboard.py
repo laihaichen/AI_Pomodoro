@@ -13,7 +13,9 @@ import json
 import sqlite3
 import subprocess
 import sys
+import threading
 from datetime import datetime, timezone
+from pathlib import Path as _Path
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
 from config import (  # noqa: E402
@@ -445,13 +447,85 @@ def api_divine_intervention():
 AGENT_WORKSPACE    = BASE / "Agent_Workspace"
 COMPLAINTS_FILE    = AGENT_WORKSPACE / "complaints.txt"
 COMPLAINT_LOGIC    = AGENT_WORKSPACE / "complaint_logic.txt"
-PROMPTS_FILE       = AGENT_WORKSPACE / "violation_agent_prompt.txt"
-TERMINAL_SCRIPT    = BASE / "applescript" / "terminal.applescript"
+API_CONFIG_FILE    = BASE / "api_config.json"
+
+
+def _load_api_config() -> dict:
+    """从 api_config.json 中读取 Gemini API key 和模型名。"""
+    if API_CONFIG_FILE.exists():
+        return json.loads(API_CONFIG_FILE.read_text(encoding="utf-8"))
+    return {}
+
+
+def _call_gemini_agent(complaints_text: str, prompt_md_text: str) -> str:
+    """调用 Gemini API 执行规则条文调查，返回调查报告文本。"""
+    import google.generativeai as genai
+
+    cfg = _load_api_config()
+    api_key = cfg.get("gemini_api_key", "")
+    model_name = cfg.get("gemini_model", "gemini-3-flash-preview")
+    if not api_key or api_key.startswith("在此"):
+        raise ValueError("请先在 api_config.json 中填写有效的 Gemini API Key")
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(model_name)
+
+    system_prompt = (
+        "你是一个游戏规则条文检索器。\n"
+        "用户会提供一段AI违规输出和抱怨描述，以及完整的游戏规则文档（prompt.md）。\n"
+        "你的任务是：\n"
+        "1. 仔细分析用户的抱怨，理解AI哪里违规了\n"
+        "2. 在游戏规则文档中检索被违反的具体条文\n"
+        "3. 输出调查报告，格式包含【违规行为归纳】、【违反规则条文】（列出条目编号及要点）、【结论】\n"
+        "请直接输出调查报告，不要添加任何前缀或解释。"
+    )
+
+    user_message = (
+        f"以下是用户的违规投诉：\n\n{complaints_text}\n\n"
+        f"{'='*60}\n\n"
+        f"以下是完整的游戏规则文档（prompt.md）：\n\n{prompt_md_text}"
+    )
+
+    response = model.generate_content(
+        [system_prompt, user_message],
+        generation_config=genai.types.GenerationConfig(
+            temperature=0.2,
+            max_output_tokens=2048,
+        ),
+    )
+    return response.text
+
+
+def _violation_agent_background(complaints_text: str):
+    """后台线程：调用 Gemini API → 写入 complaint_logic.txt → 调用 complaint_manage.py 存档。"""
+    try:
+        prompt_md_path = BASE / "prompt.md"
+        prompt_md = prompt_md_path.read_text(encoding="utf-8") if prompt_md_path.exists() else ""
+
+        result = _call_gemini_agent(complaints_text, prompt_md)
+        COMPLAINT_LOGIC.write_text(result, encoding="utf-8")
+
+        # 自动存档：提取精简的违规行为和条文编号
+        # 从 Agent 返回的结构化报告中提取关键字段
+        behavior_summary = result.split("【违反规则条文】")[0].replace("【违规行为归纳】", "").strip() \
+            if "【违反规则条文】" in result else result[:200]
+        rules_summary = result.split("【结论】")[0].split("【违反规则条文】")[-1].strip() \
+            if "【违反规则条文】" in result else "见 complaint_logic.txt"
+
+        subprocess.run(
+            ["python3", str(BASE / "complaint_manager" / "complaint_manage.py"),
+             "--violation_behavior", behavior_summary[:500],
+             "--violated_rules", rules_summary[:500]],
+            check=True, timeout=15,
+        )
+    except Exception as exc:
+        # 将错误写入 complaint_logic.txt 以便前端轮询发现
+        COMPLAINT_LOGIC.write_text(f"❌ 调查失败：{exc}", encoding="utf-8")
 
 
 @app.route("/api/violation-start", methods=["POST"])
 def api_violation_start():
-    """Step 2 后台初始化：清空工作文件 → 写入 violations+source → 复制 violation_agent_prompt.txt → 运行 terminal.applescript。"""
+    """Step 2 后台初始化：清空工作文件 → 写入投诉 → 异步调用 Gemini API 执行规则调查。"""
     data       = request.get_json(silent=True) or {}
     violations = data.get("violations", "").strip()
     source     = data.get("source", "").strip()
@@ -460,19 +534,19 @@ def api_violation_start():
         # ① 清空两个工作文件
         COMPLAINTS_FILE.write_text("", encoding="utf-8")
         COMPLAINT_LOGIC.write_text("", encoding="utf-8")
-        # ② 写入用户填写的违规来源 + 违规描述（格式化两区块）
+        # ② 写入用户填写的违规来源 + 违规描述
         formatted = (
             f"【违规来源（用户认为AI的输出中产生违规的那个文本块）】\n{source}\n\n"
             f"【用户抱怨（为违规来源的抱怨）】\n{violations}"
         )
         COMPLAINTS_FILE.write_text(formatted, encoding="utf-8")
-        # ③ 将 violation_agent_prompt.txt 复制到剪切板
-        prompts_text = PROMPTS_FILE.read_text(encoding="utf-8") \
-                       if PROMPTS_FILE.exists() else ""
-        subprocess.run(["pbcopy"], input=prompts_text.encode("utf-8"),
-                       check=True, timeout=5)
-        # ④ 触发 terminal.applescript（唤醒规则调查 Agent）
-        subprocess.Popen(["osascript", str(TERMINAL_SCRIPT)])
+        # ③ 在后台线程中调用 Gemini API（非阻塞，前端通过 /api/violation-poll 轮询结果）
+        thread = threading.Thread(
+            target=_violation_agent_background,
+            args=(formatted,),
+            daemon=True,
+        )
+        thread.start()
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
