@@ -59,6 +59,7 @@ def reset_files() -> list[str]:
         ("pending_active_skills.json","[]"),
         ("used_skills.json",          "{}"),
         ("companion_log.json",        "[]"),
+        ("companion_chat.json",       "{}"),
         ("skill_cooldowns.json",      "{}"),
         ("skill_effects.json",        "{}"),
     ]:

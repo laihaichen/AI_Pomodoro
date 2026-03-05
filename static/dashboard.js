@@ -807,6 +807,12 @@ function refreshData() {
                 parseInt(d.violationcount) > 0 ? "val-red" : "val-green"
             );
 
+            // current clipboard (当前学习正文)
+            const clipEl = document.getElementById("val-current-clipboard");
+            if (clipEl && d.current_clipboard) {
+                clipEl.textContent = d.current_clipboard;
+            }
+
             // milestones overview — 今日里程碑任务总览（非默认值的组）
             const msEl = document.getElementById("val-milestones-set");
             if (msEl) {

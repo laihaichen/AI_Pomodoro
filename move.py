@@ -135,6 +135,15 @@ def _compute_and_write_offset(new_count: int) -> str:
 # ── main ────────────────────────────────────────────────────────────────────
 
 def main() -> int:
+    # 0. 抓取当前剪切板内容，保存为"当前学习正文"
+    try:
+        import subprocess
+        clip = subprocess.run(["pbpaste"], capture_output=True, text=True, timeout=3).stdout.strip()
+        if clip:
+            write_snippet("current_clipboard", clip[:2000])  # 截断防止过长
+    except Exception as exc:
+        print(f"clipboard capture failed: {exc}", file=sys.stderr)
+
     now = now_ts()
 
     # 1. Shift curr → prev，写新 curr

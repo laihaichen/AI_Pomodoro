@@ -121,6 +121,8 @@ SNIPPETS: dict[str, Snippet] = {
     # ── 学习助手系统 ─────────────────────────────────────────────────────────
     "is_eligible_for_reward": Snippet("CFCCE93B-4480-4898-9056-8331A5A2764B",  "-is-eligible-for-reward", "当前未超过85，无奖励",
                                       panel_label="是否应该触发幸运系统"),
+    "current_clipboard":      Snippet("DFE00B87-E72B-4A9B-8E73-007DEF65EE0D",  "-current-clipboard",      "无剪切板信息",
+                                      panel_label="你的当前学习正文"),
 }
 
 
