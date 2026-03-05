@@ -237,7 +237,16 @@ def collect_state() -> dict:
         except (ValueError, IndexError):
             _numerator = 0
         if _denominator > 0:
-            _label = "已到达进度" if _numerator >= _denominator else "未到达进度"
+            if _numerator >= _denominator:
+                # 区分「已提前完成但节点未到」与「节点已触发」两种状态
+                _stage_val = state.get("stage", "")
+                _stage_default = SNIPPETS["stage"].default  # "当前没有达到阶段性节点"
+                if _stage_val == _stage_default:
+                    _label = "已提前达成，等待节点"
+                else:
+                    _label = "已到达进度"
+            else:
+                _label = "未到达进度"
             _progress_str = f"{_numerator}/{_denominator} {_label}"
         else:
             _progress_str = SNIPPETS["current_progress_indicator"].default  # "0/0 未到达进度"

@@ -166,6 +166,11 @@ def main() -> int:
 
     # ── 3. 吉凶判定 ──────────────────────────────────────────────────────────
     health = read_health()
+
+    # 每次 move 都基于当前 H 重新掷超时惩罚随机数
+    current_h = update_h.read_h()
+    update_h.write_overtime_range(current_h)
+
     if interval_minutes >= 15:
         fortune_val = -1
         fortune_str = "凶 (超时)"
