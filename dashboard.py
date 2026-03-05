@@ -351,15 +351,21 @@ def api_companion_status():
         count = int(read_snippet("current_prompt_count") or "0")
     except Exception:
         count = 0
-    # 读取上次聊天回复
+    # 读取上次聊天回复（从历史记录中提取最后一条 model 消息）
     chat_file = DATA_DIR / "companion_chat.json"
     try:
-        chat_replies = json.loads(chat_file.read_text(encoding="utf-8")) if chat_file.exists() else {}
+        chat_data = json.loads(chat_file.read_text(encoding="utf-8")) if chat_file.exists() else {}
     except Exception:
-        chat_replies = {}
+        chat_data = {}
     companions = get_companion_status(count)
     for c in companions:
-        c["last_reply"] = chat_replies.get(c["name"], "")
+        history = chat_data.get(c["name"], [])
+        last = ""
+        for msg in reversed(history):
+            if msg.get("role") == "model":
+                last = msg.get("parts", "")
+                break
+        c["last_reply"] = last
     return jsonify({
         "locked": is_locked(),
         "active_names": _read_active_names(),
@@ -409,8 +415,12 @@ def api_companion_use_skill():
 COMPANION_CHAT_FILE = DATA_DIR / "companion_chat.json"
 
 
-def _roleplay_pipeline(character_name: str, message: str) -> str:
-    """调用 Gemini API 进行角色扮演对话，返回角色回复。"""
+MAX_CHAT_HISTORY = 10  # 保留最多 10 轮对话（20 条消息）
+
+
+def _roleplay_pipeline(character_name: str, message: str, history: list) -> str:
+    """调用 Gemini API 进行角色扮演对话，支持多轮上下文，返回角色回复。"""
+    import re
     import google.generativeai as genai
 
     cfg = _load_api_config()
@@ -419,39 +429,86 @@ def _roleplay_pipeline(character_name: str, message: str) -> str:
     if not api_key or api_key.startswith("在此"):
         raise ValueError("请先在 api_config.json 中填写有效的 Gemini API Key")
 
-    # 动态读取角色资料（根据角色名找对应 .md 文件）
+    # 动态读取角色资料
     profile_path = BASE / "static" / "companions" / f"{character_name}.md"
     if profile_path.exists():
         character_profile = profile_path.read_text(encoding="utf-8")
     else:
         character_profile = f"你扮演的角色是 {character_name}。"
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(model_name)
+    # 读取游戏规则全文
+    prompt_md_path = BASE / "prompt.md"
+    prompt_md = prompt_md_path.read_text(encoding="utf-8") if prompt_md_path.exists() else ""
+
+    # 读取当前游戏状态面板
+    panel_lines = []
+    for key, snip in SNIPPETS.items():
+        if snip.panel_label:
+            try:
+                val = read_snippet(key)
+            except Exception:
+                val = "（读取失败）"
+            panel_lines.append(f"{snip.panel_label}：{val}")
+    game_state = "\n".join(panel_lines) if panel_lines else "（暂无游戏状态数据）"
 
     system_prompt = (
-        "你是一个角色扮演专家。\n"
-        f"你扮演的角色资料如下：\n\n{character_profile}\n\n"
-        "规则：\n"
+        "你是一个角色扮演专家。\n\n"
+        f"【背景】该角色是玩家的学习助手，和玩家一起合作完成一个番茄钟学习追踪游戏。"
+        f"角色了解游戏规则，能看到玩家的当前状态面板，可以用角色本身的语气鼓励、提醒或陪伴玩家。\n\n"
+        f"【你扮演的角色资料】\n{character_profile}\n\n"
+        f"【游戏规则文档（prompt.md）】\n{prompt_md}\n\n"
+        f"【玩家当前游戏状态面板】\n{game_state}\n\n"
+        "【回复规则】\n"
         "1. 你的回应必须为100字以内\n"
         "2. 尽可能根据角色的性格特点、语气和说话方式来扮演角色\n"
         "3. 保持角色的个性，不要跳出角色\n"
-        "4. 用角色的口吻直接回复，不要加任何前缀或解释"
+        "4. 用角色的口吻直接回复，不要加任何前缀或解释\n"
+        "5. 可以根据玩家当前游戏状态给出符合角色性格的反应（如鼓励、调侃、关心等）\n"
+        "6. 回复必须是纯文本，禁止使用任何 markdown 格式（不要用加粗、斜体、标题等）"
     )
 
-    response = model.generate_content(
-        [system_prompt, message],
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name,
+        system_instruction=system_prompt,
+    )
+
+    # 构建 Gemini 格式的历史记录
+    gemini_history = []
+    for msg in history:
+        gemini_history.append({
+            "role": msg["role"],
+            "parts": [msg["parts"]],
+        })
+
+    chat = model.start_chat(history=gemini_history)
+    response = chat.send_message(
+        message,
         generation_config=genai.types.GenerationConfig(
             temperature=0.8,
-            max_output_tokens=256,
+            max_output_tokens=8192,
         ),
     )
-    return response.text.strip()
+
+    # 诊断
+    try:
+        fr = response.candidates[0].finish_reason
+        print(f"[companion-chat] finish_reason={fr}")
+    except Exception:
+        pass
+    # 拼接 parts
+    try:
+        parts = response.candidates[0].content.parts
+        full_text = "".join(p.text for p in parts if hasattr(p, "text"))
+    except Exception:
+        full_text = response.text
+    full_text = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", full_text)
+    return full_text.strip()
 
 
 @app.route("/api/companion-chat", methods=["POST"])
 def api_companion_chat():
-    """角色扮演对话：接收角色名和消息，返回角色扮演回复。"""
+    """角色扮演对话：接收角色名和消息，返回角色扮演回复（带多轮上下文）。"""
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
     message = data.get("message", "").strip()
@@ -460,14 +517,25 @@ def api_companion_chat():
     if not message:
         return jsonify({"ok": False, "error": "消息为空"}), 400
     try:
-        reply = _roleplay_pipeline(name, message)
-        # 持久化到 companion_chat.json
+        # 读取该角色的历史对话
         try:
             chat_data = json.loads(COMPANION_CHAT_FILE.read_text(encoding="utf-8")) \
                 if COMPANION_CHAT_FILE.exists() else {}
         except Exception:
             chat_data = {}
-        chat_data[name] = reply
+        history = chat_data.get(name, [])
+
+        # 调用 API（传入历史上下文）
+        reply = _roleplay_pipeline(name, message, history)
+
+        # 追加本轮对话到历史
+        history.append({"role": "user", "parts": message})
+        history.append({"role": "model", "parts": reply})
+        # 限制最多 MAX_CHAT_HISTORY 轮（每轮 = user + model = 2 条）
+        if len(history) > MAX_CHAT_HISTORY * 2:
+            history = history[-(MAX_CHAT_HISTORY * 2):]
+        chat_data[name] = history
+
         COMPANION_CHAT_FILE.write_text(
             json.dumps(chat_data, ensure_ascii=False, indent=2),
             encoding="utf-8",
