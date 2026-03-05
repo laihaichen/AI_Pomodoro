@@ -628,6 +628,50 @@ body {
     object-fit: cover;
 }
 
+/* 头像 + 聊天按钮行 */
+.companion-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.companion-chat-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    padding: 0;
+    line-height: 1;
+}
+
+.companion-chat-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--dim);
+}
+
+/* 角色回复气泡 */
+.companion-reply-bubble {
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.6;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    word-break: break-word;
+}
+
 .companion-skills {
     width: 100%;
     display: flex;
@@ -689,6 +733,22 @@ body {
     font-size: 10px;
     opacity: 0.65;
     margin-top: 2px;
+}
+
+/* 每个技能的容器（包裹 tag/btn + 描述文字） */
+.skill-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 技能描述文字 */
+.skill-description {
+    font-size: 10px;
+    color: var(--dim);
+    line-height: 1.5;
+    padding: 0 2px;
+    opacity: 0.8;
 }
 
 /* 控制区 */

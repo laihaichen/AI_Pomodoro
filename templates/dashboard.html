@@ -526,6 +526,45 @@
         </div>
     </div>
 
+    <!-- ── 学习助手聊天 Modal ── -->
+    <div class="modal-overlay" id="chat-overlay" style="display:none;">
+        <div class="modal" style="max-width:480px;width:95%;">
+            <button class="modal-close" onclick="closeChatModal()">✕</button>
+            <h2 id="chat-modal-title" style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--bright);">💬
+                与助手对话</h2>
+            <!-- 上次回复（如果有） -->
+            <div id="chat-last-reply-area" style="display:none;margin-bottom:14px;">
+                <div
+                    style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;">
+                    上次回复</div>
+                <div id="chat-last-reply" style="font-size:12px;color:var(--text);line-height:1.6;
+                            background:rgba(255,255,255,0.03);border:1px solid var(--border);
+                            border-radius:8px;padding:10px 12px;"></div>
+            </div>
+            <!-- 输入 -->
+            <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">你希望发送的消息：</div>
+            <textarea id="chat-message-input" rows="3" placeholder="输入你想对助手说的话…"
+                style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+                       color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+            <!-- 回复展示 -->
+            <div id="chat-reply-area" style="display:none;margin-top:12px;">
+                <div
+                    style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;">
+                    角色回复</div>
+                <div id="chat-reply-text" style="font-size:13px;color:var(--bright);line-height:1.7;
+                            background:rgba(255,255,255,0.04);border:1px solid var(--border);
+                            border-radius:8px;padding:12px 14px;"></div>
+            </div>
+            <!-- 按钮 -->
+            <button id="chat-send-btn" onclick="sendChat()" style="margin-top:12px;width:100%;padding:9px;
+                    background:var(--border);border:1px solid #3a3a3a;
+                    border-radius:6px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;
+                    transition:background 0.15s;">
+                发送 →
+            </button>
+        </div>
+    </div>
+
     <!-- ── Setup Wizard Modal ── -->
 
 

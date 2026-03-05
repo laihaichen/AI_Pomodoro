@@ -1052,7 +1052,10 @@ function renderSlot(comp, locked) {
     `;
     slot.appendChild(hdr);
 
-    // avatar
+    // avatar row: avatar + chat button
+    const avatarRow = document.createElement("div");
+    avatarRow.className = "companion-avatar-row";
+
     const av = document.createElement("div");
     av.className = "companion-avatar-area";
     if (comp.avatar_url) {
@@ -1060,18 +1063,37 @@ function renderSlot(comp, locked) {
     } else {
         av.textContent = "🤖";
     }
-    slot.appendChild(av);
+    avatarRow.appendChild(av);
+
+    const chatBtn = document.createElement("button");
+    chatBtn.className = "companion-chat-btn";
+    chatBtn.textContent = "💬";
+    chatBtn.title = `与${comp.name}对话`;
+    chatBtn.onclick = () => openChatModal(comp.name, comp.last_reply || "");
+    avatarRow.appendChild(chatBtn);
+
+    slot.appendChild(avatarRow);
+
+    // last reply bubble (if exists)
+    if (comp.last_reply) {
+        const bubble = document.createElement("div");
+        bubble.className = "companion-reply-bubble";
+        bubble.textContent = comp.last_reply;
+        slot.appendChild(bubble);
+    }
 
     // skills
     const skillsDiv = document.createElement("div");
     skillsDiv.className = "companion-skills";
     (comp.skills || []).forEach(sk => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "skill-wrapper";
+
         if (sk.type === "passive") {
             const tag = document.createElement("div");
             tag.className = "skill-tag";
             tag.textContent = sk.name;
-            if (sk.description) tag.title = sk.description;
-            skillsDiv.appendChild(tag);
+            wrapper.appendChild(tag);
         } else {
             const btn = document.createElement("button");
             btn.className = "skill-btn";
@@ -1080,11 +1102,74 @@ function renderSlot(comp, locked) {
             btn.innerHTML = sk.name +
                 (disabled ? `<span class="skill-status-label">${sk.label}</span>` : "");
             btn.onclick = () => useSkill(sk.name);
-            skillsDiv.appendChild(btn);
+            wrapper.appendChild(btn);
         }
+
+        if (sk.description) {
+            const desc = document.createElement("div");
+            desc.className = "skill-description";
+            desc.textContent = sk.description;
+            wrapper.appendChild(desc);
+        }
+
+        skillsDiv.appendChild(wrapper);
     });
     slot.appendChild(skillsDiv);
     return slot;
+}
+
+// ── Companion Chat ───────────────────────────────────────────────────────────
+let _chatCompanionName = "";
+
+function openChatModal(name, lastReply) {
+    _chatCompanionName = name;
+    document.getElementById("chat-modal-title").textContent = `💬 与${name}对话`;
+    document.getElementById("chat-message-input").value = "";
+    document.getElementById("chat-reply-area").style.display = "none";
+    // 显示上次回复（如有）
+    const lastArea = document.getElementById("chat-last-reply-area");
+    if (lastReply) {
+        document.getElementById("chat-last-reply").textContent = lastReply;
+        lastArea.style.display = "";
+    } else {
+        lastArea.style.display = "none";
+    }
+    const btn = document.getElementById("chat-send-btn");
+    btn.textContent = "发送 →";
+    btn.disabled = false;
+    document.getElementById("chat-overlay").style.display = "flex";
+    document.getElementById("chat-message-input").focus();
+}
+
+function closeChatModal() {
+    document.getElementById("chat-overlay").style.display = "none";
+}
+
+function sendChat() {
+    const message = document.getElementById("chat-message-input").value.trim();
+    if (!message) { alert("请输入消息"); return; }
+    const btn = document.getElementById("chat-send-btn");
+    btn.textContent = "⏳ 角色思考中…";
+    btn.disabled = true;
+    fetch("/api/companion-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: _chatCompanionName, message }),
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                document.getElementById("chat-reply-text").textContent = d.reply;
+                document.getElementById("chat-reply-area").style.display = "";
+                btn.textContent = "✅ 已收到回复";
+                // 刷新槽位以显示气泡
+                refreshCompanionSlots();
+            } else {
+                btn.textContent = "❌ " + (d.error || "未知错误");
+                btn.disabled = false;
+            }
+        })
+        .catch(() => { btn.textContent = "发送 →"; btn.disabled = false; });
 }
 
 function renderEmptySlot() {

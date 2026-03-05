@@ -345,16 +345,25 @@ def api_companion_registry():
 
 @app.route("/api/companion-status")
 def api_companion_status():
-    """Return loaded companions with skill statuses."""
+    """Return loaded companions with skill statuses + last chat replies."""
     from mod.companions import get_companion_status, is_locked, _read_active_names
     try:
         count = int(read_snippet("current_prompt_count") or "0")
     except Exception:
         count = 0
+    # 读取上次聊天回复
+    chat_file = DATA_DIR / "companion_chat.json"
+    try:
+        chat_replies = json.loads(chat_file.read_text(encoding="utf-8")) if chat_file.exists() else {}
+    except Exception:
+        chat_replies = {}
+    companions = get_companion_status(count)
+    for c in companions:
+        c["last_reply"] = chat_replies.get(c["name"], "")
     return jsonify({
         "locked": is_locked(),
         "active_names": _read_active_names(),
-        "companions": get_companion_status(count),
+        "companions": companions,
     })
 
 
@@ -395,6 +404,77 @@ def api_companion_use_skill():
         return jsonify({"ok": False, "msg": "技能名为空"}), 400
     write_pending_skill(skill_name)
     return jsonify({"ok": True, "msg": f"{skill_name} 已排队"})
+
+
+COMPANION_CHAT_FILE = DATA_DIR / "companion_chat.json"
+
+
+def _roleplay_pipeline(character_name: str, message: str) -> str:
+    """调用 Gemini API 进行角色扮演对话，返回角色回复。"""
+    import google.generativeai as genai
+
+    cfg = _load_api_config()
+    api_key = cfg.get("gemini_api_key", "")
+    model_name = cfg.get("gemini_model", "gemini-3-flash-preview")
+    if not api_key or api_key.startswith("在此"):
+        raise ValueError("请先在 api_config.json 中填写有效的 Gemini API Key")
+
+    # 动态读取角色资料（根据角色名找对应 .md 文件）
+    profile_path = BASE / "static" / "companions" / f"{character_name}.md"
+    if profile_path.exists():
+        character_profile = profile_path.read_text(encoding="utf-8")
+    else:
+        character_profile = f"你扮演的角色是 {character_name}。"
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(model_name)
+
+    system_prompt = (
+        "你是一个角色扮演专家。\n"
+        f"你扮演的角色资料如下：\n\n{character_profile}\n\n"
+        "规则：\n"
+        "1. 你的回应必须为100字以内\n"
+        "2. 尽可能根据角色的性格特点、语气和说话方式来扮演角色\n"
+        "3. 保持角色的个性，不要跳出角色\n"
+        "4. 用角色的口吻直接回复，不要加任何前缀或解释"
+    )
+
+    response = model.generate_content(
+        [system_prompt, message],
+        generation_config=genai.types.GenerationConfig(
+            temperature=0.8,
+            max_output_tokens=256,
+        ),
+    )
+    return response.text.strip()
+
+
+@app.route("/api/companion-chat", methods=["POST"])
+def api_companion_chat():
+    """角色扮演对话：接收角色名和消息，返回角色扮演回复。"""
+    data = request.get_json(silent=True) or {}
+    name = data.get("name", "").strip()
+    message = data.get("message", "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "角色名为空"}), 400
+    if not message:
+        return jsonify({"ok": False, "error": "消息为空"}), 400
+    try:
+        reply = _roleplay_pipeline(name, message)
+        # 持久化到 companion_chat.json
+        try:
+            chat_data = json.loads(COMPANION_CHAT_FILE.read_text(encoding="utf-8")) \
+                if COMPANION_CHAT_FILE.exists() else {}
+        except Exception:
+            chat_data = {}
+        chat_data[name] = reply
+        COMPANION_CHAT_FILE.write_text(
+            json.dumps(chat_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return jsonify({"ok": True, "reply": reply})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/api/next-pomodoro", methods=["POST"])
