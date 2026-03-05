@@ -457,8 +457,8 @@ def _load_api_config() -> dict:
     return {}
 
 
-def _call_gemini_agent(complaints_text: str, prompt_md_text: str) -> str:
-    """调用 Gemini API 执行规则条文调查，返回调查报告文本。"""
+def _investigate_violation(complaints_text: str, prompt_md_text: str) -> str:
+    """针对违规投诉，向 Gemini 发起规则条文调查，返回结构化调查报告文本。"""
     import google.generativeai as genai
 
     cfg = _load_api_config()
@@ -502,7 +502,7 @@ def _violation_agent_background(complaints_text: str):
         prompt_md_path = BASE / "prompt.md"
         prompt_md = prompt_md_path.read_text(encoding="utf-8") if prompt_md_path.exists() else ""
 
-        result = _call_gemini_agent(complaints_text, prompt_md)
+        result = _investigate_violation(complaints_text, prompt_md)
         COMPLAINT_LOGIC.write_text(result, encoding="utf-8")
 
         # 自动存档：提取精简的违规行为和条文编号
