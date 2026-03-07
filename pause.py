@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from datetime import datetime, timezone
 
-sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 from config import PAUSE_TS_FILE, write_snippet  # noqa: E402
 
 

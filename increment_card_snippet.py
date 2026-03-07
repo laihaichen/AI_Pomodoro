@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import sys
 
-sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 from config import read_snippet, write_snippet  # noqa: E402
 
 

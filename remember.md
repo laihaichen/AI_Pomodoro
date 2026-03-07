@@ -1,5 +1,5 @@
 # 运行
-lsof -ti :5050 | xargs kill -9 && python3 /Users/haichenlai/Desktop/Prompt/dashboard.py
+lsof -ti :5050 | xargs kill -9 && APP_MODE=alfred python3 dashboard.py
 
 # 以non-Alfred模式运行
 lsof -ti :5050 | xargs kill -9 && APP_MODE=standalone python3 dashboard.py

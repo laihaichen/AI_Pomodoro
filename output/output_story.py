@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-BASE       = Path("/Users/haichenlai/Desktop/Prompt")
+BASE       = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = BASE / "output"
 STORY_FILE = BASE / "data" / "story_today.txt"
 

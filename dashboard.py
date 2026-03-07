@@ -2,7 +2,7 @@
 """dashboard.py — local web dashboard for the learning tracker.
 
 Usage:
-    python3 /Users/haichenlai/Desktop/Prompt/dashboard.py
+    python3 dashboard.py
     then open http://localhost:5050 in a browser.
 
 Auto-refreshes every 5 seconds via AJAX polling.
@@ -17,7 +17,7 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path as _Path
 
-sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 from config import (  # noqa: E402
     CURR_TS_FILE, PREV_TS_FILE, FIRST_TS_FILE,
     PAUSE_TS_FILE, CONT_TS_FILE,
@@ -1126,7 +1126,7 @@ def api_reset():
     try:
         import subprocess as _sp
         result = _sp.run(
-            ["python3", "/Users/haichenlai/Desktop/Prompt/reset.py"],
+            ["python3", str(BASE / "reset.py")],
             capture_output=True, text=True, timeout=15
         )
         output = result.stdout + result.stderr

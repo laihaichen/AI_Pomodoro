@@ -16,7 +16,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 from config import (  # noqa: E402
     CONT_TS_FILE, CURR_TS_FILE, FINAL_FATE_FILE, FIRST_TS_FILE,
     HEALTH_FILE, PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,

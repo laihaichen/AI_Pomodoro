@@ -7,7 +7,7 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 
-sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 from config import CONT_TS_FILE, PAUSE_TS_FILE, SNIPPETS, read_snippet, write_snippet  # noqa: E402
 import update_h  # noqa: E402
 
