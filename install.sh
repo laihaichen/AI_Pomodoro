@@ -63,7 +63,8 @@ if [ ! -f "$API_CONFIG" ]; then
     cat > "$API_CONFIG" <<'EOF'
 {
     "gemini_api_key": "在此填入你的 Gemini API Key",
-    "gemini_model": "gemini-3-flash-preview"
+    "gemini_model": "gemini-3-flash-preview",
+    "target_urls": ["gemini.google.com", "aistudio.google.com"]
 }
 EOF
     echo "   ✅ 已生成 api_config.json"

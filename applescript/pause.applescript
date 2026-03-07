@@ -7,6 +7,11 @@
 -- *****************************************************************
 
 -- Main script execution
+-- 动态读取目标 URL（从 api_config.json）
+set scriptPath to POSIX path of (path to me)
+set projectRoot to do shell script "dirname " & quoted form of scriptPath & " | xargs dirname"
+set targetURLs to paragraphs of (do shell script "python3 " & quoted form of (projectRoot & "/applescript/read_target_urls.py") & " " & quoted form of (projectRoot & "/api_config.json"))
+
 tell application "Google Chrome"
     -- 1. Activate Chrome browser
     activate
@@ -19,7 +24,14 @@ tell application "Google Chrome"
             repeat with t_index from 1 to (count of tabs of window w_index)
                 set tabURL to URL of tab t_index of window w_index
                 -- CUSTOMIZABLE: Modify this condition to target specific AI platforms
-                if tabURL contains "gemini.google.com" then
+                set urlMatched to false
+                repeat with aURL in targetURLs
+                    if tabURL contains aURL then
+                        set urlMatched to true
+                        exit repeat
+                    end if
+                end repeat
+                if urlMatched then
                     set end of aiPages to {win:w_index, tab:t_index}
                 end if
             end repeat

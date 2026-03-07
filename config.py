@@ -26,6 +26,22 @@ _ALFRED = Path.home() / "Library" / "Application Support" / "Alfred"
 DB_FILE      = _ALFRED / "Databases" / "snippets.alfdb"
 SNIPPETS_DIR = _ALFRED / "Alfred.alfredpreferences" / "snippets" / "学习时间追踪系统"
 
+# ── 目标 AI 对话 URL（从 api_config.json 读取，两种模式共用）────────────────
+API_CONFIG_FILE = BASE / "api_config.json"
+
+def _load_target_urls() -> list[str]:
+    """从 api_config.json 读取 target_urls，不存在则默认 gemini.google.com。"""
+    try:
+        cfg = json.loads(API_CONFIG_FILE.read_text(encoding="utf-8"))
+        urls = cfg.get("target_urls", [])
+        if urls:
+            return urls
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    return ["gemini.google.com", "aistudio.google.com"]
+
+TARGET_URLS: list[str] = _load_target_urls()
+
 # ── data file paths ──────────────────────────────────────────────────────────
 CURR_TS_FILE        = DATA_DIR / "curr_timestamp.txt"
 PREV_TS_FILE        = DATA_DIR / "prev_timestamp.txt"

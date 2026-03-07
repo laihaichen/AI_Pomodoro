@@ -900,6 +900,37 @@ def api_usecard_zone():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/target-urls", methods=["GET"])
+def api_get_target_urls():
+    """读取当前 target_urls 配置。"""
+    from config import TARGET_URLS
+    return jsonify({"urls": TARGET_URLS})
+
+
+@app.route("/api/target-urls", methods=["POST"])
+def api_set_target_urls():
+    """写入 target_urls 到 api_config.json。"""
+    from config import API_CONFIG_FILE
+    data = request.get_json(silent=True) or {}
+    urls = data.get("urls", [])
+    if not urls or not isinstance(urls, list):
+        return jsonify({"ok": False, "error": "urls 必须是非空列表"}), 400
+    try:
+        try:
+            cfg = json.loads(API_CONFIG_FILE.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            cfg = {}
+        cfg["target_urls"] = urls
+        API_CONFIG_FILE.write_text(
+            json.dumps(cfg, ensure_ascii=False, indent=4), encoding="utf-8"
+        )
+        import config
+        config.TARGET_URLS = urls
+        return jsonify({"ok": True, "urls": urls})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/setup", methods=["POST"])
 def api_setup():
     data = request.get_json()

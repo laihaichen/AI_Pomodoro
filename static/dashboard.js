@@ -90,6 +90,46 @@ function closeWizard() {
 // 遮罩层点击不再关闭 Wizard（防止误触丢失进度）
 // 关闭唯一方式：点击右上角 ✕ 按钮
 
+// ── AI 对话 URL 编辑器 ──────────────────────────────────────────────────────
+function openTargetUrlEditor() {
+    fetch("/api/target-urls")
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById("target-url-input").value = (d.urls || []).join("\n");
+            document.getElementById("url-editor-overlay").classList.add("open");
+        })
+        .catch(() => {
+            document.getElementById("target-url-input").value = "gemini.google.com";
+            document.getElementById("url-editor-overlay").classList.add("open");
+        });
+}
+function closeTargetUrlEditor() {
+    document.getElementById("url-editor-overlay").classList.remove("open");
+}
+function saveTargetUrls() {
+    const btn = document.getElementById("url-save-btn");
+    const text = document.getElementById("target-url-input").value.trim();
+    const urls = text.split("\n").map(s => s.trim()).filter(Boolean);
+    if (!urls.length) { alert("请至少输入一个 URL"); return; }
+    btn.textContent = "⏳ 保存中...";
+    btn.disabled = true;
+    fetch("/api/target-urls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls })
+    })
+        .then(r => r.json())
+        .then(d => {
+            btn.textContent = d.ok ? "✅ 已保存" : "❌ " + d.error;
+            setTimeout(() => { btn.textContent = "保存"; btn.disabled = false; }, 2000);
+            if (d.ok) setTimeout(closeTargetUrlEditor, 1500);
+        })
+        .catch(() => {
+            btn.textContent = "❌ 网络错误";
+            setTimeout(() => { btn.textContent = "保存"; btn.disabled = false; }, 2000);
+        });
+}
+
 
 // ── Render current step ──────────────────────────────────────────────────────
 function renderProgress() {

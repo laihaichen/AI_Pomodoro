@@ -6,7 +6,7 @@
 > **运行环境要求**
 > - 🍎 **仅支持 macOS**（依赖 AppleScript 进行浏览器自动化）
 > - 🌐 **仅支持 Google Chrome**（AppleScript 自动化目标）
-> - 🤖 **AI 对话界面**：需在 Chrome 中打开 [Gemini](https://gemini.google.com)
+> - 🤖 **AI 对话界面**：默认支持 [Gemini](https://gemini.google.com) 和 [AI Studio](https://aistudio.google.com)，可在 Dashboard 中自定义其他 URL
 > - 🔑 **Gemini API Key**（可选）：AI 伴侣功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
 
 ---
@@ -147,10 +147,15 @@ bash install.sh
 
 ### 3. 配置 AI 对话页面
 
-在 Google Chrome 中打开 [Gemini](https://gemini.google.com)，将 `prompt.md` 的完整内容设置为 system prompt。
+在 Google Chrome 中打开 [Gemini](https://gemini.google.com) 或 [AI Studio](https://aistudio.google.com)，将 `prompt.md` 的完整内容设置为 system prompt。
 
 > [!TIP]
 > 建议使用 Gemini 的 **Gem** 功能（[gemini.google.com/gems](https://gemini.google.com/gems)），可以将 `prompt.md` 预设为 Gem 的 system prompt，之后每次启动直接打开该 Gem 即可，无需重复粘贴。
+
+**自定义 AI 对话目标**：启动 Dashboard 后，点击顶部「🌐 AI 对话 URL」按钮可修改目标网站，每行一个域名（如 `chatgpt.com`、`claude.ai`）。修改后无需重启即可生效。
+
+> [!CAUTION]
+> 目前仅 `gemini.google.com` 和 `aistudio.google.com` 经过稳定性测试。其他 AI 对话界面（ChatGPT、Claude 等）的输入框和发送按钮选择器可能不兼容，**稳定性无保证**。
 
 ### 4. 启动
 
@@ -218,7 +223,7 @@ lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 | ~~必须安装 Alfred~~ | ~~强依赖 Alfred Powerpack~~ | ✅ 已解决：Standalone 模式 |
 | **仅支持 macOS** | 浏览器自动化依赖 AppleScript | 可通过 Selenium/Playwright 扩展 |
 | **仅支持 Chrome** | AppleScript 中写死 Google Chrome | 可扩展支持其他浏览器 |
-| **AI 对话仅测试 Gemini** | 浏览器注入的按钮选择器以 Gemini 为主 | 可扩展 ChatGPT、Claude 等对话界面 |
+| ~~AI 对话仅支持 Gemini~~ | ~~浏览器注入目标 URL 硬编码~~ | ✅ 已解决：Dashboard 可自定义 URL（仅 Gemini / AI Studio 稳定） |
 | **伴侣 API 仅支持 Gemini** | `_roleplay_pipeline` 硬编码 `google-generativeai` | 可抽象为多后端（OpenAI、Anthropic 等） |
 
 ---

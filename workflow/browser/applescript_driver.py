@@ -14,14 +14,12 @@ import base64
 import subprocess
 import textwrap
 
+import config
 from workflow.browser.base import BrowserDriver
 
 
 class AppleScriptDriver(BrowserDriver):
     """macOS AppleScript → Chrome 自动化驱动。"""
-
-    # 可配置的目标 URL 匹配关键词
-    TARGET_URLS = ("/gemini.google.com",)
 
     def inject_and_send(self, text: str) -> bool:
         script = self._build_script(text)
@@ -37,7 +35,7 @@ class AppleScriptDriver(BrowserDriver):
 
         # URL 匹配条件
         url_conditions = " or ".join(
-            f'tabURL contains "{u}"' for u in self.TARGET_URLS
+            f'tabURL contains "{u}"' for u in config.TARGET_URLS
         )
 
         return textwrap.dedent(f'''\
