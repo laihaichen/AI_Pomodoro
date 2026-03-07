@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .env
 api_config.json
+data/snippets_local.json
+*.scpt
