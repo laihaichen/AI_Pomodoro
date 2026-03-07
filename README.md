@@ -156,10 +156,10 @@ bash install.sh
 
 ```bash
 # Standalone 模式（无需 Alfred）
-APP_MODE=standalone python3 dashboard.py
+lsof -ti :5050 | xargs kill -9 2>/dev/null; APP_MODE=standalone python3 dashboard.py
 
 # Alfred 模式（需要 Alfred Powerpack）
-python3 dashboard.py
+lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 ```
 
 打开浏览器访问 **http://localhost:5050** 🎉
