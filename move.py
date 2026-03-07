@@ -173,6 +173,16 @@ def main() -> int:
             new_h = update_h.accumulate_h(delta)
             h_info = f"  |  H += {delta:.1f} → H = {new_h:.1f}"
 
+    # ── 2.5 Companion on_pre_move 钩子（在健康度读取前执行，如赫默+1） ──
+    try:
+        pre_companions = load_active_companions()
+        if pre_companions:
+            pre_ctx = {}
+            for companion in pre_companions:
+                pre_ctx = companion.on_pre_move(pre_ctx)
+    except Exception as exc:
+        print(f"companion on_pre_move failed: {exc}", file=sys.stderr)
+
     # ── 3. 吉凶判定 ──────────────────────────────────────────────────────────
     health = read_health()
 

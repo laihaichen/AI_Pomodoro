@@ -13,7 +13,10 @@ Effect 代表"技能触发后对游戏状态产生什么变化"。
 """
 
 from __future__ import annotations
+from pathlib import Path
 from typing import Any
+
+_HEALTH_FILE = Path(__file__).parent.parent / "data" / "health.txt"
 
 
 class BaseEffect:
@@ -92,14 +95,14 @@ class HealthEffect(BaseEffect):
         self.delta = delta
 
     def apply(self, context: dict) -> dict:
-        from pathlib import Path
-        health_file = Path(__file__).parent.parent / "data" / "health.txt"
+        import mod.effects as _mod
+        health_file = _mod._HEALTH_FILE
         try:
             current = int(health_file.read_text(encoding="utf-8").strip()) \
                       if health_file.exists() else 9
         except ValueError:
             current = 9
-        new_val = max(0, min(current + self.delta, 10))
+        new_val = max(0, current + self.delta)
         health_file.write_text(str(new_val), encoding="utf-8")
         context["health"] = new_val
         return context

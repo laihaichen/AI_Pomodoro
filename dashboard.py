@@ -940,7 +940,7 @@ def api_health_adjust():
     try:
         current = int(HEALTH_FILE.read_text(encoding="utf-8").strip()) \
                   if HEALTH_FILE.exists() else 9
-        new_val = max(0, min(current + delta, 10))
+        new_val = max(0, current + delta)
         HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
         HEALTH_FILE.write_text(str(new_val), encoding="utf-8")
         return jsonify({"ok": True, "health": new_val})

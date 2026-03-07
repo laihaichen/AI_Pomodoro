@@ -91,7 +91,7 @@ def adjust_health(delta: int) -> int:
                   if HEALTH_FILE.exists() else 9
     except ValueError:
         current = 9
-    new_val = max(0, min(current + delta, 10))
+    new_val = max(0, current + delta)
     HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
     HEALTH_FILE.write_text(str(new_val), encoding="utf-8")
     return new_val

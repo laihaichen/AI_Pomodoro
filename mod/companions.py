@@ -12,6 +12,7 @@ Companion（学习助手）是玩家在游戏中可以招募的辅助角色。
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
@@ -119,10 +120,44 @@ def write_pending_skill(skill_name: str) -> None:
     _write_json(_PENDING_FILE, skills)
 
 
+# ── 缪尔赛思流形同步 ─────────────────────────────────────────────────────────────
+
+MUELSYSE_NAME = "缪尔赛思"
+
+
+def _sync_muelsyse_skills() -> None:
+    """根据当前槽位顺序，为缪尔赛思动态克隆左侧相邻助手的全部技能。"""
+    muelsyse = COMPANION_REGISTRY.get(MUELSYSE_NAME)
+    if muelsyse is None:
+        return
+    names = _read_active_names()
+    if MUELSYSE_NAME not in names:
+        muelsyse.skills = []
+        return
+    idx = names.index(MUELSYSE_NAME)
+    if idx == 0:
+        muelsyse.skills = []  # 最左侧，无复制目标
+        return
+    left_name = names[idx - 1]
+    left_comp = COMPANION_REGISTRY.get(left_name)
+    if left_comp is None or not left_comp.skills:
+        muelsyse.skills = []
+        return
+    # 深拷贝左侧助手的全部技能，改名加“流形·”前缀
+    cloned = []
+    for sk in left_comp.skills:
+        clone = copy.deepcopy(sk)
+        clone.name = f"流形·{sk.name}"
+        clone.description = f"复制{left_name}的技能：{sk.description}"
+        cloned.append(clone)
+    muelsyse.skills = cloned
+
+
 # ── 加载实例 ─────────────────────────────────────────────────────────────────
 
 def load_active_companions() -> list[BaseCompanion]:
     """从 active_companions.json 读取激活助手名称，返回对应实例列表。"""
+    _sync_muelsyse_skills()
     names = _read_active_names()
     result = []
     for name in names:
@@ -203,6 +238,7 @@ def get_skill_status(skill: "Skill", current_count: int) -> dict:
 
 def get_companion_status(current_count: int) -> list[dict]:
     """返回所有已装载助手及其技能状态（供 /api/companion-status 使用）。"""
+    _sync_muelsyse_skills()
     active_names = _read_active_names()
     result = []
     for name in active_names:
@@ -263,6 +299,9 @@ class BaseCompanion:
     # ------------------------------------------------------------------
     # 钩子方法
     # ------------------------------------------------------------------
+
+    def on_pre_move(self, context: dict) -> dict:
+        return self._run_event("on_pre_move", context)
 
     def on_move(self, context: dict) -> dict:
         return self._run_event("on_move", context)
@@ -337,7 +376,7 @@ def _make_silence() -> BaseCompanion:
             description="第一个番茄钟时健康度 +1，此后不再生效",
             conditions=[AlwaysCondition()],
             effects=[HealthEffect(delta=+1)],
-            trigger_event="on_move",
+            trigger_event="on_pre_move",
             active_or_passive="passive",
             global_uses=1,
         ),
@@ -346,3 +385,14 @@ def _make_silence() -> BaseCompanion:
 
 
 COMPANION_REGISTRY["赫默"] = _make_silence()
+
+
+# ── 缪尔赛思 ────────────────────────────────────────────────────────────────
+
+def _make_muelsyse() -> BaseCompanion:
+    comp = BaseCompanion(name="缪尔赛思")
+    # skills 初始为空，由 _sync_muelsyse_skills() 动态填充
+    return comp
+
+
+COMPANION_REGISTRY["缪尔赛思"] = _make_muelsyse()

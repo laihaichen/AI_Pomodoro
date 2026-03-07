@@ -69,6 +69,7 @@ def _append_companion_log(companion: str, skill: str, description: str) -> None:
 # ── 类型别名 ─────────────────────────────────────────────────────────────────
 
 TriggerEvent = Literal[
+    "on_pre_move",
     "on_move",
     "on_victory",
     "on_defeat",
