@@ -142,6 +142,9 @@ bash install.sh
 
 在 Google Chrome 中打开 [Gemini](https://gemini.google.com) 或 [Google AI Studio](https://aistudio.google.com)，将 `prompt.md` 的完整内容设置为 system prompt。
 
+> [!TIP]
+> 建议使用 Gemini 的 **Gem** 功能（[gemini.google.com/gems](https://gemini.google.com/gems)），可以将 `prompt.md` 预设为 Gem 的 system prompt，之后每次启动直接打开该 Gem 即可，无需重复粘贴。
+
 ### 4. 启动
 
 ```bash
@@ -204,6 +207,8 @@ python3 dashboard.py
 | ~~必须安装 Alfred~~ | ~~强依赖 Alfred Powerpack~~ | ✅ 已解决：Standalone 模式 |
 | **仅支持 macOS** | 浏览器自动化依赖 AppleScript | 可通过 Selenium/Playwright 扩展 |
 | **仅支持 Chrome** | AppleScript 中写死 Google Chrome | 可扩展支持其他浏览器 |
+| **AI 对话仅测试 Gemini** | 浏览器注入的按钮选择器以 Gemini 为主 | 可扩展 ChatGPT、Claude 等对话界面 |
+| **伴侣 API 仅支持 Gemini** | `_roleplay_pipeline` 硬编码 `google-generativeai` | 可抽象为多后端（OpenAI、Anthropic 等） |
 
 ---
 
