@@ -6,10 +6,11 @@
   2. JS 聚焦输入框 → 直接注入完整文本（替代 keystroke + Alfred 展开）
   3. JS 点击发送按钮
 
-去掉了原 AppleScript 中的 keystroke 环节（展开由 engine.py 完成）。
+文本通过 Base64 编码传输，避免特殊字符破坏 AppleScript/JS 语法。
 """
 from __future__ import annotations
 
+import base64
 import subprocess
 import textwrap
 
@@ -26,20 +27,13 @@ class AppleScriptDriver(BrowserDriver):
         script = self._build_script(text)
         result = subprocess.run(
             ["osascript", "-e", script],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True, text=True, timeout=30,
         )
         return result.returncode == 0
 
     def _build_script(self, text: str) -> str:
-        # AppleScript 字符串转义：反斜杠和双引号
-        escaped = text.replace("\\", "\\\\").replace('"', '\\"')
-        # JS 字符串转义：反斜杠、单引号、换行符、反引号
-        js_escaped = (
-            text
-            .replace("\\", "\\\\")
-            .replace("`", "\\`")
-            .replace("${", "\\${")
-        )
+        # Base64 编码文本，避免任何特殊字符破坏 AppleScript/JS 语法
+        b64 = base64.b64encode(text.encode("utf-8")).decode("ascii")
 
         # URL 匹配条件
         url_conditions = " or ".join(
@@ -81,7 +75,7 @@ class AppleScriptDriver(BrowserDriver):
                         tell application "System Events" to set frontmost of process "Google Chrome" to true
                         delay 0.02
 
-                        -- 聚焦输入框 + 直接注入完整文本（替代 keystroke + Alfred 展开）
+                        -- 聚焦输入框 + Base64 解码注入完整文本
                         tell tab tab_idx of window win_idx
                             execute javascript "
                                 (function() {{
@@ -90,7 +84,8 @@ class AppleScriptDriver(BrowserDriver):
                                     el.focus();
                                     el.click();
 
-                                    var text = `{js_escaped}`;
+                                    var b64 = '{b64}';
+                                    var text = decodeURIComponent(escape(atob(b64)));
 
                                     if (el.value !== undefined) {{
                                         el.value = text;

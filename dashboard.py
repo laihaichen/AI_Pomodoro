@@ -26,7 +26,14 @@ from config import (  # noqa: E402
     HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE,
     BASE,
     DATA_DIR,
+    APP_MODE,
     read_snippet, write_snippet, update_total_score,
+)
+from workflow.browser import get_browser_driver  # noqa: E402
+from workflow import (  # noqa: E402
+    move_workflow, getcard_workflow, usecard_workflow,
+    getinterventioncard_workflow, pause_workflow,
+    continue_workflow, stay_workflow,
 )
 
 from flask import Flask, jsonify, render_template, request
@@ -155,7 +162,7 @@ def collect_state() -> dict:
         state["last_rest_action"] = "尚无休息记录"
         state["last_rest_is_paused"] = False
 
-    # ── Alfred snippets from SQLite ──────────────────────────────────────────
+    # ── snippets（通过 read_snippet 自动分流 Alfred / standalone）─────────────
     snippet_keys = [
         "total_rest_time", "countcard", "interval", "is_time_within_limit",
         "current_prompt_count", "stage", "overtime_penalty_random_num",
@@ -166,13 +173,8 @@ def collect_state() -> dict:
         "fortune_and_misfortune",
     ]
     try:
-        with sqlite3.connect(DB_FILE) as con:
-            for key in snippet_keys:
-                snip = SNIPPETS[key]
-                row = con.execute(
-                    "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-                ).fetchone()
-                state[key] = row[0] if row else "—"
+        for key in snippet_keys:
+            state[key] = read_snippet(key) or "—"
     except Exception as exc:
         for key in snippet_keys:
             state.setdefault(key, "DB error")
@@ -553,14 +555,18 @@ def api_companion_chat():
 
 @app.route("/api/next-pomodoro", methods=["POST"])
 def api_next_pomodoro():
-    script = (
-        'tell application id "com.runningwithcrayons.Alfred" '
-        'to run trigger "btn_next_pomodoro" '
-        'in workflow "com.pomodoro.ai" '
-        'with argument "test"'
-    )
     try:
-        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        if APP_MODE == "standalone":
+            text = move_workflow.run()
+            get_browser_driver().inject_and_send(text)
+        else:
+            script = (
+                'tell application id "com.runningwithcrayons.Alfred" '
+                'to run trigger "btn_next_pomodoro" '
+                'in workflow "com.pomodoro.ai" '
+                'with argument "test"'
+            )
+            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -568,14 +574,18 @@ def api_next_pomodoro():
 
 @app.route("/api/stay-pomodoro", methods=["POST"])
 def api_stay_pomodoro():
-    script = (
-        'tell application id "com.runningwithcrayons.Alfred" '
-        'to run trigger "btn_stay" '
-        'in workflow "com.pomodoro.ai" '
-        'with argument "test"'
-    )
     try:
-        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        if APP_MODE == "standalone":
+            text = stay_workflow.run()
+            get_browser_driver().inject_and_send(text)
+        else:
+            script = (
+                'tell application id "com.runningwithcrayons.Alfred" '
+                'to run trigger "btn_stay" '
+                'in workflow "com.pomodoro.ai" '
+                'with argument "test"'
+            )
+            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -592,12 +602,17 @@ def api_divine_intervention():
             ["python3", str(BASE / "decrement_intervention_card_snippet.py")],
             check=True, timeout=10,
         )
-        # ② 写入剪切板
-        subprocess.run(["pbcopy"], input=prompt_text.encode("utf-8"),
-                       check=True, timeout=5)
-        # ③ 运行 stay.applescript
-        stay_script = str(BASE / "applescript" / "stay.applescript")
-        subprocess.run(["osascript", stay_script], check=True, timeout=10)
+        if APP_MODE == "standalone":
+            # 用 stay_workflow 发送，将 prompt_text 作为 clipboard 内容
+            text = stay_workflow.run(clipboard_override=prompt_text)
+            get_browser_driver().inject_and_send(text)
+        else:
+            # ② 写入剪切板
+            subprocess.run(["pbcopy"], input=prompt_text.encode("utf-8"),
+                           check=True, timeout=5)
+            # ③ 运行 stay.applescript
+            stay_script = str(BASE / "applescript" / "stay.applescript")
+            subprocess.run(["osascript", stay_script], check=True, timeout=10)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -765,14 +780,18 @@ def api_violation_report():
 
 @app.route("/api/pause", methods=["POST"])
 def api_pause():
-    script = (
-        'tell application id "com.runningwithcrayons.Alfred" '
-        'to run trigger "btn_pause" '
-        'in workflow "com.pomodoro.ai" '
-        'with argument "test"'
-    )
     try:
-        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        if APP_MODE == "standalone":
+            text = pause_workflow.run()
+            get_browser_driver().inject_and_send(text)
+        else:
+            script = (
+                'tell application id "com.runningwithcrayons.Alfred" '
+                'to run trigger "btn_pause" '
+                'in workflow "com.pomodoro.ai" '
+                'with argument "test"'
+            )
+            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -780,14 +799,18 @@ def api_pause():
 
 @app.route("/api/continue", methods=["POST"])
 def api_continue():
-    script = (
-        'tell application id "com.runningwithcrayons.Alfred" '
-        'to run trigger "btn_continue" '
-        'in workflow "com.pomodoro.ai" '
-        'with argument "test"'
-    )
     try:
-        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        if APP_MODE == "standalone":
+            text = continue_workflow.run()
+            get_browser_driver().inject_and_send(text)
+        else:
+            script = (
+                'tell application id "com.runningwithcrayons.Alfred" '
+                'to run trigger "btn_continue" '
+                'in workflow "com.pomodoro.ai" '
+                'with argument "test"'
+            )
+            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -795,28 +818,36 @@ def api_continue():
 
 @app.route("/api/getcard", methods=["POST"])
 def api_getcard():
-    script = (
-        'tell application id "com.runningwithcrayons.Alfred" '
-        'to run trigger "btn_getcard" '
-        'in workflow "com.pomodoro.ai" '
-        'with argument "test"'
-    )
     try:
-        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        if APP_MODE == "standalone":
+            text = getcard_workflow.run()
+            get_browser_driver().inject_and_send(text)
+        else:
+            script = (
+                'tell application id "com.runningwithcrayons.Alfred" '
+                'to run trigger "btn_getcard" '
+                'in workflow "com.pomodoro.ai" '
+                'with argument "test"'
+            )
+            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 @app.route("/api/getinterventioncard", methods=["POST"])
 def api_getinterventioncard():
-    script = (
-        'tell application id "com.runningwithcrayons.Alfred" '
-        'to run trigger "btn_getinterventioncard" '
-        'in workflow "com.pomodoro.ai" '
-        'with argument "test"'
-    )
     try:
-        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        if APP_MODE == "standalone":
+            text = getinterventioncard_workflow.run()
+            get_browser_driver().inject_and_send(text)
+        else:
+            script = (
+                'tell application id "com.runningwithcrayons.Alfred" '
+                'to run trigger "btn_getinterventioncard" '
+                'in workflow "com.pomodoro.ai" '
+                'with argument "test"'
+            )
+            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -825,14 +856,18 @@ def api_getinterventioncard():
 
 @app.route("/api/usecard", methods=["POST"])
 def api_usecard():
-    script = (
-        'tell application id "com.runningwithcrayons.Alfred" '
-        'to run trigger "btn_usecard" '
-        'in workflow "com.pomodoro.ai" '
-        'with argument "test"'
-    )
     try:
-        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        if APP_MODE == "standalone":
+            text = usecard_workflow.run()
+            get_browser_driver().inject_and_send(text)
+        else:
+            script = (
+                'tell application id "com.runningwithcrayons.Alfred" '
+                'to run trigger "btn_usecard" '
+                'in workflow "com.pomodoro.ai" '
+                'with argument "test"'
+            )
+            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -840,21 +875,26 @@ def api_usecard():
 
 @app.route("/api/usecard-zone", methods=["POST"])
 def api_usecard_zone():
-    """接收用户选择的区间 → 复制到剪切板 → 运行 usecard.applescript。"""
+    """接收用户选择的区间 → 使用宿命卡。"""
     data = request.get_json(silent=True) or {}
     zone = data.get("zone", "").strip()
     try:
-        # ① 将区间写入剪切板
-        subprocess.run(["pbcopy"], input=zone.encode("utf-8"),
-                       check=True, timeout=5)
-        # ② 扣减宿命卡数量
-        subprocess.run(
-            ["python3", str(BASE / "decrement_card_snippet.py")],
-            check=True, timeout=10,
-        )
-        # ③ 运行 usecard.applescript
-        usecard_script = str(BASE / "applescript" / "usecard.applescript")
-        subprocess.run(["osascript", usecard_script], check=True, timeout=15)
+        if APP_MODE == "standalone":
+            # 将 zone 作为 clipboard_override 传入 usecard_workflow
+            text = usecard_workflow.run(clipboard_override=zone)
+            get_browser_driver().inject_and_send(text)
+        else:
+            # ① 将区间写入剪切板
+            subprocess.run(["pbcopy"], input=zone.encode("utf-8"),
+                           check=True, timeout=5)
+            # ② 扣减宿命卡数量
+            subprocess.run(
+                ["python3", str(BASE / "decrement_card_snippet.py")],
+                check=True, timeout=10,
+            )
+            # ③ 运行 usecard.applescript
+            usecard_script = str(BASE / "applescript" / "usecard.applescript")
+            subprocess.run(["osascript", usecard_script], check=True, timeout=15)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500

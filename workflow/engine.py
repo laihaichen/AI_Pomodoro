@@ -29,17 +29,14 @@ TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
 def _get_clipboard() -> str:
     """读取系统剪贴板内容（跨平台）。"""
+    # macOS: pbpaste
     try:
-        result = subprocess.run(
-            ["pbcopy"],  # 先检测 macOS
-            capture_output=True, timeout=2,
-        )
-        # 如果 pbcopy 存在，则用 pbpaste 读取
         result = subprocess.run(
             ["pbpaste"],
             capture_output=True, text=True, timeout=2,
         )
-        return result.stdout
+        if result.returncode == 0:
+            return result.stdout
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 
@@ -49,7 +46,8 @@ def _get_clipboard() -> str:
             ["xclip", "-selection", "clipboard", "-o"],
             capture_output=True, text=True, timeout=2,
         )
-        return result.stdout
+        if result.returncode == 0:
+            return result.stdout
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 

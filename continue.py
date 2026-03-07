@@ -8,46 +8,23 @@ import sys
 from datetime import datetime, timezone
 
 sys.path.insert(0, "/Users/haichenlai/Desktop/Prompt")
-from config import CONT_TS_FILE, DB_FILE, PAUSE_TS_FILE, SNIPPETS  # noqa: E402
+from config import CONT_TS_FILE, PAUSE_TS_FILE, SNIPPETS, read_snippet, write_snippet  # noqa: E402
 import update_h  # noqa: E402
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
 def read_total_rest() -> float:
-    """Read current -total_rest_time from SQLite (in minutes)."""
-    snip = SNIPPETS["total_rest_time"]
-    with sqlite3.connect(DB_FILE) as con:
-        row = con.execute(
-            "SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)
-        ).fetchone()
-    if row is None:
-        raise RuntimeError(f"UID {snip.uid!r} not found in DB")
+    """Read current -total_rest_time."""
     try:
-        return float(row[0])
+        return float(read_snippet("total_rest_time") or "0")
     except ValueError:
         return 0.0
 
 
 def write_total_rest(value: float) -> None:
-    """Write updated -total_rest_time to SQLite + JSON."""
-    str_value = f"{value:.1f}"
-    snip = SNIPPETS["total_rest_time"]
-
-    with sqlite3.connect(DB_FILE) as con:
-        con.execute(
-            "UPDATE snippets SET snippet = ? WHERE uid = ?",
-            (str_value, snip.uid),
-        )
-
-    if not snip.json_path.exists():
-        raise RuntimeError("-total_rest_time JSON file not found")
-    payload = json.loads(snip.json_path.read_text(encoding="utf-8"))
-    payload["alfredsnippet"]["snippet"] = str_value
-    snip.json_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    """Write updated -total_rest_time."""
+    write_snippet("total_rest_time", f"{value:.1f}")
 
 
 # ── main ────────────────────────────────────────────────────────────────────
@@ -61,17 +38,7 @@ def main() -> int:
     # 同步写入 -time-cont snippet（本地时间，人类可读格式）
     time_str = now.astimezone().strftime("%Y-%m-%d %H:%M:%S")
     try:
-        _snip = SNIPPETS["time_cont"]
-        with sqlite3.connect(DB_FILE) as _con:
-            _con.execute("UPDATE snippets SET snippet = ? WHERE uid = ?", (time_str, _snip.uid))
-        if _snip.json_path.exists():
-            import json as _json
-            _payload = _json.loads(_snip.json_path.read_text(encoding="utf-8"))
-            _payload["alfredsnippet"]["snippet"] = time_str
-            _snip.json_path.write_text(
-                _json.dumps(_payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+        write_snippet("time_cont", time_str)
     except (RuntimeError, OSError) as exc:
         print(f"time_cont write failed: {exc}", file=sys.stderr)
 
