@@ -64,6 +64,14 @@ def _read_active_names() -> list[str]:
 
 def _write_active_names(names: list[str]) -> None:
     _write_json(_ACTIVE_FILE, names)
+    # 同步写入 Alfred snippet
+    try:
+        import sys, json as _json
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from config import write_snippet
+        write_snippet("active_companions", _json.dumps(names, ensure_ascii=False))
+    except Exception:
+        pass
 
 
 def add_companion(name: str) -> tuple[bool, str]:
@@ -228,11 +236,10 @@ def get_registry_list() -> list[dict]:
 class BaseCompanion:
     """所有学习助手的抽象基类。"""
 
-    name: str = "unnamed_companion"
-    description: str = ""
-    avatar: str = ""   # 图片文件名，存于 static/companions/
-
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, name: str = "unnamed_companion", **kwargs: Any) -> None:
+        self.name = name
+        self.avatar = f"{name}.png" if name != "unnamed_companion" else ""  # 图片文件名，存于 static/companions/
+        self.description = _read_desc(f"{name}.md") if name != "unnamed_companion" else ""
         self._params = kwargs
         self.skills: list = []
 
@@ -299,10 +306,7 @@ def _make_exusiai() -> BaseCompanion:
     from mod.conditions import AlwaysCondition
     from mod.effects import FinalFateEffect
 
-    comp = BaseCompanion()
-    comp.name = "能天使"
-    comp.avatar = "能天使.png"
-    comp.description = _read_desc("能天使.md")
+    comp = BaseCompanion(name="能天使")
     comp.skills = [
         Skill(
             name="天使的祝福",
@@ -317,3 +321,28 @@ def _make_exusiai() -> BaseCompanion:
 
 
 COMPANION_REGISTRY["能天使"] = _make_exusiai()
+
+
+# ── 赫默 ──────────────────────────────────────────────────────────────────────
+
+def _make_silence() -> BaseCompanion:
+    from mod.skills import Skill
+    from mod.conditions import AlwaysCondition
+    from mod.effects import HealthEffect
+
+    comp = BaseCompanion(name="赫默")
+    comp.skills = [
+        Skill(
+            name="强化治疗",
+            description="第一个番茄钟时健康度 +1，此后不再生效",
+            conditions=[AlwaysCondition()],
+            effects=[HealthEffect(delta=+1)],
+            trigger_event="on_move",
+            active_or_passive="passive",
+            global_uses=1,
+        ),
+    ]
+    return comp
+
+
+COMPANION_REGISTRY["赫默"] = _make_silence()

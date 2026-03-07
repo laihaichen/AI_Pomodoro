@@ -74,3 +74,36 @@ class FinalFateEffect(BaseEffect):
         sign = "+" if self.delta >= 0 else ""
         return f"FinalFateEffect(delta={sign}{self.delta})"
 
+
+class HealthEffect(BaseEffect):
+    """修改健康度的效果。
+
+    直接读写 data/health.txt，叠加一个固定 delta。
+    示例：
+        HealthEffect(delta=+1)   # 健康度 +1
+        HealthEffect(delta=-2)   # 健康度 -2
+    """
+
+    name = "health_effect"
+    description = "修改当前健康度。"
+
+    def __init__(self, delta: int) -> None:
+        super().__init__(delta=delta)
+        self.delta = delta
+
+    def apply(self, context: dict) -> dict:
+        from pathlib import Path
+        health_file = Path(__file__).parent.parent / "data" / "health.txt"
+        try:
+            current = int(health_file.read_text(encoding="utf-8").strip()) \
+                      if health_file.exists() else 9
+        except ValueError:
+            current = 9
+        new_val = max(0, min(current + self.delta, 10))
+        health_file.write_text(str(new_val), encoding="utf-8")
+        context["health"] = new_val
+        return context
+
+    def __repr__(self) -> str:
+        sign = "+" if self.delta >= 0 else ""
+        return f"HealthEffect(delta={sign}{self.delta})"

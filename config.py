@@ -125,6 +125,8 @@ SNIPPETS: dict[str, Snippet] = {
                                       panel_label="你的当前学习正文"),
     "countinterventioncard":  Snippet("99B29E07-A3F8-4E88-84EF-1CE76F9D2AB4",  "-countinterventioncard",  "0",
                                       panel_label="当前干预卡持有数"),
+    "active_companions":      Snippet("9DC7EE01-FFB2-4417-937B-1009A4646129",  "-active-companions",  "[]",
+                                      panel_label="当前助手列表（当前队伍列表）"),
 }
 
 
