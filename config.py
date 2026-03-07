@@ -6,13 +6,20 @@ All other scripts import constants from here instead of defining them locally.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# ── 运行模式 ─────────────────────────────────────────────────────────────────
+# "alfred"     → 读写 Alfred SQLite（默认，需要安装 Alfred）
+# "standalone" → 读写本地 JSON（无需 Alfred）
+APP_MODE = os.environ.get("APP_MODE", "alfred")
+
 # ── base paths ───────────────────────────────────────────────────────────────
 BASE     = Path("/Users/haichenlai/Desktop/Prompt")
 DATA_DIR = BASE / "data"
+LOCAL_SNIPPETS_FILE = DATA_DIR / "snippets_local.json"    # standalone 模式存储
 
 _ALFRED = Path("/Users/haichenlai/Library/Application Support/Alfred")
 DB_FILE      = _ALFRED / "Databases" / "snippets.alfdb"
@@ -132,8 +139,39 @@ SNIPPETS: dict[str, Snippet] = {
 
 # ── snippet IO（公共读写函数）────────────────────────────────────────────────
 
-def read_snippet(key: str) -> str:
-    """从 Alfred SQLite 读取 snippet 值。找不到则返回空字符串。"""
+def _init_local_snippets() -> None:
+    """首次 standalone 启动时，从 SNIPPETS 的 default 值初始化本地 JSON。"""
+    if LOCAL_SNIPPETS_FILE.exists():
+        return
+    data = {k: s.default for k, s in SNIPPETS.items()}
+    LOCAL_SNIPPETS_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def _read_local(key: str) -> str:
+    """从本地 JSON 读取 snippet 值。"""
+    try:
+        data = json.loads(LOCAL_SNIPPETS_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return SNIPPETS[key].default
+    return data.get(key, SNIPPETS[key].default)
+
+
+def _write_local(key: str, value: str) -> None:
+    """写入本地 JSON。"""
+    try:
+        data = json.loads(LOCAL_SNIPPETS_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {k: s.default for k, s in SNIPPETS.items()}
+    data[key] = value
+    LOCAL_SNIPPETS_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def _read_alfred(key: str) -> str:
+    """从 Alfred SQLite 读取 snippet 值。"""
     snip = SNIPPETS[key]
     with sqlite3.connect(DB_FILE) as con:
         row = con.execute(
@@ -142,8 +180,8 @@ def read_snippet(key: str) -> str:
     return row[0] if row else ""
 
 
-def write_snippet(key: str, value: str) -> None:
-    """同时写入 Alfred SQLite + JSON 备份文件。"""
+def _write_alfred(key: str, value: str) -> None:
+    """写入 Alfred SQLite + JSON 备份文件。"""
     snip = SNIPPETS[key]
     with sqlite3.connect(DB_FILE) as con:
         con.execute(
@@ -157,6 +195,21 @@ def write_snippet(key: str, value: str) -> None:
             json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+
+
+def read_snippet(key: str) -> str:
+    """读取 snippet 值，根据 APP_MODE 自动分流。"""
+    if APP_MODE == "standalone":
+        return _read_local(key)
+    return _read_alfred(key)
+
+
+def write_snippet(key: str, value: str) -> None:
+    """写入 snippet 值，根据 APP_MODE 自动分流。"""
+    if APP_MODE == "standalone":
+        _write_local(key, value)
+    else:
+        _write_alfred(key, value)
 
 
 def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
