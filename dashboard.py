@@ -771,8 +771,16 @@ def api_violation_report():
             ["python3", str(BASE / "increment_violation_count_snippet.py")],
             check=True, timeout=10,
         )
-        stay_script = str(BASE / "applescript" / "stay.applescript")
-        subprocess.run(["osascript", stay_script], check=True, timeout=10)
+        if APP_MODE == "standalone":
+            # standalone: 用 stay_workflow 发送，full_prompt 作为 clipboard 内容
+            text = stay_workflow.run(clipboard_override=full_prompt)
+            get_browser_driver().inject_and_send(text)
+        else:
+            # alfred: 写入剪切板 + 调用 stay.applescript
+            subprocess.run(["pbcopy"], input=full_prompt.encode("utf-8"),
+                           check=True, timeout=5)
+            stay_script = str(BASE / "applescript" / "stay.applescript")
+            subprocess.run(["osascript", stay_script], check=True, timeout=10)
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
