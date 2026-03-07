@@ -448,12 +448,21 @@ def _roleplay_pipeline(character_name: str, message: str, history: list) -> str:
             panel_lines.append(f"{snip.panel_label}：{val}")
     game_state = "\n".join(panel_lines) if panel_lines else "（暂无游戏状态数据）"
 
+    # 实时读取当前剪切板内容
+    try:
+        clip = subprocess.run(["pbpaste"], capture_output=True, timeout=3).stdout.decode("utf-8", errors="replace").strip()
+        if len(clip) > 2000:
+            clip = clip[:2000] + "…（已截断）"
+    except Exception:
+        clip = "（读取失败）"
+
     system_prompt = (
         "你是一个角色扮演专家。\n\n"
         f"【背景】该角色是玩家的学习助手，和玩家一起合作完成一个番茄钟学习追踪游戏。"
         f"角色了解游戏规则，能看到玩家的当前状态面板，可以用角色本身的语气鼓励、提醒或陪伴玩家。\n\n"
         f"【你扮演的角色资料】\n{character_profile}\n\n"
         f"【玩家当前游戏状态面板】\n{game_state}\n\n"
+        f"【玩家当前的剪切板信息】\n{clip}\n\n"
         "【回复规则】\n"
         "1. 你的回应必须为100字以内\n"
         "2. 尽可能根据角色的性格特点、语气和说话方式来扮演角色\n"

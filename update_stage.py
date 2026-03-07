@@ -81,7 +81,7 @@ def is_progress_reached(indicator: str) -> bool:
     格式举例： '3/5 已到达进度' → True
                '2/5 未到达进度' → False
     """
-    return "已到达进度" in indicator
+    return "已到达进度" in indicator or "已提前达成" in indicator
 
 
 def adjust_health(delta: int) -> int:
