@@ -123,6 +123,8 @@ SNIPPETS: dict[str, Snippet] = {
                                       panel_label="是否应该触发幸运系统"),
     "current_clipboard":      Snippet("DFE00B87-E72B-4A9B-8E73-007DEF65EE0D",  "-current-clipboard",      "无剪切板信息",
                                       panel_label="你的当前学习正文"),
+    "countinterventioncard":  Snippet("99B29E07-A3F8-4E88-84EF-1CE76F9D2AB4",  "-countinterventioncard",  "0",
+                                      panel_label="当前干预卡持有数"),
 }
 
 
