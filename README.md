@@ -2,6 +2,13 @@
 
 > 将番茄钟时间管理与文字 RPG 深度耦合的桌面学习辅助系统。每一次学习记录都会触发命运判定，驱动角色叙事，用低心智负担的游戏化激励解决长时间学习场景下的拖延与疲劳问题。
 
+> [!WARNING]
+> **运行环境要求**
+> - 🍎 **仅支持 macOS**（依赖 AppleScript 进行浏览器自动化）
+> - 🌐 **仅支持 Google Chrome**（AppleScript 自动化目标）
+> - 🤖 **AI 对话界面**：需在 Chrome 中打开 [Gemini](https://gemini.google.com) 或 [AI Studio](https://aistudio.google.com)
+> - 🔑 **Gemini API Key**（可选）：AI 伴侣功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
+
 ---
 
 ## ✨ 功能概览
