@@ -182,11 +182,19 @@ class Skill:
         return all(cond.is_met(context) for cond in self.conditions)
 
     def activate(self, context: dict) -> dict:
-        """若条件满足则依序执行所有效果，并将状态写入磁盘。"""
-        if not self.can_activate(context):
+        """若条件满足则依序执行所有效果，并将状态写入磁盘。
+        若技能处于生效期（is_in_effect），自动重复执行 effects（不消耗 uses/CD）。
+        """
+        count = context.get("current_prompt_count", 0)
+
+        # ── 持续性效果：生效期内每回合自动执行，不消耗计数 ──
+        if self.effect_duration is not None and self.is_in_effect(count):
+            for effect in self.effects:
+                context = effect.apply(context)
             return context
 
-        count = context.get("current_prompt_count", 0)
+        if not self.can_activate(context):
+            return context
 
         for effect in self.effects:
             context = effect.apply(context)

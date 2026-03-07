@@ -396,3 +396,29 @@ def _make_muelsyse() -> BaseCompanion:
 
 
 COMPANION_REGISTRY["缪尔赛思"] = _make_muelsyse()
+
+
+# ── 维什戴尔 ──────────────────────────────────────────────────────────────────
+
+def _make_viviana() -> BaseCompanion:
+    from mod.skills import Skill
+    from mod.conditions import AlwaysCondition
+    from mod.effects import FinalFateEffect
+
+    comp = BaseCompanion(name="维什戴尔")
+    comp.skills = [
+        Skill(
+            name="爆裂黎明",
+            description="主动技能，在接下来的6回合每回合提供额外30幸运值，整局可使用2次",
+            conditions=[AlwaysCondition()],
+            effects=[FinalFateEffect(delta=+30)],
+            trigger_event="on_move",
+            active_or_passive="active",
+            global_uses=2,
+            effect_duration=6,
+        ),
+    ]
+    return comp
+
+
+COMPANION_REGISTRY["维什戴尔"] = _make_viviana()
