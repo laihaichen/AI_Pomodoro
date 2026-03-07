@@ -68,6 +68,14 @@
                 title="使用一张宿命卡">
                 使用一张宿命卡
             </button>
+            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerGetInterventionCard(this)"
+                title="执行 AppleScript：btn_getinterventioncard">
+                获得一张干预卡
+            </button>
+            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="openDivineModal()"
+                title="使用一张干预卡">
+                使用一张干预卡
+            </button>
             <button id="btn-reset-all" onclick="triggerReset(this)" title="重置所有游戏状态（二次确认）" style="flex:1;min-width:80px;background:rgba(220,50,50,0.12);
                        border:1px solid rgba(220,50,50,0.4);border-radius:8px;
                        color:#f87171;font-size:12px;font-weight:600;
@@ -79,11 +87,7 @@
         </div>
         <!-- 第二行：辅助工具 -->
         <div style="display:flex;gap:8px;margin-top:8px;">
-            <button class="next-pomodoro-btn"
-                style="flex:0 0 auto;min-width:80px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;"
-                onclick="openDivineModal()" title="神圣干预辅助填写器">
-                ✨ 神圣干预辅助填写器
-            </button>
+
             <button class="next-pomodoro-btn"
                 style="flex:0 0 auto;min-width:80px;background:rgba(251,146,60,0.12);border:1px solid rgba(251,146,60,0.4);color:#fb923c;"
                 onclick="openViolationModal()" title="人工智能违规报告辅助填写器">
@@ -179,11 +183,6 @@
                 style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;">—</div>
             <div class="card-sub">-overtime-penalty-random-num</div>
         </div>
-        <div class="card accent-mauve">
-            <div class="card-label">宿命卡数量</div>
-            <div class="card-value" id="val-countcard">—</div>
-            <div class="card-sub">-countcard snippet</div>
-        </div>
     </div>
 
     <!-- ── 阶段性节点 ── -->
@@ -201,6 +200,19 @@
         <span id="val-total_score"
             style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--bright);">0</span>
         <span style="font-size:11px;color:var(--dim);">分</span>
+    </div>
+    <!-- 宿命卡 & 干预卡 -->
+    <div class="grid grid-2" style="margin-bottom:10px;">
+        <div class="card accent-mauve">
+            <div class="card-label">宿命卡数量</div>
+            <div class="card-value" id="val-countcard" style="font-size:28px;font-weight:800;">—</div>
+            <div class="card-sub">-countcard</div>
+        </div>
+        <div class="card accent-mauve">
+            <div class="card-label">干预卡数量</div>
+            <div class="card-value" id="val-countinterventioncard" style="font-size:28px;font-weight:800;">—</div>
+            <div class="card-sub">-countinterventioncard</div>
+        </div>
     </div>
     <!-- 今日故事主题 -->
     <div class="card" id="card-theme" style="margin-bottom:10px;padding:14px 20px;display:none;">

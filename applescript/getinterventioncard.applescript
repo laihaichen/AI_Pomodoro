@@ -66,11 +66,11 @@ tell application "Google Chrome"
             
             -- 5. Use system-level keystrokes for input and expansion
             tell application "System Events"
-                keystroke "-getinterventioncard" -- CUSTOMIZABLE: Change to match your Alfred snippet keyword
+                keystroke "-geticard" -- CUSTOMIZABLE: Change to match your Alfred snippet keyword
                 delay 0.075 -- CUSTOMIZABLE: Critical workflow balance interval
             end tell
             
-            delay 0.3 -- CUSTOMIZABLE: Snippet expansion wait time
+            delay 0.075 -- CUSTOMIZABLE: Snippet expansion wait time
             
             -- 6. Use JavaScript with intelligent waiting to find and click send button
             -- CUSTOMIZABLE: Add selectors for additional AI platforms

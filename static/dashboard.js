@@ -331,6 +331,7 @@ function triggerStayPomodoro(btn) { _alfredTrigger(btn, "/api/stay-pomodoro"); }
 function triggerPause(btn) { _alfredTrigger(btn, "/api/pause"); }
 function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
 function triggerGetCard(btn) { _alfredTrigger(btn, "/api/getcard"); }
+function triggerGetInterventionCard(btn) { _alfredTrigger(btn, "/api/getinterventioncard"); }
 
 function openUseCardModal() {
     document.getElementById("usecard-overlay").style.display = "flex";
@@ -627,6 +628,8 @@ function openDivineModal() {
     document.getElementById("divine-step2").style.display = "none";
     document.getElementById("divine-step3").style.display = "none";
     document.getElementById("divine-new-text").value = "";
+    const btn = document.getElementById("divine-send-btn");
+    if (btn) { btn.textContent = "📋 复制并发送"; btn.disabled = false; }
     document.getElementById("divine-overlay").style.display = "flex";
 }
 
@@ -802,6 +805,7 @@ function refreshData() {
 
             // cards
             setVal("val-countcard", d.countcard);
+            setVal("val-countinterventioncard", d.countinterventioncard);
             setVal("val-violationcount", d.violationcount);
             applyClass("val-violationcount",
                 parseInt(d.violationcount) > 0 ? "val-red" : "val-green"

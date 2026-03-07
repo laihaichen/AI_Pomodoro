@@ -162,7 +162,7 @@ def collect_state() -> dict:
         "offset", "difficulty", "max_rest_time", "violationcount",
         "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
         "random_num", "foretold", "total_count", "is_victory", "total_score",
-        "current_clipboard",
+        "current_clipboard", "countinterventioncard",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:
@@ -582,10 +582,15 @@ def api_divine_intervention():
     data = request.get_json(silent=True) or {}
     prompt_text = data.get("prompt", "")
     try:
-        # ① 写入剪切板
+        # ① 扣减干预卡数量
+        subprocess.run(
+            ["python3", str(BASE / "decrement_intervention_card_snippet.py")],
+            check=True, timeout=10,
+        )
+        # ② 写入剪切板
         subprocess.run(["pbcopy"], input=prompt_text.encode("utf-8"),
                        check=True, timeout=5)
-        # ② 运行 stay.applescript
+        # ③ 运行 stay.applescript
         stay_script = str(BASE / "applescript" / "stay.applescript")
         subprocess.run(["osascript", stay_script], check=True, timeout=10)
         return jsonify({"ok": True})
@@ -796,6 +801,21 @@ def api_getcard():
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+@app.route("/api/getinterventioncard", methods=["POST"])
+def api_getinterventioncard():
+    script = (
+        'tell application id "com.runningwithcrayons.Alfred" '
+        'to run trigger "btn_getinterventioncard" '
+        'in workflow "com.pomodoro.ai" '
+        'with argument "test"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
 
 
 @app.route("/api/usecard", methods=["POST"])
