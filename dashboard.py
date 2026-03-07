@@ -27,7 +27,7 @@ from config import (  # noqa: E402
     BASE,
     DATA_DIR,
     APP_MODE,
-    read_snippet, write_snippet, update_total_score,
+    read_snippet, write_snippet, update_total_score, backup_prompt,
 )
 from workflow.browser import get_browser_driver  # noqa: E402
 from workflow import (  # noqa: E402
@@ -567,6 +567,17 @@ def api_next_pomodoro():
                 'with argument "test"'
             )
             subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+            # 备份：延迟执行，等待 Alfred 的 move.py 完成后再读 snippet
+            def _delayed_backup():
+                import time
+                time.sleep(3)
+                try:
+                    from workflow.engine import load_template, expand_template
+                    backup_prompt(expand_template(load_template("go")))
+                except Exception:
+                    pass
+            import threading
+            threading.Thread(target=_delayed_backup, daemon=True).start()
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -586,6 +597,10 @@ def api_stay_pomodoro():
                 'with argument "test"'
             )
             subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+            try:
+                backup_prompt(stay_workflow.run())
+            except Exception:
+                pass
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -613,6 +628,10 @@ def api_divine_intervention():
             # ③ 运行 stay.applescript
             stay_script = str(BASE / "applescript" / "stay.applescript")
             subprocess.run(["osascript", stay_script], check=True, timeout=10)
+            try:
+                backup_prompt(stay_workflow.run(clipboard_override=prompt_text))
+            except Exception:
+                pass
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -781,6 +800,10 @@ def api_violation_report():
                            check=True, timeout=5)
             stay_script = str(BASE / "applescript" / "stay.applescript")
             subprocess.run(["osascript", stay_script], check=True, timeout=10)
+            try:
+                backup_prompt(full_prompt)
+            except Exception:
+                pass
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -906,6 +929,19 @@ def api_usecard_zone():
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/prompt-backup", methods=["GET"])
+def api_prompt_backup():
+    """返回最近 5 条 prompt 备份。"""
+    from config import PROMPT_BACKUP_FILE
+    try:
+        data = json.loads(PROMPT_BACKUP_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+    # 按时间戳倒序取最近 5 条
+    recent = sorted(data.items(), key=lambda x: x[0], reverse=True)[:5]
+    return jsonify({"backups": [{"time": t, "text": v} for t, v in recent]})
 
 
 @app.route("/api/target-urls", methods=["GET"])

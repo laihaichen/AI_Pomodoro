@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
-from config import DATA_DIR, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, write_snippet  # noqa: E402
+from config import DATA_DIR, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, PROMPT_BACKUP_FILE, write_snippet  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────
 DATA_FILES_TO_CLEAR = [
@@ -151,6 +151,13 @@ def main() -> int:
         print("  ✓ theme.txt → cleared")
     except Exception as exc:
         print(f"  ✗ theme.txt 清空失败：{exc}", file=sys.stderr)
+
+    # Clear prompt_backup.json
+    try:
+        PROMPT_BACKUP_FILE.write_text("{}", encoding="utf-8")
+        print("  ✓ prompt_backup.json → {}")
+    except Exception as exc:
+        print(f"  ✗ prompt_backup.json 清空失败：{exc}", file=sys.stderr)
 
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0

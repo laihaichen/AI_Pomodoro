@@ -131,6 +131,61 @@ function saveTargetUrls() {
 }
 
 
+// ── 历史备份查看器 ──────────────────────────────────────────────────────────
+function openBackupViewer() {
+    const list = document.getElementById("backup-list");
+    list.innerHTML = '<p style="color:var(--dim);text-align:center;">加载中...</p>';
+    document.getElementById("backup-viewer-overlay").classList.add("open");
+    fetch("/api/prompt-backup")
+        .then(r => r.json())
+        .then(d => {
+            const backups = d.backups || [];
+            if (!backups.length) {
+                list.innerHTML = '<p style="color:var(--dim);text-align:center;">暂无备份记录</p>';
+                return;
+            }
+            list.innerHTML = backups.map((b, i) => {
+                const preview = b.text.substring(0, 80).replace(/\n/g, " ") + (b.text.length > 80 ? "..." : "");
+                return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">🕐 ${b.time}</div>
+                        <div style="font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${preview}</div>
+                    </div>
+                    <button onclick="copyBackup(${i})" id="backup-copy-${i}"
+                        style="flex-shrink:0;padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">复制</button>
+                </div>`;
+            }).join("");
+            // 存储数据到 window 以便复制
+            window._backupData = backups;
+        })
+        .catch(() => {
+            list.innerHTML = '<p style="color:var(--dim);text-align:center;">加载失败</p>';
+        });
+}
+function closeBackupViewer() {
+    document.getElementById("backup-viewer-overlay").classList.remove("open");
+}
+function copyBackup(idx) {
+    const b = window._backupData[idx];
+    if (!b) return;
+    const btn = document.getElementById(`backup-copy-${idx}`);
+    navigator.clipboard.writeText(b.text).then(() => {
+        btn.textContent = "✅ 已复制";
+        setTimeout(() => { btn.textContent = "复制"; }, 2000);
+    }).catch(() => {
+        // fallback: textarea
+        const ta = document.createElement("textarea");
+        ta.value = b.text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        btn.textContent = "✅ 已复制";
+        setTimeout(() => { btn.textContent = "复制"; }, 2000);
+    });
+}
+
+
 // ── Render current step ──────────────────────────────────────────────────────
 function renderProgress() {
     const prog = document.getElementById("wizard-progress");

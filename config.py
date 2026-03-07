@@ -259,3 +259,20 @@ def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
     new_val = round((current + delta) * factor)
     write_snippet("total_score", str(new_val))
     return new_val
+
+
+# ── prompt 备份 ──────────────────────────────────────────────────────────────
+PROMPT_BACKUP_FILE = DATA_DIR / "prompt_backup.json"
+
+def backup_prompt(text: str) -> None:
+    """将发送的 prompt 备份到 data/prompt_backup.json（时间戳 → 文本）。"""
+    from datetime import datetime
+    try:
+        data = json.loads(PROMPT_BACKUP_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+    key = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    data[key] = text
+    PROMPT_BACKUP_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
