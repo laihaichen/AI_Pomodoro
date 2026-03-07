@@ -4,5 +4,6 @@ __pycache__/
 .env
 api_config.json
 data/snippets_local.json
+data/prompt_backup.json
 saved/saves.jsonl
 *.scpt

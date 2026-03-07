@@ -11,17 +11,35 @@
 from __future__ import annotations
 
 import base64
+import json
 import subprocess
 import textwrap
+from datetime import datetime
 
 import config
 from workflow.browser.base import BrowserDriver
+
+_BACKUP_FILE = config.DATA_DIR / "prompt_backup.json"
+
+
+def _backup_prompt(text: str) -> None:
+    """将发送的 prompt 备份到 data/prompt_backup.json（时间戳 → 文本）。"""
+    try:
+        data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+    key = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    data[key] = text
+    _BACKUP_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 class AppleScriptDriver(BrowserDriver):
     """macOS AppleScript → Chrome 自动化驱动。"""
 
     def inject_and_send(self, text: str) -> bool:
+        _backup_prompt(text)
         script = self._build_script(text)
         result = subprocess.run(
             ["osascript", "-e", script],
