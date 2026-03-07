@@ -257,14 +257,23 @@ def get_companion_status(current_count: int) -> list[dict]:
 
 def get_registry_list() -> list[dict]:
     """返回所有可选助手的概要信息（供下拉列表使用）。"""
-    return [
-        {
-            "name":       c.name,
-            "avatar_url": c.avatar_url,
+    result = []
+    for c in COMPANION_REGISTRY.values():
+        # 缪尔赛思：在选择列表中显示概念技能，而非动态克隆结果
+        if c.name == "缪尔赛思":
+            skills_desc = ["[被动]流形：复制左侧相邻学习助手的技能"]
+        else:
+            skills_desc = []
+            for s in c.skills:
+                tag = "被动" if s.active_or_passive == "passive" else "主动"
+                skills_desc.append(f"[{tag}]{s.name}：{s.description}" if s.description else f"[{tag}]{s.name}")
+        result.append({
+            "name":        c.name,
+            "avatar_url":  c.avatar_url,
             "description": c.description[:80] if c.description else "",
-        }
-        for c in COMPANION_REGISTRY.values()
-    ]
+            "skills":      skills_desc,
+        })
+    return result
 
 
 # ── 基类 ─────────────────────────────────────────────────────────────────────

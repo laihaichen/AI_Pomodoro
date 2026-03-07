@@ -207,15 +207,20 @@ def main() -> int:
     try:
         companions = load_active_companions()
         if companions:
+            try:
+                prompt_count = int(read_snippet("current_prompt_count") or "0")
+            except Exception:
+                prompt_count = 0
             ctx = {
-                "final_fate":         final_fate,
-                "rand_num":           rand_num,
-                "fortune_val":        fortune_val,
-                "overtime":           overtime,
-                "health":             health,
-                "interval_minutes":   interval_minutes,
-                "is_first":           is_first,
-                "player_used_skills": consume_pending_skills(),
+                "final_fate":           final_fate,
+                "rand_num":             rand_num,
+                "fortune_val":          fortune_val,
+                "overtime":             overtime,
+                "health":               health,
+                "interval_minutes":     interval_minutes,
+                "is_first":             is_first,
+                "player_used_skills":   consume_pending_skills(),
+                "current_prompt_count": prompt_count,
             }
             for companion in companions:
                 ctx = companion.on_move(ctx)

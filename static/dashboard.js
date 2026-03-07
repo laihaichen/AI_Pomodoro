@@ -768,8 +768,8 @@ function refreshData() {
 
             // fortune (is_time_within_limit)
             const fortune = d.is_time_within_limit || "";
-            setVal("val-fortunevalue", fortune);
-            applyClass("val-fortunevalue",
+            setVal("val-is_time_within_limit", fortune);
+            applyClass("val-is_time_within_limit",
                 fortune.includes("凶") ? "val-red" : fortune.includes("合规") ? "val-green" : null
             );
 
@@ -809,6 +809,13 @@ function refreshData() {
             setVal("val-violationcount", d.violationcount);
             applyClass("val-violationcount",
                 parseInt(d.violationcount) > 0 ? "val-red" : "val-green"
+            );
+
+            // 吉凶结果
+            const fam = d.fortune_and_misfortune || "";
+            setVal("val-fortune-and-misfortune", fam);
+            applyClass("val-fortune-and-misfortune",
+                fam.includes("凶") ? "val-red" : fam.includes("吉") ? "val-green" : null
             );
 
             // current clipboard (当前学习正文)
@@ -1236,7 +1243,10 @@ function loadCompanionRegistry() {
             list.forEach(c => {
                 const opt = document.createElement("option");
                 opt.value = c.name;
-                opt.textContent = c.name;
+                const skillText = (c.skills && c.skills.length)
+                    ? c.skills.join(" / ")
+                    : "无技能";
+                opt.textContent = `${c.name} — ${skillText}`;
                 sel.appendChild(opt);
             });
         })

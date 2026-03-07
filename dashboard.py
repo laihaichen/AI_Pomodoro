@@ -163,6 +163,7 @@ def collect_state() -> dict:
         "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
         "random_num", "foretold", "total_count", "is_victory", "total_score",
         "current_clipboard", "countinterventioncard",
+        "fortune_and_misfortune",
     ]
     try:
         with sqlite3.connect(DB_FILE) as con:

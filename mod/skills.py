@@ -191,6 +191,13 @@ class Skill:
         if self.effect_duration is not None and self.is_in_effect(count):
             for effect in self.effects:
                 context = effect.apply(context)
+            started = self.effect_started_at()
+            remaining = self.effect_duration - (count - started)
+            _append_companion_log(
+                companion=context.get("companion_name", "助手"),
+                skill=self.name,
+                description=f"{self.description or self.name}（剩余 {remaining} 回合）",
+            )
             return context
 
         if not self.can_activate(context):
