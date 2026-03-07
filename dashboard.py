@@ -437,10 +437,6 @@ def _roleplay_pipeline(character_name: str, message: str, history: list) -> str:
     else:
         character_profile = f"你扮演的角色是 {character_name}。"
 
-    # 读取游戏规则全文
-    prompt_md_path = BASE / "prompt.md"
-    prompt_md = prompt_md_path.read_text(encoding="utf-8") if prompt_md_path.exists() else ""
-
     # 读取当前游戏状态面板
     panel_lines = []
     for key, snip in SNIPPETS.items():
@@ -457,7 +453,6 @@ def _roleplay_pipeline(character_name: str, message: str, history: list) -> str:
         f"【背景】该角色是玩家的学习助手，和玩家一起合作完成一个番茄钟学习追踪游戏。"
         f"角色了解游戏规则，能看到玩家的当前状态面板，可以用角色本身的语气鼓励、提醒或陪伴玩家。\n\n"
         f"【你扮演的角色资料】\n{character_profile}\n\n"
-        f"【游戏规则文档（prompt.md）】\n{prompt_md}\n\n"
         f"【玩家当前游戏状态面板】\n{game_state}\n\n"
         "【回复规则】\n"
         "1. 你的回应必须为100字以内\n"
