@@ -6,7 +6,7 @@
 > **运行环境要求**
 > - 🍎 **仅支持 macOS**（依赖 AppleScript 进行浏览器自动化）
 > - 🌐 **仅支持 Google Chrome**（AppleScript 自动化目标）
-> - 🤖 **AI 对话界面**：需在 Chrome 中打开 [Gemini](https://gemini.google.com) 或 [AI Studio](https://aistudio.google.com)
+> - 🤖 **AI 对话界面**：需在 Chrome 中打开 [Gemini](https://gemini.google.com)
 > - 🔑 **Gemini API Key**（可选）：AI 伴侣功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
 
 ---
@@ -42,7 +42,7 @@
 | 持久化 | 本地 JSON（standalone）/ SQLite + JSON 双写（Alfred 模式） |
 | AI | Google Gemini API（`google-generativeai` SDK） |
 | 桌面自动化 | macOS AppleScript（Chrome 注入） |
-| AI 前端 | Google Chrome（Gemini Web / AI Studio） |
+| AI 前端 | Google Chrome（Gemini Web） |
 
 ### 运行模式
 
@@ -147,7 +147,7 @@ bash install.sh
 
 ### 3. 配置 AI 对话页面
 
-在 Google Chrome 中打开 [Gemini](https://gemini.google.com) 或 [Google AI Studio](https://aistudio.google.com)，将 `prompt.md` 的完整内容设置为 system prompt。
+在 Google Chrome 中打开 [Gemini](https://gemini.google.com)，将 `prompt.md` 的完整内容设置为 system prompt。
 
 > [!TIP]
 > 建议使用 Gemini 的 **Gem** 功能（[gemini.google.com/gems](https://gemini.google.com/gems)），可以将 `prompt.md` 预设为 Gem 的 system prompt，之后每次启动直接打开该 Gem 即可，无需重复粘贴。
