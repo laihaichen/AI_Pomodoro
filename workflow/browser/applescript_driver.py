@@ -22,7 +22,6 @@ class AppleScriptDriver(BrowserDriver):
     """macOS AppleScript → Chrome 自动化驱动。"""
 
     def inject_and_send(self, text: str) -> bool:
-        config.backup_prompt(text)
         script = self._build_script(text)
         result = subprocess.run(
             ["osascript", "-e", script],

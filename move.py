@@ -140,7 +140,7 @@ def main() -> int:
         import subprocess
         clip = subprocess.run(["pbpaste"], capture_output=True, text=True, timeout=3).stdout.strip()
         if clip:
-            write_snippet("current_clipboard", clip[:2000])  # 截断防止过长
+            write_snippet("current_clipboard", clip[:8000])  # 截断防止过长
     except Exception as exc:
         print(f"clipboard capture failed: {exc}", file=sys.stderr)
 
@@ -320,6 +320,15 @@ def main() -> int:
             f"吉凶={fortune_str}（概率判定独立）  原始随机数={rand_num}\n"
             f"超时惩罚={overtime}  最终命运值={final_fate}  总积分={new_score}"
         )
+
+    # ── 11. Prompt 备份 ──────────────────────────────────────────────────────
+    try:
+        from workflow.engine import load_template, expand_template
+        from config import backup_prompt
+        backup_prompt(expand_template(load_template("go")))
+    except Exception as exc:
+        print(f"prompt backup failed: {exc}", file=sys.stderr)
+
     return 0
 
 

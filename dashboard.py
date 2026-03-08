@@ -53,7 +53,7 @@ _BOSSFIGHT_ACTIVE_TEXT = """\
 回答配额：玩家仅有1次回答机会（最后一条prompt）
 作答方式：玩家必须将答案手写在白板上（白板手撕），并将白板上的手写答案拍照提交给AI进行审核
 断网要求：玩家在开始回答的那一刻必须完全脱离任何互联网，不能从任何外部来源获取答案
-唯一的例外：玩家允许查看学习时间追踪系统的历史记录（之前所有回合的AI回复内容），但不能产生历史记录之外的任何新记录（即不能发送新的prompt或使用任何在线资源）
+唯一的例外：玩家允许查看番茄钟学习管理系统的历史记录（之前所有回合的AI回复内容），但不能产生历史记录之外的任何新记录（即不能发送新的prompt或使用任何在线资源）
 判定规则（No Mercy）：若玩家答对则通过；若答错或未在最后一条prompt内作答，立即判定Boss战失败→模拟人生游戏失败，没有第二次机会
 休息禁止：Boss战期间禁止开启休息功能，玩家不能利用休息时间钻空子
 括号例外机制限制：Boss战期间，括号例外机制被允许使用的唯一理由是向AI声明比赛规则；玩家不能通过括号例外机制询问关于题目本身的任何内容
@@ -567,17 +567,7 @@ def api_next_pomodoro():
                 'with argument "test"'
             )
             subprocess.run(["osascript", "-e", script], check=True, timeout=5)
-            # 备份：延迟执行，等待 Alfred 的 move.py 完成后再读 snippet
-            def _delayed_backup():
-                import time
-                time.sleep(3)
-                try:
-                    from workflow.engine import load_template, expand_template
-                    backup_prompt(expand_template(load_template("go")))
-                except Exception:
-                    pass
-            import threading
-            threading.Thread(target=_delayed_backup, daemon=True).start()
+            # 备份由 move.py 内部完成，此处无需重复
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -586,8 +576,16 @@ def api_next_pomodoro():
 @app.route("/api/stay-pomodoro", methods=["POST"])
 def api_stay_pomodoro():
     try:
+        # 刷新「当前学习正文」（与 move.py 逻辑一致）
+        try:
+            clip = subprocess.run(["pbpaste"], capture_output=True, text=True, timeout=3).stdout.strip()
+            if clip:
+                write_snippet("current_clipboard", clip[:8000])
+        except Exception:
+            pass
         if APP_MODE == "standalone":
             text = stay_workflow.run()
+            backup_prompt(text)
             get_browser_driver().inject_and_send(text)
         else:
             script = (
@@ -597,10 +595,7 @@ def api_stay_pomodoro():
                 'with argument "test"'
             )
             subprocess.run(["osascript", "-e", script], check=True, timeout=5)
-            try:
-                backup_prompt(stay_workflow.run())
-            except Exception:
-                pass
+            # 备份由 stay.applescript → stay_backup.py 完成，此处无需重复
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -620,6 +615,7 @@ def api_divine_intervention():
         if APP_MODE == "standalone":
             # 用 stay_workflow 发送，将 prompt_text 作为 clipboard 内容
             text = stay_workflow.run(clipboard_override=prompt_text)
+            backup_prompt(text)
             get_browser_driver().inject_and_send(text)
         else:
             # ② 写入剪切板
@@ -772,7 +768,7 @@ def api_violation_report():
 
         full_prompt = (
             "【违规通告】\n"
-            "AI 已违反《学习时间追踪系统》核心游戏规则\n\n"
+            "AI 已违反《番茄钟学习管理系统》核心游戏规则\n\n"
             f"违规来源（AI输出中违规的文本块）：{source}\n\n"
             f"规则调查员的调查报告结果：{expected}\n"
             f"违规描述：{violations}\n"
@@ -793,6 +789,7 @@ def api_violation_report():
         if APP_MODE == "standalone":
             # standalone: 用 stay_workflow 发送，full_prompt 作为 clipboard 内容
             text = stay_workflow.run(clipboard_override=full_prompt)
+            backup_prompt(text)
             get_browser_driver().inject_and_send(text)
         else:
             # alfred: 写入剪切板 + 调用 stay.applescript
@@ -1218,13 +1215,7 @@ def api_progress_step():
     data = request.get_json()
     delta = int(data.get("delta", 0))
     try:
-        # Read current value from Alfred DB
-        with sqlite3.connect(DB_FILE) as con:
-            row = con.execute(
-                "SELECT snippet FROM snippets WHERE uid = ?",
-                (SNIPPETS["current_progress_indicator"].uid,)
-            ).fetchone()
-        cur = row[0] if row else "0/0 未到达进度"
+        cur = read_snippet("current_progress_indicator") or "0/0 未到达进度"
 
         # Parse "N/M ..." format
         parts = cur.split("/")
