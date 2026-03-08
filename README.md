@@ -7,7 +7,7 @@
 > - 🍎 **仅支持 macOS**（依赖 AppleScript 进行浏览器自动化）
 > - 🌐 **仅支持 Google Chrome**（AppleScript 自动化目标）
 > - 🤖 **AI 对话界面**：默认支持 [Gemini](https://gemini.google.com) 和 [AI Studio](https://aistudio.google.com)，可在 Dashboard 中自定义其他 URL
-> - 🔑 **Gemini API Key**（可选）：AI 伴侣功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
+> - 🔑 **Gemini API Key**（可选）：AI 助手功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
 
 ---
 
@@ -19,7 +19,7 @@
 | **命运值系统** | 6 级命运值区间（高度正面 → 失败事件），基于概率、健康度衰减、超时惩罚的多维状态机 |
 | **幸运系统** | 干预卡 / 宿命卡双卡储蓄机制，命运值 ≥ 85 时触发 |
 | **里程碑任务** | 阶段性进度目标与难度分级（探索者 / 平衡 / 硬核） |
-| **AI 伴侣** | 基于 Gemini API 的角色扮演对话，角色性格由 Markdown 档案定义，实时注入游戏状态上下文 |
+| **AI 助手** | 基于 Gemini API 的角色扮演对话，角色性格由 Markdown 档案定义，实时注入游戏状态上下文 |
 | **实时仪表盘** | Web Dashboard（`localhost:5050`），轮询刷新 20+ 项状态指标 |
 | **违规检测** | AI 审计系统，自动检测游戏规则违规并存档 |
 
@@ -77,7 +77,7 @@ Prompt/
 │   ├── templates/                     # 7 个 prompt 模板
 │   └── browser/                       # 浏览器驱动（AppleScript / 未来 Selenium）
 │
-├── mod/                               # 学习助手（伴侣）模块
+├── mod/                               # 学习助手（助手）模块
 │   ├── companions.py                  # 角色管理、对话管线
 │   ├── skills.py                      # 技能定义
 │   ├── conditions.py                  # 技能触发条件
@@ -104,7 +104,7 @@ Prompt/
 | **macOS** | 需要 AppleScript 进行浏览器自动化 |
 | **Python 3.10+** | 后端运行时 |
 | **Google Chrome** | 自动化目标浏览器 |
-| **Gemini API Key**（可选） | AI 伴侣功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 获取 |
+| **Gemini API Key**（可选） | AI 助手功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 获取 |
 
 ### Alfred 模式（进阶）
 
@@ -143,7 +143,7 @@ bash install.sh
 }
 ```
 
-> 不配置 API Key 也可以使用核心功能（番茄钟、命运值系统），仅 AI 伴侣对话功能需要。
+> 不配置 API Key 也可以使用核心功能（番茄钟、命运值系统），仅 AI 助手对话功能需要。
 
 ### 3. 配置 AI 对话页面
 
@@ -196,23 +196,23 @@ lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 | 使用一张干预卡 | 选择区间 + 自定义事件描述 |
 | 重置所有状态 | 清空全量数据（二次确认） |
 
-### AI 伴侣
+### AI 助手
 
 在 Dashboard 底部的聊天框中与 AI 角色对话。角色的性格、语气由 `static/companions/` 下的 Markdown 档案定义，系统会将当前游戏状态实时注入对话上下文。
 
-**伴侣不仅是对话角色——每位伴侣拥有独特的技能，可以直接影响游戏状态**（幸运值、健康度等）。最多可同时装备 3 位伴侣，首次提交番茄钟记录后阵容自动锁定。
+**助手不仅是对话角色——每位助手拥有独特的技能，可以直接影响游戏状态**（幸运值、健康度等）。最多可同时装备 3 位助手，首次提交番茄钟记录后阵容自动锁定。
 
-#### 伴侣与技能一览
+#### 助手与技能一览
 
-| 伴侣 | 技能 | 类型 | 效果 |
+| 助手 | 技能 | 类型 | 效果 |
 |---|---|---|---|
 | **能天使** | 天使的祝福 | 被动 | 每次提交番茄钟时 +6 额外幸运值 |
 | **赫默** | 强化治疗 | 被动 | 首个番茄钟时健康度 +1（整局仅 1 次） |
 | **维什戴尔** | 爆裂黎明 | 主动 | 启动后 6 回合每回合 +30 幸运值（整局可用 2 次） |
-| **缪尔赛思** | 流形 | 被动 | 复制左侧相邻伴侣的全部技能 |
+| **缪尔赛思** | 流形 | 被动 | 复制左侧相邻助手的全部技能 |
 
 > [!NOTE]
-> 技能系统支持冷却回合（CD）、效果持续时间、全局使用次数上限等机制。各技能的触发状态在 Dashboard 伴侣面板中实时显示。
+> 技能系统支持冷却回合（CD）、效果持续时间、全局使用次数上限等机制。各技能的触发状态在 Dashboard 助手面板中实时显示。
 
 ---
 
@@ -238,7 +238,7 @@ lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 | **仅支持 macOS** | 浏览器自动化依赖 AppleScript | 可通过 Selenium/Playwright 扩展 |
 | **仅支持 Chrome** | AppleScript 中写死 Google Chrome | 可扩展支持其他浏览器 |
 | ~~AI 对话仅支持 Gemini~~ | ~~浏览器注入目标 URL 硬编码~~ | ✅ 已解决：Dashboard 可自定义 URL（仅 Gemini / AI Studio 稳定） |
-| **伴侣 API 仅支持 Gemini** | `_roleplay_pipeline` 硬编码 `google-generativeai` | 可抽象为多后端（OpenAI、Anthropic 等） |
+| **助手 API 仅支持 Gemini** | `_roleplay_pipeline` 硬编码 `google-generativeai` | 可抽象为多后端（OpenAI、Anthropic 等） |
 
 ---
 
