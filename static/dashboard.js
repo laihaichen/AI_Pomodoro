@@ -70,7 +70,7 @@ function buildSteps(hours, difficulty) {
     steps.push({
         id: "result", type: "result",
         title: "初始化完成", heading: "你的初始化 Prompt 已生成",
-        hint: "以下内容已自动写入 -max_rest_time 与 -difficulty。请将 Prompt 复制给 AI 聊天工具开始今天的学习。",
+        hint: "请将 Prompt 复制给 AI 聊天工具开始今天的学习。",
     });
 
     return steps;

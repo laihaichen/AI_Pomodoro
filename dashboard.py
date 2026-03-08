@@ -86,7 +86,7 @@ def generate_launch_prompt(
         ("12小时", "第72条记录"),
     ]
     lines = [
-        f"启动一个 {today} 的学习时间追踪系统，期望时长是 {hours} 小时",
+        f"启动一个 {today} 的番茄钟学习管理系统，期望时长是 {hours} 小时",
         "启动所有模块。",
         f"最长休息时间：{max_rest} 分钟。",
         f"难度选择：{difficulty}",
