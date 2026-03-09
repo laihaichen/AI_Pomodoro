@@ -585,7 +585,7 @@ def api_stay_pomodoro():
             pass
         if APP_MODE == "standalone":
             text = stay_workflow.run()
-            backup_prompt(text)
+            backup_prompt(text, prompt_type="stay")
             get_browser_driver().inject_and_send(text)
         else:
             script = (
@@ -615,7 +615,7 @@ def api_divine_intervention():
         if APP_MODE == "standalone":
             # 用 stay_workflow 发送，将 prompt_text 作为 clipboard 内容
             text = stay_workflow.run(clipboard_override=prompt_text)
-            backup_prompt(text)
+            backup_prompt(text, prompt_type="divine")
             get_browser_driver().inject_and_send(text)
         else:
             # ② 写入剪切板
@@ -625,7 +625,7 @@ def api_divine_intervention():
             stay_script = str(BASE / "applescript" / "stay.applescript")
             subprocess.run(["osascript", stay_script], check=True, timeout=10)
             try:
-                backup_prompt(stay_workflow.run(clipboard_override=prompt_text))
+                backup_prompt(stay_workflow.run(clipboard_override=prompt_text), prompt_type="divine")
             except Exception:
                 pass
         return jsonify({"ok": True})
@@ -789,7 +789,7 @@ def api_violation_report():
         if APP_MODE == "standalone":
             # standalone: 用 stay_workflow 发送，full_prompt 作为 clipboard 内容
             text = stay_workflow.run(clipboard_override=full_prompt)
-            backup_prompt(text)
+            backup_prompt(text, prompt_type="violation")
             get_browser_driver().inject_and_send(text)
         else:
             # alfred: 写入剪切板 + 调用 stay.applescript
@@ -798,7 +798,7 @@ def api_violation_report():
             stay_script = str(BASE / "applescript" / "stay.applescript")
             subprocess.run(["osascript", stay_script], check=True, timeout=10)
             try:
-                backup_prompt(full_prompt)
+                backup_prompt(full_prompt, prompt_type="violation")
             except Exception:
                 pass
         return jsonify({"ok": True})
@@ -930,15 +930,19 @@ def api_usecard_zone():
 
 @app.route("/api/prompt-backup", methods=["GET"])
 def api_prompt_backup():
-    """返回最近 5 条 prompt 备份。"""
+    """返回最近 5 条 prompt 备份（结构化格式）。"""
     from config import PROMPT_BACKUP_FILE
     try:
         data = json.loads(PROMPT_BACKUP_FILE.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
-        data = {}
-    # 按时间戳倒序取最近 5 条
-    recent = sorted(data.items(), key=lambda x: x[0], reverse=True)[:5]
-    return jsonify({"backups": [{"time": t, "text": v} for t, v in recent]})
+        data = []
+    if isinstance(data, list):
+        recent = data[-5:][::-1]  # 最后 5 条，倒序
+    else:
+        # 兼容旧 dict 格式
+        items = sorted(data.items(), key=lambda x: x[0], reverse=True)[:5]
+        recent = [{"time": t, "type": "unknown", "state": {}, "prompt_text": v} for t, v in items]
+    return jsonify({"backups": recent})
 
 
 @app.route("/api/target-urls", methods=["GET"])

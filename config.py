@@ -133,7 +133,7 @@ SNIPPETS: dict[str, Snippet] = {
     "time_pause":             Snippet("-time-pause",             "0"),
     "time_cont":              Snippet("-time-cont",              "0"),
     # ── 学习助手系统 ─────────────────────────────────────────────────────────
-    "is_eligible_for_reward": Snippet("-is-eligible-for-reward", "当前未超过85，无奖励",
+    "is_eligible_for_reward": Snippet("-is-eligible-for-reward", "当前未超过90，无奖励",
                                       panel_label="是否应该触发幸运系统"),
     "current_clipboard":      Snippet("-current-clipboard",      "无剪切板信息",
                                       panel_label="你的当前学习正文"),
@@ -264,15 +264,78 @@ def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
 # ── prompt 备份 ──────────────────────────────────────────────────────────────
 PROMPT_BACKUP_FILE = DATA_DIR / "prompt_backup.json"
 
-def backup_prompt(text: str) -> None:
-    """将发送的 prompt 备份到 data/prompt_backup.json（时间戳 → 文本）。"""
+
+def _read_current_state() -> dict:
+    """从 snippet 读取当前游戏状态，返回结构化字典。"""
+    def _int(key: str) -> int:
+        try:
+            return int(read_snippet(key) or "0")
+        except (ValueError, TypeError):
+            return 0
+
+    def _float(key: str) -> float:
+        try:
+            return float(read_snippet(key) or "0")
+        except (ValueError, TypeError):
+            return 0.0
+
+    interval = _float("interval")
+    return {
+        "prompt_count":    _int("current_prompt_count"),
+        "total_count":     _int("total_count"),
+        "health":          _int("healthy"),
+        "fortune":         read_snippet("fortune_and_misfortune") or "—",
+        "random_num":      _int("random_num"),
+        "overtime_penalty": _int("overtime_penalty_random_num"),
+        "final_fate":      _int("final_fate_value"),
+        "interval":        interval,
+        "is_overtime":     interval >= 15,
+        "offset":          _float("offset"),
+        "total_rest":      _float("total_rest_time"),
+        "total_score":     _int("total_score"),
+        "violation_count": _int("violationcount"),
+        "is_victory":      read_snippet("is_victory") or "—",
+    }
+
+
+def backup_prompt(
+    text: str,
+    prompt_type: str = "unknown",
+    state: dict | None = None,
+) -> None:
+    """将发送的 prompt 备份到 data/prompt_backup.json（结构化列表）。
+
+    Args:
+        text: 发送的 prompt 全文。
+        prompt_type: "move" / "stay" / "init" / "divine" / "violation" 等。
+        state: 游戏状态字典；None 时自动从 snippet 读取。
+    """
     from datetime import datetime
+
+    if state is None:
+        try:
+            state = _read_current_state()
+        except Exception:
+            state = {}
+
+    record = {
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "type": prompt_type,
+        "state": state,
+        "prompt_text": text,
+    }
+
     try:
-        data = json.loads(PROMPT_BACKUP_FILE.read_text(encoding="utf-8"))
+        raw = PROMPT_BACKUP_FILE.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            # 兼容旧格式（dict），迁移为 list
+            data = []
     except (FileNotFoundError, json.JSONDecodeError):
-        data = {}
-    key = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    data[key] = text
+        data = []
+
+    data.append(record)
     PROMPT_BACKUP_FILE.write_text(
         json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+

@@ -13,6 +13,6 @@ from config import backup_prompt
 from workflow.engine import load_template, expand_template
 
 try:
-    backup_prompt(expand_template(load_template("stay")))
+    backup_prompt(expand_template(load_template("stay")), prompt_type="stay")
 except Exception as exc:
     print(f"stay backup failed: {exc}", file=sys.stderr)

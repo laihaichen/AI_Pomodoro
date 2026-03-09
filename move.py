@@ -256,14 +256,14 @@ def main() -> int:
 
     # ── 6. 幸运系统 ──────────────────────────────────────────────────────────
     _LUCKY_MSG = (
-        "最终命运值>=85，幸运系统已触发\n\n"
+        "最终命运值>=90，幸运系统已触发\n\n"
         "##### 幸运操作列表\n\n"
         "- [干预卡count + 1：玩家获得1张干预卡，可在之后任意时机使用]\n"
         "- [宿命卡count + 1：玩家获得1张宿命卡，可在之后任意年龄使用]"
     )
     try:
         _DEFAULT = SNIPPETS["is_eligible_for_reward"].default
-        if final_fate >= 85:
+        if final_fate >= 90:
             write_snippet("is_eligible_for_reward", _LUCKY_MSG)
         else:
             if read_snippet("is_eligible_for_reward").strip() != _DEFAULT:
@@ -325,7 +325,7 @@ def main() -> int:
     try:
         from workflow.engine import load_template, expand_template
         from config import backup_prompt
-        backup_prompt(expand_template(load_template("go")))
+        backup_prompt(expand_template(load_template("go")), prompt_type="move")
     except Exception as exc:
         print(f"prompt backup failed: {exc}", file=sys.stderr)
 

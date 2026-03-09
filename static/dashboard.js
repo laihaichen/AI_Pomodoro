@@ -144,18 +144,28 @@ function openBackupViewer() {
                 list.innerHTML = '<p style="color:var(--dim);text-align:center;">暂无备份记录</p>';
                 return;
             }
+            const typeLabels = { move: "🔄 推进", stay: "💬 消息", divine: "⚡ 神圣干预", violation: "⚠️ 违规通告", init: "🚀 初始化", unknown: "📝 其他" };
             list.innerHTML = backups.map((b, i) => {
-                const preview = b.text.substring(0, 80).replace(/\n/g, " ") + (b.text.length > 80 ? "..." : "");
+                const text = b.prompt_text || b.text || "";
+                const preview = text.substring(0, 80).replace(/\n/g, " ") + (text.length > 80 ? "..." : "");
+                const tag = typeLabels[b.type] || typeLabels.unknown;
+                const s = b.state || {};
+                const stateInfo = s.final_fate !== undefined
+                    ? `命运值 ${s.final_fate} · HP ${s.health} · 分 ${s.total_score}`
+                    : "";
                 return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
                     <div style="flex:1;min-width:0;">
-                        <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">🕐 ${b.time}</div>
+                        <div style="font-size:12px;font-weight:600;margin-bottom:4px;display:flex;gap:8px;align-items:center;">
+                            <span style="color:var(--text);">🕐 ${b.time}</span>
+                            <span style="font-size:10px;padding:2px 6px;background:rgba(255,255,255,0.06);border-radius:4px;">${tag}</span>
+                            ${stateInfo ? `<span style="font-size:10px;color:var(--dim);">${stateInfo}</span>` : ""}
+                        </div>
                         <div style="font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${preview}</div>
                     </div>
                     <button onclick="copyBackup(${i})" id="backup-copy-${i}"
-                        style="flex-shrink:0;padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">复制</button>
+                        style="flex-shrink:0;padding:6px 14px;background:var(--border);color:var(--text);border:1px solid #3a3a3a;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">复制</button>
                 </div>`;
             }).join("");
-            // 存储数据到 window 以便复制
             window._backupData = backups;
         })
         .catch(() => {
@@ -168,14 +178,14 @@ function closeBackupViewer() {
 function copyBackup(idx) {
     const b = window._backupData[idx];
     if (!b) return;
+    const text = b.prompt_text || b.text || "";
     const btn = document.getElementById(`backup-copy-${idx}`);
-    navigator.clipboard.writeText(b.text).then(() => {
+    navigator.clipboard.writeText(text).then(() => {
         btn.textContent = "✅ 已复制";
         setTimeout(() => { btn.textContent = "复制"; }, 2000);
     }).catch(() => {
-        // fallback: textarea
         const ta = document.createElement("textarea");
-        ta.value = b.text;
+        ta.value = text;
         document.body.appendChild(ta);
         ta.select();
         document.execCommand("copy");

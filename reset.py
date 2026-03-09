@@ -154,8 +154,8 @@ def main() -> int:
 
     # Clear prompt_backup.json
     try:
-        PROMPT_BACKUP_FILE.write_text("{}", encoding="utf-8")
-        print("  ✓ prompt_backup.json → {}")
+        PROMPT_BACKUP_FILE.write_text("[]", encoding="utf-8")
+        print("  ✓ prompt_backup.json → []")
     except Exception as exc:
         print(f"  ✗ prompt_backup.json 清空失败：{exc}", file=sys.stderr)
 
