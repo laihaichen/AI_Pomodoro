@@ -303,6 +303,20 @@ def main() -> int:
     except Exception as exc:
         print(f"count/milestone failed: {exc}", file=sys.stderr)
 
+    # ── 8b. Boss战节点触发 ────────────────────────────────────────────────────
+    try:
+        import re as _re_boss
+        _bfs_cur = read_snippet("bossfight_stage")
+        _diff_cur = read_snippet("difficulty")
+        if _diff_cur == "硬核难度" and _bfs_cur not in ("当前难度不适用", ""):
+            _m_boss = _re_boss.search(r"第(\d+)条", _bfs_cur)
+            if _m_boss and new_count == int(_m_boss.group(1)):
+                from config import BOSSFIGHT_ACTIVE_TEXT
+                write_snippet("bossfight_stage", BOSSFIGHT_ACTIVE_TEXT)
+                print(f"⚔️ Boss战节点触发！第 {new_count} 条记录")
+    except Exception as exc:
+        print(f"bossfight check failed: {exc}", file=sys.stderr)
+
     # ── 9. Offset ────────────────────────────────────────────────────────────
     print(_compute_and_write_offset(new_count))
 

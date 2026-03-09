@@ -57,6 +57,34 @@ BOSS_DEFEATED_FILE   = DATA_DIR / "is_boss_defeated.txt"    # Boss战结果（no
 THEME_FILE           = DATA_DIR / "theme.txt"               # 今日模拟人生故事主题
 
 
+# ── Boss战触发文本（move.py + dashboard.py 共用）──────────────────────────────
+BOSSFIGHT_ACTIVE_TEXT = """\
+当前已经达到boss战节点，请AI根据游戏规则出题。
+
+【boss战阶段规则回忆】
+
+硬核难度：额外胜利条件 — Boss战
+
+当距离完成当日目标还剩1条学习记录时自动触发Boss战
+出题节点：在倒数第二条用户prompt对应的AI输出末尾，根据当日学习内容生成一题综合考核题
+回答配额：玩家仅有1次回答机会（最后一条prompt）
+作答方式：玩家必须将答案手写在白板上（白板手撕），并将白板上的手写答案拍照提交给AI进行审核
+断网要求：玩家在开始回答的那一刻必须完全脱离任何互联网，不能从任何外部来源获取答案
+唯一的例外：玩家允许查看番茄钟学习管理系统的历史记录（之前所有回合的AI回复内容），但不能产生历史记录之外的任何新记录（即不能发送新的prompt或使用任何在线资源）
+判定规则（No Mercy）：若玩家答对则通过；若答错或未在最后一条prompt内作答，立即判定Boss战失败→模拟人生游戏失败，没有第二次机会
+休息禁止：Boss战期间禁止开启休息功能，玩家不能利用休息时间钻空子
+括号例外机制限制：Boss战期间，括号例外机制被允许使用的唯一理由是向AI声明比赛规则；玩家不能通过括号例外机制询问关于题目本身的任何内容
+继承关系：硬核难度需同时满足平衡难度的阶段性最低任务指标，即所有条件叠加
+
+对AI出题者的要求：
+
+1. 客观性原则：所出的Boss战题目必须有客观的正确答案和客观的错误答案，玩家的回答应该是明确的正确或明确的错误（对错模糊的主观题不适合作为Boss战题目）
+2. 难度适中原则：题目既不能太简单（否则不符合Boss的挑战性），也不能太难（超出白板手撕的合理难度范围）
+3. 不超纲原则：所出的Boss战题目必须是玩家当天学习内容的反映，如果玩家当天吃透了所学内容，应该能够合理地成功完成Boss战题目
+4. 评分标准：出题时需同时说明客观的评分标准，以便判定答案的正确性\
+"""
+
+
 # ── snippet registry ─────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
@@ -73,26 +101,26 @@ SNIPPETS: dict[str, Snippet] = {
                                       panel_label="本条时间"),
     # ── 学习进度 ──────────────────────────────────────────────────────────────
     "current_prompt_count":   Snippet("-current_prompt_count",   "0",
-                                      panel_label="当前学习记录条数"),
+                                      panel_label="当前学习记录条数（今天第几条记录，1条=10分钟期望学习时长）"),
     "total_count":            Snippet("-total-count",            "0",
-                                      panel_label="学习记录总条数"),
+                                      panel_label="学习记录总条数（当天目标总条数）"),
     "total_score":            Snippet("-total-score",            "0",
-                                      panel_label="当前总积分"),
+                                      panel_label="当前总积分（累计，可正可负）"),
     # ── 健康度（概率吉凶系统） ────────────────────────────────────────────────
     "healthy":                Snippet("-healthy",                "9",
-                                      panel_label="健康度"),
+                                      panel_label="健康度（满分10，初始9，只减不加）"),
     # ── 随机数 ───────────────────────────────────────────────────────────────
     "random_num":             Snippet("-random-num",             "0",
-                                      panel_label="原始随机数"),
+                                      panel_label="原始随机数（1~100）"),
     # ── 最终命运值 ────────────────────────────────────────────────────────────
     "final_fate_value":       Snippet("-final-fate-value",       "0",
-                                      panel_label="最终命运值"),
+                                      panel_label="最终命运值（范围-100~100，正=好运，负=厄运，≥90触发幸运系统）"),
     # ── 超时惩罚 ─────────────────────────────────────────────────────────────
     "overtime_penalty_random_num": Snippet("-overtime-penalty-random-num", "0",
-                                           panel_label="超时惩罚随机数"),
+                                           panel_label="超时惩罚随机数（0=无惩罚，>0表示因超时被扣除的命运值）"),
     # ── 时间计算 ─────────────────────────────────────────────────────────────
     "interval":               Snippet("-interval",               "0",
-                                      panel_label="时间差"),
+                                      panel_label="时间差（单位：分钟，两条记录之间的间隔，≥15分钟会强制判凶）"),
     "is_time_within_limit":   Snippet("-is-time-difference-within-the-limit", "未到15分钟，合规",
                                       panel_label="时间差是否合规的状态"),
     "fortune_and_misfortune": Snippet("-fortune-and-misfortune", "吉",
@@ -112,13 +140,13 @@ SNIPPETS: dict[str, Snippet] = {
                                       panel_label="应该加载的预设事件，上一轮的"),
     # ── 休息 & 统计 ───────────────────────────────────────────────────────────
     "total_rest_time":        Snippet("-total_rest_time",        "0",
-                                      panel_label="累计休息时间"),
+                                      panel_label="累计休息时间（单位：分钟）"),
     "countcard":              Snippet("-countcard",              "0",
                                       panel_label="当前宿命卡持有数"),
     "violationcount":         Snippet("-violationcount",         "0",
                                       panel_label="人工智能当前违规次数"),
     "offset":                 Snippet("-offset",                 "0.0",
-                                      panel_label="当前时间偏移值(超过正60直接判负)"),
+                                      panel_label="当前时间偏移值（单位：分钟，负值=安全，正值且>60=判负）"),
     "is_victory":             Snippet("-is-victory",             "尚未胜利",
                                       panel_label="游戏胜利状态"),
     # ── 设置（不出现在面板）─────────────────────────────────────────────────

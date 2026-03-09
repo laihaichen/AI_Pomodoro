@@ -933,14 +933,13 @@ function refreshData() {
                 rewardEl.style.fontWeight = isTriggered ? "700" : "600";
             }
 
-            // current clipboard (当前学习正文) — Markdown + 代码高亮渲染
+            // current clipboard (当前学习正文) — 纯文本显示
             const clipEl = document.getElementById("val-current-clipboard");
             if (clipEl && d.current_clipboard) {
                 const raw = d.current_clipboard;
                 if (clipEl.dataset.raw !== raw) {
                     clipEl.dataset.raw = raw;
-                    clipEl.innerHTML = marked.parse(raw);
-                    clipEl.querySelectorAll("pre code").forEach(block => hljs.highlightElement(block));
+                    clipEl.textContent = raw;
                 }
             }
 

@@ -184,6 +184,27 @@ def main() -> int:
         print("  ✓ prompt_backup.json → []")
     except Exception as exc:
         print(f"  ✗ prompt_backup.json 归档/清空失败：{exc}", file=sys.stderr)
+    # Archive & clear story_today.txt
+    story_file = BASE / "data" / "story_today.txt"
+    try:
+        story_text = story_file.read_text(encoding="utf-8").strip()
+        if story_text:
+            from datetime import date as _date
+            date_str = _date.today().isoformat()
+            story_dir = BASE / "saved" / "stories"
+            story_dir.mkdir(parents=True, exist_ok=True)
+            story_path = story_dir / f"{date_str}.txt"
+            # 同日多次 reset：追加
+            if story_path.exists():
+                story_text = story_path.read_text(encoding="utf-8") + "\n\n---\n\n" + story_text
+            story_path.write_text(story_text, encoding="utf-8")
+            print(f"  ✓ story_today.txt → 归档至 saved/stories/{date_str}.txt")
+        else:
+            print("  ✓ story_today.txt 为空，无需归档")
+        story_file.write_text("", encoding="utf-8")
+        print("  ✓ story_today.txt → cleared")
+    except Exception as exc:
+        print(f"  ✗ story_today.txt 归档/清空失败：{exc}", file=sys.stderr)
 
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0

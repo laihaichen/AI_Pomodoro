@@ -24,6 +24,7 @@ from config import (  # noqa: E402
     PENALIZED_REST_FILE, H_FILE,
     DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
     HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE,
+    BOSSFIGHT_ACTIVE_TEXT,
     BASE,
     DATA_DIR,
     APP_MODE,
@@ -41,31 +42,7 @@ from flask import Flask, jsonify, render_template, request
 app = Flask(__name__)
 
 # ── Boss战触发文本（模块级常量，供 collect_state 与 api_setup 共享）────────────
-_BOSSFIGHT_ACTIVE_TEXT = """\
-当前已经达到boss战节点，请AI根据游戏规则出题。
-
-【boss战阶段规则回忆】
-
-硬核难度：额外胜利条件 — Boss战
-
-当距离完成当日目标还剩1条学习记录时自动触发Boss战
-出题节点：在倒数第二条用户prompt对应的AI输出末尾，根据当日学习内容生成一题综合考核题
-回答配额：玩家仅有1次回答机会（最后一条prompt）
-作答方式：玩家必须将答案手写在白板上（白板手撕），并将白板上的手写答案拍照提交给AI进行审核
-断网要求：玩家在开始回答的那一刻必须完全脱离任何互联网，不能从任何外部来源获取答案
-唯一的例外：玩家允许查看番茄钟学习管理系统的历史记录（之前所有回合的AI回复内容），但不能产生历史记录之外的任何新记录（即不能发送新的prompt或使用任何在线资源）
-判定规则（No Mercy）：若玩家答对则通过；若答错或未在最后一条prompt内作答，立即判定Boss战失败→模拟人生游戏失败，没有第二次机会
-休息禁止：Boss战期间禁止开启休息功能，玩家不能利用休息时间钻空子
-括号例外机制限制：Boss战期间，括号例外机制被允许使用的唯一理由是向AI声明比赛规则；玩家不能通过括号例外机制询问关于题目本身的任何内容
-继承关系：硬核难度需同时满足平衡难度的阶段性最低任务指标，即所有条件叠加
-
-对AI出题者的要求：
-
-1. 客观性原则：所出的Boss战题目必须有客观的正确答案和客观的错误答案，玩家的回答应该是明确的正确或明确的错误（对错模糊的主观题不适合作为Boss战题目）
-2. 难度适中原则：题目既不能太简单（否则不符合Boss的挑战性），也不能太难（超出白板手撕的合理难度范围）
-3. 不超纲原则：所出的Boss战题目必须是玩家当天学习内容的反映，如果玩家当天吃透了所学内容，应该能够合理地成功完成Boss战题目
-4. 评分标准：出题时需同时说明客观的评分标准，以便判定答案的正确性\
-"""
+_BOSSFIGHT_ACTIVE_TEXT = BOSSFIGHT_ACTIVE_TEXT  # re-exported from config
 
 # write_snippet / read_snippet / update_total_score — imported from config
 
@@ -1098,30 +1075,21 @@ def api_declare_victory():
         final_score = update_total_score(factor=1.1)
 
         # ── 写入游戏存档 ────────────────────────────────────────────────────
-        def _read_snip(key: str) -> str:
-            try:
-                s = SNIPPETS[key]
-                with sqlite3.connect(DB_FILE) as _c:
-                    row = _c.execute("SELECT snippet FROM snippets WHERE uid = ?", (s.uid,)).fetchone()
-                return (row[0] or "").strip() if row else ""
-            except Exception:
-                return ""
-
         # 里程碑列表：hour3 / hour6 / hour9 / hour12 对应任务文字（过滤空槽位）
         milestone_keys  = ["hour3", "hour6", "hour9", "hour12"]
         milestone_slots = ["3小时节点", "6小时节点", "9小时节点", "12小时节点"]
         milestones = []
         for label, key in zip(milestone_slots, milestone_keys):
-            text = _read_snip(key)
-            if text and text not in ("0", ""):
+            text = read_snippet(key)
+            if text and text not in ("0", "", "当前无阶段性任务"):
                 milestones.append({"节点": label, "任务": text})
 
         save_data = {
-            "当天预期总条数":   int(_read_snip("total_count") or 0),
-            "当天设置的休息总时长": _read_snip("max_rest_time"),
+            "当天预期总条数":   int(read_snippet("total_count") or 0),
+            "当天设置的休息总时长": read_snippet("max_rest_time"),
             "总积分":           final_score,
             "是否胜利":         "已胜利",
-            "当前游戏难度":     _read_snip("difficulty"),
+            "当前游戏难度":     read_snippet("difficulty"),
             "今日里程碑任务总览": milestones,
             "今日学习助手列表": json.loads((DATA_DIR / "active_companions.json").read_text(encoding="utf-8")) if (DATA_DIR / "active_companions.json").exists() else [],
             "存档时间":         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -1144,39 +1112,27 @@ def api_declare_victory():
 def api_declare_defeat():
     """Settle the game as a defeat. Writes the same save fields as declare-victory."""
     try:
-        def _read_snip(key: str) -> str:
-            try:
-                s = SNIPPETS[key]
-                with sqlite3.connect(DB_FILE) as _c:
-                    row = _c.execute("SELECT snippet FROM snippets WHERE uid = ?", (s.uid,)).fetchone()
-                return (row[0] or "").strip() if row else ""
-            except Exception:
-                return ""
-
         # 当前积分（失败结算不额外乘以系数，惩罚已在触发时执行）
-        snip = SNIPPETS["total_score"]
-        with sqlite3.connect(DB_FILE) as _c:
-            row = _c.execute("SELECT snippet FROM snippets WHERE uid = ?", (snip.uid,)).fetchone()
-        final_score = int((row[0] or "0").strip()) if row else 0
+        final_score = int(read_snippet("total_score") or 0)
 
         # 里程碑列表
         milestone_keys  = ["hour3", "hour6", "hour9", "hour12"]
         milestone_slots = ["3小时节点", "6小时节点", "9小时节点", "12小时节点"]
         milestones = []
         for label, key in zip(milestone_slots, milestone_keys):
-            text = _read_snip(key)
-            if text and text not in ("0", ""):
+            text = read_snippet(key)
+            if text and text not in ("0", "", "当前无阶段性任务"):
                 milestones.append({"节点": label, "任务": text})
 
         # 读取当前失败状态（保留失败来源文字）
-        is_victory_val = _read_snip("is_victory") or "已失败"
+        is_victory_val = read_snippet("is_victory") or "已失败"
 
         save_data = {
-            "当天预期总条数":    int(_read_snip("total_count") or 0),
-            "当天设置的休息总时长": _read_snip("max_rest_time"),
+            "当天预期总条数":    int(read_snippet("total_count") or 0),
+            "当天设置的休息总时长": read_snippet("max_rest_time"),
             "总积分":            final_score,
             "是否胜利":          is_victory_val,
-            "当前游戏难度":      _read_snip("difficulty"),
+            "当前游戏难度":      read_snippet("difficulty"),
             "今日里程碑任务总览": milestones,
             "今日学习助手列表":  json.loads((DATA_DIR / "active_companions.json").read_text(encoding="utf-8")) if (DATA_DIR / "active_companions.json").exists() else [],
             "存档时间":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
