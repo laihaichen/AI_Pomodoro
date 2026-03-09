@@ -170,7 +170,7 @@ def collect_state() -> dict:
         "hour3", "hour6", "hour9", "hour12", "bossfight_stage",
         "random_num", "foretold", "total_count", "is_victory", "total_score",
         "current_clipboard", "countinterventioncard",
-        "fortune_and_misfortune",
+        "fortune_and_misfortune", "is_eligible_for_reward",
     ]
     try:
         for key in snippet_keys:
@@ -467,7 +467,7 @@ def _roleplay_pipeline(character_name: str, message: str, history: list) -> str:
         f"【玩家当前游戏状态面板】\n{game_state}\n\n"
         f"【玩家当前的剪切板信息】\n{clip}\n\n"
         "【回复规则】\n"
-        "1. 你的回应必须为100字以内\n"
+        "1. 你的回应字数在200字以内\n"
         "2. 尽可能根据角色的性格特点、语气和说话方式来扮演角色\n"
         "3. 保持角色的个性，不要跳出角色\n"
         "4. 用角色的口吻直接回复，不要加任何前缀或解释\n"

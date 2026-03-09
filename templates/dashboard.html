@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
     <title>番茄钟学习管理系统 Dashboard</title>
     <link rel="stylesheet" href="/static/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -272,10 +274,21 @@
         </div>
     </div>
     <div class="grid grid-2" style="margin-top:10px;">
-        <div class="card">
-            <div class="card-label">吉凶结果</div>
-            <div class="card-value" id="val-fortune-and-misfortune">—</div>
-            <div class="card-sub">-fortune-and-misfortune snippet</div>
+        <div class="card" style="display:flex;gap:12px;align-items:stretch;padding:0;overflow:hidden;">
+            <!-- 吉凶结果（左半） -->
+            <div
+                style="flex:0 0 38%;border-right:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
+                <div class="card-label" style="font-size:11px;">吉凶结果</div>
+                <div class="card-value" id="val-fortune-and-misfortune" style="font-size:22px;margin-top:4px;">—</div>
+                <div class="card-sub" style="font-size:10px;margin-top:2px;">-fortune snippet</div>
+            </div>
+            <!-- 幸运系统（右半） -->
+            <div style="flex:1;padding:14px 12px;display:flex;flex-direction:column;justify-content:center;">
+                <div class="card-label" style="font-size:11px;">🎁 是否触发幸运系统</div>
+                <div id="val-is_eligible_for_reward"
+                    style="font-size:12px;font-weight:600;margin-top:6px;color:var(--dim);word-break:break-all;line-height:1.4;">
+                    —</div>
+            </div>
         </div>
         <div class="card">
             <div class="card-label">📖 本轮加载的预设事件区间</div>

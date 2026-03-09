@@ -152,12 +152,38 @@ def main() -> int:
     except Exception as exc:
         print(f"  ✗ theme.txt 清空失败：{exc}", file=sys.stderr)
 
-    # Clear prompt_backup.json
+    # Archive & clear prompt_backup.json
     try:
+        raw = PROMPT_BACKUP_FILE.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        if isinstance(data, list) and len(data) > 0:
+            # 从第一条记录的 time 字段提取日期
+            try:
+                date_str = data[0]["time"][:10]  # "2026-03-09 12:00:00" → "2026-03-09"
+            except (KeyError, IndexError, TypeError):
+                from datetime import date
+                date_str = date.today().isoformat()
+            archive_dir = BASE / "saved" / "prompt_backup"
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            archive_path = archive_dir / f"{date_str}.json"
+            # 如果同日期已存在，追加而非覆盖
+            if archive_path.exists():
+                try:
+                    existing = json.loads(archive_path.read_text(encoding="utf-8"))
+                    if isinstance(existing, list):
+                        data = existing + data
+                except (json.JSONDecodeError, Exception):
+                    pass
+            archive_path.write_text(
+                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            print(f"  ✓ prompt_backup.json → 归档至 saved/prompt_backup/{date_str}.json（{len(data)} 条）")
+        else:
+            print("  ✓ prompt_backup.json 为空，无需归档")
         PROMPT_BACKUP_FILE.write_text("[]", encoding="utf-8")
         print("  ✓ prompt_backup.json → []")
     except Exception as exc:
-        print(f"  ✗ prompt_backup.json 清空失败：{exc}", file=sys.stderr)
+        print(f"  ✗ prompt_backup.json 归档/清空失败：{exc}", file=sys.stderr)
 
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0

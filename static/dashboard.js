@@ -923,6 +923,16 @@ function refreshData() {
                 fam.includes("凶") ? "val-red" : fam.includes("吉") ? "val-green" : null
             );
 
+            // 是否触发幸运系统
+            const rewardEl = document.getElementById("val-is_eligible_for_reward");
+            if (rewardEl) {
+                const reward = d.is_eligible_for_reward || "—";
+                rewardEl.textContent = reward;
+                const isTriggered = reward.includes("幸运系统已触发");
+                rewardEl.style.color = isTriggered ? "#f5c842" : "var(--dim)";
+                rewardEl.style.fontWeight = isTriggered ? "700" : "600";
+            }
+
             // current clipboard (当前学习正文) — Markdown + 代码高亮渲染
             const clipEl = document.getElementById("val-current-clipboard");
             if (clipEl && d.current_clipboard) {
@@ -1312,6 +1322,12 @@ function refreshCompanionSlots() {
         .then(data => {
             const container = document.getElementById("companion-slots");
             if (!container) return;
+
+            // 指纹对比：数据没变就不重建 DOM，避免选区丢失
+            const fingerprint = JSON.stringify(data);
+            if (container.dataset.fingerprint === fingerprint) return;
+            container.dataset.fingerprint = fingerprint;
+
             container.innerHTML = "";
 
             const comps = data.companions || [];
