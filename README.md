@@ -139,7 +139,7 @@ bash install.sh
 ```json
 {
     "gemini_api_key": "你的API密钥",
-    "gemini_model": "gemini-3.1-pro"
+    "gemini_model": "gemini-3.1-pro-preview"
 }
 ```
 

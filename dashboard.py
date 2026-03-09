@@ -429,7 +429,7 @@ def _roleplay_pipeline(character_name: str, message: str, history: list) -> str:
 
     cfg = _load_api_config()
     api_key = cfg.get("gemini_api_key", "")
-    model_name = cfg.get("gemini_model", "gemini-3-flash-preview")
+    model_name = cfg.get("gemini_model", "gemini-3.1-pro-preview")
     if not api_key or api_key.startswith("在此"):
         raise ValueError("请先在 api_config.json 中填写有效的 Gemini API Key")
 
@@ -652,7 +652,7 @@ def _investigate_violation(complaints_text: str, prompt_md_text: str) -> str:
 
     cfg = _load_api_config()
     api_key = cfg.get("gemini_api_key", "")
-    model_name = cfg.get("gemini_model", "gemini-3-flash-preview")
+    model_name = cfg.get("gemini_model_lite", "gemini-3-flash-preview")
     if not api_key or api_key.startswith("在此"):
         raise ValueError("请先在 api_config.json 中填写有效的 Gemini API Key")
 
