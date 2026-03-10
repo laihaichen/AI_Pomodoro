@@ -74,7 +74,7 @@ tell application "Google Chrome"
                 "
             end tell
             
-            delay 0.03 -- CUSTOMIZABLE: JavaScript focus optimization delay
+            delay 0.1 -- CUSTOMIZABLE: JavaScript focus optimization delay
             
             -- 5. Use system-level keystrokes for input and expansion
             tell application "System Events"
@@ -82,7 +82,7 @@ tell application "Google Chrome"
                 delay 0.075 -- CUSTOMIZABLE: Critical workflow balance interval
             end tell
             
-            delay 0.075 -- CUSTOMIZABLE: Snippet expansion wait time
+            delay 0.2 -- CUSTOMIZABLE: Snippet expansion wait time
             
             -- 6. Use JavaScript with intelligent waiting to find and click send button
             -- CUSTOMIZABLE: Add selectors for additional AI platforms
