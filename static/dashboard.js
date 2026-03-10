@@ -927,10 +927,45 @@ function refreshData() {
             const rewardEl = document.getElementById("val-is_eligible_for_reward");
             if (rewardEl) {
                 const reward = d.is_eligible_for_reward || "—";
-                rewardEl.textContent = reward;
                 const isTriggered = reward.includes("幸运系统已触发");
+                const canExchange = reward.includes("[SCORE_EXCHANGE_AVAILABLE]");
+
+                // 显示文本（去掉内部标记）
+                const displayText = reward.replace("[SCORE_EXCHANGE_AVAILABLE]", "").trim();
+                rewardEl.textContent = displayText;
                 rewardEl.style.color = isTriggered ? "#f5c842" : "var(--dim)";
                 rewardEl.style.fontWeight = isTriggered ? "700" : "600";
+
+                // 换分按钮
+                const btnId = "btn-claim-lucky-score";
+                let existingBtn = document.getElementById(btnId);
+                if (canExchange && !existingBtn) {
+                    const btn = document.createElement("button");
+                    btn.id = btnId;
+                    btn.textContent = "💰 换取5积分（不拿卡）";
+                    btn.style.cssText = "margin-top:8px;padding:6px 14px;border:1px solid #f5c842;border-radius:6px;background:rgba(245,200,66,0.15);color:#f5c842;cursor:pointer;font-size:0.85rem;font-weight:600;display:block;";
+                    btn.addEventListener("click", () => {
+                        btn.disabled = true;
+                        btn.textContent = "⏳ 兑换中...";
+                        fetch("/api/claim-lucky-score", { method: "POST" })
+                            .then(r => r.json())
+                            .then(res => {
+                                if (res.ok) {
+                                    btn.textContent = "✅ 已兑换 +5 积分";
+                                    btn.style.borderColor = "#4ade80";
+                                    btn.style.color = "#4ade80";
+                                    setTimeout(() => btn.remove(), 2500);
+                                } else {
+                                    btn.textContent = "❌ " + (res.error || "失败");
+                                    btn.disabled = false;
+                                }
+                            })
+                            .catch(() => { btn.textContent = "❌ 网络错误"; btn.disabled = false; });
+                    });
+                    rewardEl.parentNode.appendChild(btn);
+                } else if (!canExchange && existingBtn) {
+                    existingBtn.remove();
+                }
             }
 
             // current clipboard (当前学习正文) — 纯文本显示

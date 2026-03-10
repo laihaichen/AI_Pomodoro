@@ -264,6 +264,11 @@ def main() -> int:
     try:
         _DEFAULT = SNIPPETS["is_eligible_for_reward"].default
         if final_fate >= 90:
+            # 检查是否满足换分门槛：宿命卡≥5 且 干预卡≥2
+            _fate_cards = int(read_snippet("countcard") or 0)
+            _intv_cards = int(read_snippet("countinterventioncard") or 0)
+            if _fate_cards >= 5 and _intv_cards >= 2:
+                _LUCKY_MSG += "\n\n[SCORE_EXCHANGE_AVAILABLE]"
             write_snippet("is_eligible_for_reward", _LUCKY_MSG)
         else:
             if read_snippet("is_eligible_for_reward").strip() != _DEFAULT:

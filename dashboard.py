@@ -1149,6 +1149,26 @@ def api_declare_defeat():
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
+@app.route("/api/claim-lucky-score", methods=["POST"])
+def api_claim_lucky_score():
+    """Exchange lucky reward for +5 score (instead of drawing a card)."""
+    try:
+        cur = read_snippet("is_eligible_for_reward")
+        if "[SCORE_EXCHANGE_AVAILABLE]" not in cur:
+            return jsonify({"ok": False, "error": "换分条件不满足"}), 400
+
+        # +5 积分
+        score_raw = read_snippet("total_score") or "0"
+        new_score = int(score_raw) + 5
+        write_snippet("total_score", str(new_score))
+
+        # 清除幸运奖励状态
+        write_snippet("is_eligible_for_reward", SNIPPETS["is_eligible_for_reward"].default)
+
+        return jsonify({"ok": True, "new_score": new_score})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
 
 @app.route("/api/reset", methods=["POST"])
 
