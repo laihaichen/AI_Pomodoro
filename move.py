@@ -280,6 +280,11 @@ def main() -> int:
     new_score = None
     try:
         new_score = update_total_score(delta=final_fate)
+        # 超额健康度加成：health > 10 时，每回合额外 (health-10)*10 积分
+        if health > 10:
+            _hp_bonus = (health - 10) * 10
+            new_score = update_total_score(delta=_hp_bonus)
+            print(f"💪 超额健康度加成：健康度{health} → +{_hp_bonus} 积分")
         if final_fate <= -90:
             new_score = update_total_score(factor=0.9)
     except Exception as exc:
