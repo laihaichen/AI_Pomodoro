@@ -1,15 +1,15 @@
 {
   "hour3": {
-    "denom": 0,
-    "jury": false
+    "denom": 4,
+    "jury": true
   },
   "hour6": {
-    "denom": 0,
+    "denom": 6,
     "jury": false
   },
   "hour9": {
-    "denom": 0,
-    "jury": false
+    "denom": 3,
+    "jury": true
   },
   "hour12": {
     "denom": 0,

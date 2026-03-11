@@ -1,5 +1,9 @@
 {
-  "jurors": [],
+  "jurors": [
+    "能天使",
+    "赫默",
+    "缪尔赛思"
+  ],
   "status": "idle",
   "current_question": "",
   "current_answer": "",

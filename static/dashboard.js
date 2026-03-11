@@ -248,8 +248,8 @@ function renderStep() {
           </div>
           <label style="margin-top:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
             <input type="checkbox" id="w-jury" ${juryChecked}
-              style="accent-color:#a78bfa;cursor:pointer;width:16px;height:16px;" />
-            <span style="font-size:12px;color:#a78bfa;font-weight:600;">⚖️ 经过陪审团系统</span>
+              style="accent-color:var(--bright);cursor:pointer;width:16px;height:16px;" />
+            <span style="font-size:12px;color:var(--bright);font-weight:700;">⚖️ 经过陪审团系统</span>
           </label>`;
     } else if (step.type === "result") {
         inputHTML = `<textarea id="w-result" class="prompt-result" readonly></textarea>
@@ -1044,6 +1044,18 @@ function refreshData() {
                 piEl.style.color = pi.startsWith("0/0") ? "var(--dim)"
                     : pi.includes("已到达") ? "var(--green, #4ade80)"
                         : "var(--bright)";
+            }
+            // 陪审团管控模式：隐藏手动按钮，显示标签
+            const manualBtns = document.getElementById("progress-manual-btns");
+            const juryLabel = document.getElementById("progress-jury-label");
+            if (manualBtns && juryLabel) {
+                if (d.current_milestone_jury) {
+                    manualBtns.style.display = "none";
+                    juryLabel.style.display = "inline";
+                } else {
+                    manualBtns.style.display = "flex";
+                    juryLabel.style.display = "none";
+                }
             }
 
 

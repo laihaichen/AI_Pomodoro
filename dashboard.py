@@ -238,6 +238,7 @@ def collect_state() -> dict:
         write_snippet("current_progress_indicator", _progress_str)
         state["current_progress_indicator"] = _progress_str
         state["current_milestone_denominator"] = _denominator
+        state["current_milestone_jury"] = bool(_goal_val.get("jury", False)) if isinstance(_goal_val, dict) else False
     except Exception:
         pass
 
@@ -540,7 +541,7 @@ def api_jury_submit():
         new_health = apply_health_penalty()
     else:
         new_health = None
-        _advance_progress()  # 通过 → 进度 +1
+    _advance_progress()  # 无论结果如何，做了就算进度 +1
 
     save_trial_to_history(question, answer, verdict)
 
@@ -633,7 +634,7 @@ def api_jury_suspend_reply():
         new_health = apply_health_penalty()
     else:
         new_health = None
-        _advance_progress()  # 通过 → 进度 +1
+    _advance_progress()  # 无论结果如何，做了就算进度 +1
 
     save_trial_to_history(
         state.get("current_question", ""),
@@ -1512,6 +1513,22 @@ def api_progress_step():
     """Increment or decrement the progress indicator numerator by delta (+1 / -1)."""
     data = request.get_json()
     delta = int(data.get("delta", 0))
+
+    # 当前阶段如已勾选「经过陪审团系统」，禁止手动调整进度
+    try:
+        goals = json.loads(MILESTONE_GOALS_FILE.read_text(encoding="utf-8")) if MILESTONE_GOALS_FILE.exists() else {}
+        count = int(read_snippet("current_prompt_count") or "0")
+        total = int(read_snippet("total_count") or "0")
+        if total > 0:
+            frac = count / total
+            key = "hour12" if frac > 0.75 else "hour9" if frac > 0.5 else "hour6" if frac > 0.25 else "hour3"
+        else:
+            key = "hour3"
+        goal_val = goals.get(key, {})
+        if isinstance(goal_val, dict) and goal_val.get("jury", False):
+            return jsonify({"ok": False, "error": "当前阶段已启用陪审团系统，进度只能通过陪审团推进"})
+    except Exception:
+        pass
     try:
         cur = read_snippet("current_progress_indicator") or "0/0 未到达进度"
 
