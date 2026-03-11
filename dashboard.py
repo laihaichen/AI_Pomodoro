@@ -442,6 +442,20 @@ def api_jury_status():
     })
 
 
+def _advance_progress():
+    """陪审团通过时自动推进进度指示器 +1。"""
+    try:
+        cur = read_snippet("current_progress_indicator") or "0/0 未到达进度"
+        parts = cur.split("/")
+        numerator = int(parts[0].strip())
+        denominator = int(parts[1].strip().split()[0])
+        new_num = min(numerator + 1, denominator)
+        label = "已到达进度" if new_num >= denominator > 0 else "未到达进度"
+        write_snippet("current_progress_indicator", f"{new_num}/{denominator} {label}")
+    except Exception:
+        pass  # 进度格式异常不影响判决
+
+
 @app.route("/api/jury/submit", methods=["POST"])
 def api_jury_submit():
     """提交 question + answer，触发陪审团审议。"""
@@ -526,6 +540,7 @@ def api_jury_submit():
         new_health = apply_health_penalty()
     else:
         new_health = None
+        _advance_progress()  # 通过 → 进度 +1
 
     save_trial_to_history(question, answer, verdict)
 
@@ -618,6 +633,7 @@ def api_jury_suspend_reply():
         new_health = apply_health_penalty()
     else:
         new_health = None
+        _advance_progress()  # 通过 → 进度 +1
 
     save_trial_to_history(
         state.get("current_question", ""),

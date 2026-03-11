@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
-    <title>番茄钟学习管理系统 Dashboard</title>
+    <title>番茄钟学习管理系统</title>
     <link rel="stylesheet" href="/static/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
@@ -19,12 +19,14 @@
         <div class="header-left">
             <div class="tomato">🍅</div>
             <div class="title-block">
-                <h1>番茄钟学习管理系统 Dashboard</h1>
+                <h1>番茄钟学习管理系统</h1>
                 <p>实时读取 Alfred Snippets &amp; 本地数据文件</p>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
-            <a href="/jury" class="setup-btn" style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">⚖️ 陪审团</a>
+            <a href="/jury" class="setup-btn"
+                style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">⚖️
+                陪审团</a>
             <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
             <button class="setup-btn" onclick="openTargetUrlEditor()"
                 style="background:var(--surface);color:var(--bright);border:1px solid var(--border);">🌐 AI 对话
@@ -95,7 +97,9 @@
                 onmouseout="this.style.background='rgba(220,50,50,0.12)'">
                 🔄 重置所有状态
             </button>
-            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#f87171;cursor:pointer;white-space:nowrap;" title="勾选后重置时不归档数据（开发/测试用）">
+            <label
+                style="display:flex;align-items:center;gap:4px;font-size:11px;color:#f87171;cursor:pointer;white-space:nowrap;"
+                title="勾选后重置时不归档数据（开发/测试用）">
                 <input type="checkbox" id="chk-no-archive" style="accent-color:#f87171;cursor:pointer;">
                 不保存
             </label>
