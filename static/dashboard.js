@@ -39,6 +39,7 @@ function buildSteps(hours, difficulty) {
                 steps.push({
                     id: `milestone_${i}`,
                     denomId: `denom_${i}`,
+                    juryId: `jury_${i}`,
                     type: "milestone_combo",
                     title: `阶段目标 ${i + 1} / ${milestoneCount}`,
                     heading: `${m.range} 阶段最低完成指标`,
@@ -233,6 +234,7 @@ function renderStep() {
       placeholder="${step.placeholder}">${savedVal}</textarea>`;
     } else if (step.type === "milestone_combo") {
         const savedDenom = wData[step.denomId] ?? "";
+        const juryChecked = wData[step.juryId] ? "checked" : "";
         inputHTML = `
           <input id="w-input" class="wizard-input" type="text"
             placeholder="${step.placeholder}" value="${wData[step.id] ?? ''}" />
@@ -243,7 +245,12 @@ function renderStep() {
               style="width:120px;flex-shrink:0;"
               title="分母用于生成 -current-progress-indicator。如「完成10个简历投递」，分母为 10" />
             <span style="font-size:11px;color:var(--dim);">(完成条数)用于进度条</span>
-          </div>`;
+          </div>
+          <label style="margin-top:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="w-jury" ${juryChecked}
+              style="accent-color:#a78bfa;cursor:pointer;width:16px;height:16px;" />
+            <span style="font-size:12px;color:#a78bfa;font-weight:600;">⚖️ 经过陪审团系统</span>
+          </label>`;
     } else if (step.type === "result") {
         inputHTML = `<textarea id="w-result" class="prompt-result" readonly></textarea>
       <div class="copy-success" id="copy-msg"></div>`;
@@ -328,6 +335,7 @@ function wizardNext() {
         inp.classList.remove("error");
         wData[step.id] = val;
         wData[step.denomId] = parseInt(denom.value) || 0;
+        wData[step.juryId] = document.getElementById("w-jury")?.checked || false;
     } else if (step.type === "textarea") {
         wData[step.id] = (document.getElementById("w-input").value || "").trim();
     }
@@ -346,10 +354,13 @@ function submitSetup() {
 
     const milestones = [];
     const denominators = [];
+    const juryFlags = [];
     wSteps.forEach(s => {
         if (s.id.startsWith("milestone_")) milestones.push(wData[s.id] || "");
-        if (s.type === "milestone_combo") denominators.push(Number(wData[s.denomId]) || 0);
-
+        if (s.type === "milestone_combo") {
+            denominators.push(Number(wData[s.denomId]) || 0);
+            juryFlags.push(!!wData[s.juryId]);
+        }
     });
 
     fetch("/api/setup", {
@@ -360,7 +371,8 @@ function submitSetup() {
             max_rest: wData.max_rest,
             difficulty: wData.difficulty,
             milestones: milestones,
-            denominators: denominators,   // 新增：各阶段进度条分母
+            denominators: denominators,
+            jury_flags: juryFlags,
             theme: wData.theme || "",
         }),
     })

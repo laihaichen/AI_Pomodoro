@@ -30,7 +30,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
-from config import DATA_DIR, BASE, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, PROMPT_BACKUP_FILE, write_snippet  # noqa: E402
+from config import DATA_DIR, BASE, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, PROMPT_BACKUP_FILE, JURY_STATE_FILE, JURY_QUESTION_FILE, JURY_ANSWER_FILE, write_snippet  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────
 DATA_FILES_TO_CLEAR = [
@@ -118,9 +118,12 @@ def main() -> int:
     # Reset milestone_goals.json — 分母全部清零
     try:
         MILESTONE_GOALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _default_goal = {"denom": 0, "jury": False}
         MILESTONE_GOALS_FILE.write_text(
-            json.dumps({"hour3": 0, "hour6": 0, "hour9": 0, "hour12": 0},
-                       ensure_ascii=False, indent=2),
+            json.dumps({
+                "hour3": _default_goal, "hour6": _default_goal,
+                "hour9": _default_goal, "hour12": _default_goal
+            }, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         print("  ✓ milestone_goals.json → all zeros")
@@ -156,6 +159,21 @@ def main() -> int:
         print("  ✓ theme.txt → cleared")
     except Exception as exc:
         print(f"  ✗ theme.txt 清空失败：{exc}", file=sys.stderr)
+
+    # Clear jury system files
+    try:
+        _jury_default = json.dumps({
+            "jurors": [], "status": "idle",
+            "current_question": "", "current_answer": "",
+            "votes": [], "suspension_queue": [], "suspension_index": 0,
+            "history": []
+        }, ensure_ascii=False, indent=2)
+        JURY_STATE_FILE.write_text(_jury_default, encoding="utf-8")
+        JURY_QUESTION_FILE.write_text("", encoding="utf-8")
+        JURY_ANSWER_FILE.write_text("", encoding="utf-8")
+        print("  ✓ jury_state.json / jury_question.md / jury_answer.md → cleared")
+    except Exception as exc:
+        print(f"  ✗ 陪审团文件清空失败：{exc}", file=sys.stderr)
 
     # Archive & clear prompt_backup.json
     try:

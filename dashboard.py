@@ -28,6 +28,7 @@ from config import (  # noqa: E402
     BASE,
     DATA_DIR,
     APP_MODE,
+    JURY_STATE_FILE, JURY_QUESTION_FILE, JURY_ANSWER_FILE, JURY_SIZE,
     read_snippet, write_snippet, update_total_score, backup_prompt,
 )
 from workflow.browser import get_browser_driver  # noqa: E402
@@ -206,7 +207,8 @@ def collect_state() -> dict:
             _goals = json.loads(MILESTONE_GOALS_FILE.read_text(encoding="utf-8"))
         # 当前槽位的分母（count=0 时也用 hour3 的分母）
         _goal_key = current_key or "hour3"
-        _denominator = int(_goals.get(_goal_key, 0))
+        _goal_val = _goals.get(_goal_key, 0)
+        _denominator = int(_goal_val.get("denom", 0)) if isinstance(_goal_val, dict) else int(_goal_val)
         # 读取当前 snippet 值，解析分子（格式：「N/M ...」）
         _cur_indicator = read_snippet("current_progress_indicator")
         try:
@@ -374,12 +376,25 @@ def api_companion_remove():
 
 @app.route("/api/companion-lock", methods=["POST"])
 def api_companion_lock():
-    """Lock the companion lineup."""
-    from mod.companions import lock, is_locked
+    """Lock the companion lineup and auto-initialize jury from non-active companions."""
+    from mod.companions import lock, is_locked, _read_active_names, COMPANION_REGISTRY
+    import random as _rng
     if is_locked():
         return jsonify({"ok": False, "msg": "已锁定"}), 400
     lock()
-    return jsonify({"ok": True, "msg": "阵容已锁定"})
+
+    # ── 自动初始化陪审团：从非在场助手中随机抽取 ──
+    active = _read_active_names()
+    pool = [name for name in COMPANION_REGISTRY if name not in active]
+    jury_count = min(JURY_SIZE, len(pool))
+    jurors = _rng.sample(pool, jury_count) if jury_count > 0 else []
+
+    jury_state = json.loads(JURY_STATE_FILE.read_text(encoding="utf-8")) if JURY_STATE_FILE.exists() else {}
+    jury_state["jurors"] = jurors
+    jury_state["status"] = "idle"
+    JURY_STATE_FILE.write_text(json.dumps(jury_state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return jsonify({"ok": True, "msg": f"阵容已锁定，陪审团：{'、'.join(jurors) or '无'}"})
 
 
 @app.route("/api/companion-use-skill", methods=["POST"])
@@ -985,20 +1000,31 @@ def api_setup():
             if text:  # 跳过空字符串
                 write_snippet(key, text)
 
-        # ── 写入进度条分母到 milestone_goals.json ────────────────────────────
+        # ── 写入进度条分母 + 陪审团标记到 milestone_goals.json ────────────────
         denominators = data.get("denominators", [])  # 与 milestones[] 等长的整数列表
-        goals: dict[str, int] = {"hour3": 0, "hour6": 0, "hour9": 0, "hour12": 0}
-        for key, denom in zip(applicable_keys, denominators):
-            try:
-                goals[key] = max(0, int(denom))
-            except (ValueError, TypeError):
-                goals[key] = 0
+        jury_flags   = data.get("jury_flags", [])    # 与 milestones[] 等长的布尔列表
+        goals: dict[str, dict] = {
+            "hour3":  {"denom": 0, "jury": False},
+            "hour6":  {"denom": 0, "jury": False},
+            "hour9":  {"denom": 0, "jury": False},
+            "hour12": {"denom": 0, "jury": False},
+        }
+        for i, key in enumerate(applicable_keys):
+            denom = 0
+            if i < len(denominators):
+                try:
+                    denom = max(0, int(denominators[i]))
+                except (ValueError, TypeError):
+                    pass
+            jury = jury_flags[i] if i < len(jury_flags) else False
+            goals[key] = {"denom": denom, "jury": bool(jury)}
         MILESTONE_GOALS_FILE.parent.mkdir(parents=True, exist_ok=True)
         MILESTONE_GOALS_FILE.write_text(
             json.dumps(goals, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         # 同步重置 -current-progress-indicator（分子清零）
-        _init_denom = goals.get("hour3", 0)
+        _init_goal = goals.get("hour3", {})
+        _init_denom = _init_goal.get("denom", 0) if isinstance(_init_goal, dict) else 0
         write_snippet(
             "current_progress_indicator",
             f"0/{_init_denom} 未到达进度" if _init_denom > 0

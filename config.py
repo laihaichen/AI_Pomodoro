@@ -55,6 +55,11 @@ HEALTH_FILE          = DATA_DIR / "health.txt"              # 健康度（初始
 FINAL_FATE_FILE      = DATA_DIR / "final_fate.txt"          # 最终命运值
 BOSS_DEFEATED_FILE   = DATA_DIR / "is_boss_defeated.txt"    # Boss战结果（none/true/false）
 THEME_FILE           = DATA_DIR / "theme.txt"               # 今日模拟人生故事主题
+# ── 陪审团系统 ─────────────────────────────────────────────────────────────
+JURY_QUESTION_FILE   = DATA_DIR / "jury_question.md"        # 待审问题
+JURY_ANSWER_FILE     = DATA_DIR / "jury_answer.md"          # 待审答案
+JURY_STATE_FILE      = DATA_DIR / "jury_state.json"         # 陪审团状态
+JURY_SIZE            = 3                                     # 陪审员人数
 
 
 # ── Boss战触发文本（move.py + dashboard.py 共用）──────────────────────────────

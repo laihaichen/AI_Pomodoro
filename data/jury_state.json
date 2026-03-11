@@ -1,0 +1,10 @@
+{
+  "jurors": [],
+  "status": "idle",
+  "current_question": "",
+  "current_answer": "",
+  "votes": [],
+  "suspension_queue": [],
+  "suspension_index": 0,
+  "history": []
+}
