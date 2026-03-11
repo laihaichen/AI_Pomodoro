@@ -1177,8 +1177,12 @@ def api_reset():
     """Run reset.py to wipe all game state back to Day-0 defaults."""
     try:
         import subprocess as _sp
+        data = request.get_json(silent=True) or {}
+        cmd = ["python3", str(BASE / "reset.py")]
+        if data.get("no_archive"):
+            cmd.append("--no-archive")
         result = _sp.run(
-            ["python3", str(BASE / "reset.py")],
+            cmd,
             capture_output=True, text=True, timeout=15
         )
         output = result.stdout + result.stderr

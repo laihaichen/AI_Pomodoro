@@ -87,7 +87,11 @@ def reset_snippets() -> list[str]:
 # ── main ────────────────────────────────────────────────────────────────────
 
 def main() -> int:
-    print("🔄 重置游戏状态...\n")
+    no_archive = "--no-archive" in sys.argv
+    if no_archive:
+        print("🔄 重置游戏状态（不保存模式）...\n")
+    else:
+        print("🔄 重置游戏状态...\n")
 
     print("📄 数据文件：")
     for line in reset_files():
@@ -155,32 +159,33 @@ def main() -> int:
 
     # Archive & clear prompt_backup.json
     try:
-        raw = PROMPT_BACKUP_FILE.read_text(encoding="utf-8")
-        data = json.loads(raw)
-        if isinstance(data, list) and len(data) > 0:
-            # 从第一条记录的 time 字段提取日期
-            try:
-                date_str = data[0]["time"][:10]  # "2026-03-09 12:00:00" → "2026-03-09"
-            except (KeyError, IndexError, TypeError):
-                from datetime import date
-                date_str = date.today().isoformat()
-            archive_dir = BASE / "saved" / "prompt_backup"
-            archive_dir.mkdir(parents=True, exist_ok=True)
-            archive_path = archive_dir / f"{date_str}.json"
-            # 如果同日期已存在，追加而非覆盖
-            if archive_path.exists():
+        if not no_archive:
+            raw = PROMPT_BACKUP_FILE.read_text(encoding="utf-8")
+            data = json.loads(raw)
+            if isinstance(data, list) and len(data) > 0:
                 try:
-                    existing = json.loads(archive_path.read_text(encoding="utf-8"))
-                    if isinstance(existing, list):
-                        data = existing + data
-                except (json.JSONDecodeError, Exception):
-                    pass
-            archive_path.write_text(
-                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
-            print(f"  ✓ prompt_backup.json → 归档至 saved/prompt_backup/{date_str}.json（{len(data)} 条）")
+                    date_str = data[0]["time"][:10]
+                except (KeyError, IndexError, TypeError):
+                    from datetime import date
+                    date_str = date.today().isoformat()
+                archive_dir = BASE / "saved" / "prompt_backup"
+                archive_dir.mkdir(parents=True, exist_ok=True)
+                archive_path = archive_dir / f"{date_str}.json"
+                if archive_path.exists():
+                    try:
+                        existing = json.loads(archive_path.read_text(encoding="utf-8"))
+                        if isinstance(existing, list):
+                            data = existing + data
+                    except (json.JSONDecodeError, Exception):
+                        pass
+                archive_path.write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
+                print(f"  ✓ prompt_backup.json → 归档至 saved/prompt_backup/{date_str}.json（{len(data)} 条）")
+            else:
+                print("  ✓ prompt_backup.json 为空，无需归档")
         else:
-            print("  ✓ prompt_backup.json 为空，无需归档")
+            print("  ⚡ prompt_backup.json → 跳过归档（不保存模式）")
         PROMPT_BACKUP_FILE.write_text("[]", encoding="utf-8")
         print("  ✓ prompt_backup.json → []")
     except Exception as exc:
@@ -188,20 +193,22 @@ def main() -> int:
     # Archive & clear story_today.txt
     story_file = BASE / "data" / "story_today.txt"
     try:
-        story_text = story_file.read_text(encoding="utf-8").strip()
-        if story_text:
-            from datetime import date as _date
-            date_str = _date.today().isoformat()
-            story_dir = BASE / "saved" / "stories"
-            story_dir.mkdir(parents=True, exist_ok=True)
-            story_path = story_dir / f"{date_str}.txt"
-            # 同日多次 reset：追加
-            if story_path.exists():
-                story_text = story_path.read_text(encoding="utf-8") + "\n\n---\n\n" + story_text
-            story_path.write_text(story_text, encoding="utf-8")
-            print(f"  ✓ story_today.txt → 归档至 saved/stories/{date_str}.txt")
+        if not no_archive:
+            story_text = story_file.read_text(encoding="utf-8").strip()
+            if story_text:
+                from datetime import date as _date
+                date_str = _date.today().isoformat()
+                story_dir = BASE / "saved" / "stories"
+                story_dir.mkdir(parents=True, exist_ok=True)
+                story_path = story_dir / f"{date_str}.txt"
+                if story_path.exists():
+                    story_text = story_path.read_text(encoding="utf-8") + "\n\n---\n\n" + story_text
+                story_path.write_text(story_text, encoding="utf-8")
+                print(f"  ✓ story_today.txt → 归档至 saved/stories/{date_str}.txt")
+            else:
+                print("  ✓ story_today.txt 为空，无需归档")
         else:
-            print("  ✓ story_today.txt 为空，无需归档")
+            print("  ⚡ story_today.txt → 跳过归档（不保存模式）")
         story_file.write_text("", encoding="utf-8")
         print("  ✓ story_today.txt → cleared")
     except Exception as exc:

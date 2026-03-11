@@ -279,12 +279,20 @@ def write_snippet(key: str, value: str) -> None:
 
 
 def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
-    """读取 -total-score，加 delta，乘 factor，写回。返回新值。"""
+    """读取 -total-score，加 delta，乘 factor，写回。返回新值。
+
+    注意：当加完 delta 后总分 ≤ 0 时，跳过 factor 乘算，
+    避免负数乘法导致奖惩方向反转（如胜利×1.1反而扣分）。
+    """
     try:
         current = int(read_snippet("total_score"))
     except (ValueError, TypeError):
         current = 0
-    new_val = round((current + delta) * factor)
+    after_delta = current + delta
+    if after_delta > 0 and factor != 1.0:
+        new_val = round(after_delta * factor)
+    else:
+        new_val = after_delta
     write_snippet("total_score", str(new_val))
     return new_val
 

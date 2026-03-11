@@ -470,14 +470,21 @@ function useCardSend() {
 }
 
 function triggerReset(btn) {
-    const confirmed = window.confirm("⚠️ 你确定要重置所有状态吗？\n\n这将清空所有番茄钟记录、时间戳、Snippets 数据，操作无法撤销。");
-    if (!confirmed) return;
+    const noArchive = document.getElementById("chk-no-archive")?.checked;
+    const msg = noArchive
+        ? "⚠️ 你确定要重置所有状态吗？\n\n⚡ 已勾选「不保存」：将直接清空，不归档任何数据。"
+        : "⚠️ 你确定要重置所有状态吗？\n\n这将清空所有番茄钟记录、时间戳、Snippets 数据，操作无法撤销。";
+    if (!window.confirm(msg)) return;
 
     const orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = "⏳ 重置中...";
 
-    fetch("/api/reset", { method: "POST" })
+    fetch("/api/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ no_archive: !!noArchive })
+    })
         .then(r => r.json())
         .then(d => {
             if (d.ok) {
