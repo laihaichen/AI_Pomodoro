@@ -78,20 +78,21 @@ def write_final_fate(value: int) -> None:
 
 
 def fate_category(fate: int) -> str:
+    """Return a simple tier key matching event_registry keys exactly."""
     if fate <= -90:
-        return "FAIL(-100~-90) 失败事件"
+        return "FAIL"
     elif fate <= -60:
-        return "NEG_HIGH(-89~-60) 严重负面事件"
+        return "NEG_HIGH"
     elif fate <= -30:
-        return "NEG_MID(-60~-30) 中等负面事件"
+        return "NEG_MID"
     elif fate <= -1:
-        return "NEG_LOW(-30~-1) 轻度负面事件"
+        return "NEG_LOW"
     elif fate <= 49:
-        return "POS_LOW(1~49) 轻度正面事件"
+        return "POS_LOW"
     elif fate <= 84:
-        return "POS_MID(50~84) 中等正面事件"
+        return "POS_MID"
     else:
-        return "POS_HIGH(85~100) 高度正面事件"
+        return "POS_HIGH"
 
 
 # ── count / offset helpers ───────────────────────────────────────────────────

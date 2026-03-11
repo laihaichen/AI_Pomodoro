@@ -20,13 +20,15 @@
             <div class="tomato">🍅</div>
             <div class="title-block">
                 <h1>番茄钟学习管理系统</h1>
-                <p>实时读取 Alfred Snippets &amp; 本地数据文件</p>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
             <a href="/jury" class="setup-btn"
                 style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">⚖️
                 陪审团</a>
+            <a href="/story" class="setup-btn"
+                style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">📖
+                故事</a>
             <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
             <button class="setup-btn" onclick="openTargetUrlEditor()"
                 style="background:var(--surface);color:var(--bright);border:1px solid var(--border);">🌐 AI 对话
@@ -261,7 +263,8 @@
                         onmouseover="this.style.background='var(--accent-dim)'"
                         onmouseout="this.style.background='var(--surface)'">▼</button>
                 </div>
-                <span id="progress-jury-label" style="display:none;font-size:10px;color:var(--bright);font-weight:700;">⚖️ 陪审团管控</span>
+                <span id="progress-jury-label"
+                    style="display:none;font-size:10px;color:var(--bright);font-weight:700;">⚖️ 陪审团管控</span>
                 <span style="font-size:10px;color:var(--dim);letter-spacing:0.06em;">当前阶段性任务进度指示</span>
                 <span id="val-current-progress-indicator"
                     style="font-size:13px;font-weight:700;color:var(--bright);font-variant-numeric:tabular-nums;">

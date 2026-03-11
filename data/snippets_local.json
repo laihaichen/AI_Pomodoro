@@ -11,7 +11,7 @@
   "is_time_within_limit": "未到15分钟，合规",
   "fortune_and_misfortune": "凶",
   "current_task": "当前无阶段性任务",
-  "current_progress_indicator": "0/6 未到达进度",
+  "current_progress_indicator": "0/2 未到达进度",
   "stage": "当前没有达到阶段性节点",
   "bossfight_stage": "当前没有进入boss战节点",
   "foretold": "当前为第一条记录，没有预设事件",

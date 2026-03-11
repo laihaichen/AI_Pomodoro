@@ -1,0 +1,237 @@
+/* ── story panel styles ─────────────────────────────────────────────────── */
+
+.story-hero {
+    text-align: center;
+    padding: 28px 16px 18px;
+}
+.story-hero-icon { font-size: 48px; }
+.story-hero-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 6px 0 2px;
+    color: var(--text);
+}
+.story-hero-sub {
+    font-size: 13px;
+    color: var(--dim);
+}
+
+/* ── status bar ──────────────────────────────────────────────────────── */
+
+.story-status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 18px;
+    margin: 0 16px 16px;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+.status-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 70px;
+    flex: 1;
+}
+.status-label {
+    font-size: 11px;
+    color: var(--dim);
+    margin-bottom: 2px;
+}
+.status-item span:last-child {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* ── section labels ──────────────────────────────────────────────────── */
+
+.section-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 18px;
+    margin: 18px 0 8px;
+}
+
+/* ── current story card ──────────────────────────────────────────────── */
+
+.story-current-card {
+    margin: 0 16px 16px;
+    padding: 18px;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+.story-text {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+}
+.story-text.new-story {
+    animation: storyFadeIn 0.6s ease-out;
+}
+@keyframes storyFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.placeholder-text {
+    color: var(--dim);
+    font-style: italic;
+}
+
+.story-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+.story-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent, #4dabf7);
+    font-size: 13px;
+}
+.story-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(77,171,247,0.3);
+    border-top-color: var(--accent, #4dabf7);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── action buttons ──────────────────────────────────────────────────── */
+
+.story-action-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.story-action-btn:hover:not(:disabled) {
+    background: var(--accent, #4dabf7);
+    color: #fff;
+    border-color: var(--accent, #4dabf7);
+}
+.story-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.rerun-btn {
+    margin-left: auto;
+}
+
+.card-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+    margin-bottom: 16px;
+}
+.pending-badge {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(250,176,5,0.15);
+    color: #fab005;
+}
+
+/* ── event registry grid ─────────────────────────────────────────────── */
+
+.event-registry-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0 16px 16px;
+}
+.event-slot {
+    padding: 10px 14px;
+    background: var(--card);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.event-slot .slot-key {
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+}
+.event-slot.tier-fail        .slot-key { color: #e03131; }
+.event-slot.tier-neg_high    .slot-key { color: #e8590c; }
+.event-slot.tier-neg_mid     .slot-key { color: #d9480f; }
+.event-slot.tier-neg_low     .slot-key { color: #f59f00; }
+.event-slot.tier-pos_low     .slot-key { color: #40c057; }
+.event-slot.tier-pos_mid     .slot-key { color: #339af0; }
+.event-slot.tier-pos_high    .slot-key { color: #7950f2; }
+.placeholder-slot {
+    color: var(--dim);
+    font-style: italic;
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 20px;
+}
+
+/* ── timeline ────────────────────────────────────────────────────────── */
+
+.story-timeline {
+    margin: 0 16px 30px;
+}
+.timeline-entry {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+.timeline-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--card);
+}
+.timeline-header:hover {
+    background: var(--border);
+}
+.timeline-arrow {
+    transition: transform 0.2s;
+    font-size: 10px;
+}
+.timeline-entry.open .timeline-arrow { transform: rotate(90deg); }
+.timeline-body {
+    display: none;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    white-space: pre-wrap;
+}
+.timeline-entry.open .timeline-body { display: block; }
+.timeline-fate {
+    font-size: 12px;
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+.timeline-fate.positive { background: rgba(64,192,87,0.15); color: #40c057; }
+.timeline-fate.negative { background: rgba(224,49,49,0.15); color: #e03131; }

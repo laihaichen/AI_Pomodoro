@@ -849,9 +849,20 @@ def api_next_pomodoro():
             )
             subprocess.run(["osascript", "-e", script], check=True, timeout=5)
             # 备份由 move.py 内部完成，此处无需重复
+        # 自动触发叙事引擎（后台线程，不阻塞）
+        threading.Thread(target=_run_story_turn_bg, daemon=True).start()
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+def _run_story_turn_bg():
+    """后台执行叙事引擎，结果存入 game_state.json。"""
+    try:
+        from game.engine import run_turn
+        run_turn()
+    except Exception as exc:
+        print(f"[story] turn failed: {exc}", file=sys.stderr)
 
 
 @app.route("/api/stay-pomodoro", methods=["POST"])
@@ -1556,6 +1567,42 @@ def index():
 @app.route("/jury")
 def jury_page():
     return render_template("jury.html")
+
+
+@app.route("/story")
+def story_page():
+    return render_template("story.html")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  叙事面板 API
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/story/state")
+def api_story_state():
+    """Return current story state for the narrative panel."""
+    from game.engine import get_story_state
+    return jsonify(get_story_state())
+
+
+@app.route("/api/story/rerun", methods=["POST"])
+def api_story_rerun():
+    """Re-generate the last story turn."""
+    from game.engine import rerun_turn
+    result = rerun_turn()
+    return jsonify(result), 200 if result.get("ok") else 500
+
+
+@app.route("/api/story/use-card", methods=["POST"])
+def api_story_use_card():
+    """Use an intervention or destiny card."""
+    from game.engine import use_card
+    data = request.get_json() or {}
+    card_type = data.get("type", "")
+    zone = data.get("zone", "")
+    event_text = data.get("event_text", "")
+    result = use_card(card_type, zone, event_text)
+    return jsonify(result), 200 if result.get("ok") else 400
 
 
 

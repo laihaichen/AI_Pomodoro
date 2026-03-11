@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+    <title>叙事面板</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link rel="stylesheet" href="/static/story.css">
+</head>
+
+<body>
+    <div class="header">
+        <div></div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a href="/" class="setup-btn nav-link-btn">🍅 返回 Dashboard</a>
+            <a href="/jury" class="setup-btn nav-link-btn">⚖️ 陪审团</a>
+        </div>
+    </div>
+
+    <!-- ── 主标题区 ── -->
+    <div class="story-hero">
+        <div class="story-hero-icon">📖</div>
+        <h1 class="story-hero-title">叙事面板</h1>
+        <p class="story-hero-sub">模拟人生故事 · 自动随番茄钟推进</p>
+    </div>
+
+    <!-- ── 状态栏 ── -->
+    <div class="story-status-bar" id="story-status-bar">
+        <div class="status-item"><span class="status-label">角色</span><span id="s-character">—</span></div>
+        <div class="status-item"><span class="status-label">年龄</span><span id="s-age">—</span></div>
+        <div class="status-item"><span class="status-label">命运值</span><span id="s-fate">—</span></div>
+        <div class="status-item"><span class="status-label">故事类型</span><span id="s-type">—</span></div>
+        <div class="status-item"><span class="status-label">干预卡</span><span id="s-intervention">0</span></div>
+        <div class="status-item"><span class="status-label">宿命卡</span><span id="s-destiny">0</span></div>
+    </div>
+
+    <!-- ── 当前故事 ── -->
+    <div class="section-label">📜 当前故事</div>
+    <div class="story-current-card" id="story-current-card">
+        <div id="story-text-area" class="story-text">
+            <p class="placeholder-text">等待第一轮番茄钟推进后生成故事…</p>
+        </div>
+        <div class="story-card-actions">
+            <div id="story-loading" class="story-loading" style="display:none;">
+                <div class="story-spinner"></div>
+                <span>AI 正在生成故事…</span>
+            </div>
+            <button id="btn-rerun" class="story-action-btn rerun-btn" onclick="rerunStory()" style="display:none;" title="重新生成本轮故事">🔄 重新生成</button>
+        </div>
+    </div>
+
+    <!-- ── 下一轮事件预判 ── -->
+    <div class="section-label">🔮 下一轮事件预判</div>
+    <div class="event-registry-grid" id="event-registry-grid">
+        <div class="event-slot placeholder-slot">暂无事件预判</div>
+    </div>
+
+    <!-- ── 卡牌操作 ── -->
+    <div class="card-actions-bar">
+        <button id="btn-use-intervention" class="story-action-btn intervention-btn" onclick="useIntervention()" disabled>🎴 使用干预卡</button>
+        <button id="btn-use-destiny" class="story-action-btn destiny-btn" onclick="useDestiny()" disabled>🃏 使用宿命卡</button>
+        <span id="pending-destiny-badge" class="pending-badge" style="display:none;"></span>
+    </div>
+
+    <!-- ── 故事历史时间线 ── -->
+    <div class="section-label" style="margin-top:24px;">📚 故事时间线 <span id="history-count">0</span> 轮</div>
+    <div class="story-timeline" id="story-timeline">
+        <p class="placeholder-text">暂无故事历史</p>
+    </div>
+
+    <script src="/static/story.js"></script>
+</body>
+
+</html>
