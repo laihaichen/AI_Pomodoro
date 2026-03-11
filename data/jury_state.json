@@ -1,5 +1,9 @@
 {
-  "jurors": [],
+  "jurors": [
+    "缪尔赛思",
+    "维什戴尔",
+    "赫默"
+  ],
   "status": "idle",
   "current_question": "",
   "current_answer": "",
