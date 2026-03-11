@@ -1,0 +1,527 @@
+/* ══════════════════════════════════════════════════════════════════
+   jury.css — 陪审团系统专属样式
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── 导航按钮 ── */
+.nav-link-btn {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.jury-status-badge {
+    font-size: 12px;
+    color: var(--dim);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+}
+
+/* ── 居中标题区 ── */
+.jury-hero {
+    text-align: center;
+    margin: 20px 0 6px;
+}
+
+.jury-hero-icon {
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.jury-hero-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.jury-hero-sub {
+    font-size: 12px;
+    color: var(--dim);
+}
+
+/* ── 陪审员头像区 ── */
+
+.jury-avatars {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    padding: 20px 0;
+}
+
+.jury-avatar-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s;
+}
+
+.jury-avatar-slot:hover {
+    transform: translateY(-2px);
+}
+
+.jury-avatar-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: var(--dim);
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.jury-avatar-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.jury-avatar-slot span {
+    font-size: 12px;
+    color: var(--dim);
+    font-weight: 600;
+}
+
+/* 投票后头像边框颜色 */
+.jury-avatar-slot.vote-approve .jury-avatar-circle {
+    border-color: #4ade80;
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.2);
+}
+
+.jury-avatar-slot.vote-reject .jury-avatar-circle {
+    border-color: #f87171;
+    box-shadow: 0 0 12px rgba(248, 113, 113, 0.2);
+}
+
+.jury-avatar-slot.vote-suspend .jury-avatar-circle {
+    border-color: #fbbf24;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.2);
+}
+
+.jury-avatar-slot .vote-indicator {
+    font-size: 18px;
+    margin-top: -4px;
+}
+
+/* ── 漫画气泡 ── */
+.speech-bubble {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--bright, #fff);
+    max-width: 280px;
+    min-width: 180px;
+    margin-bottom: 12px;
+    animation: bubbleIn 0.3s ease-out;
+}
+
+.speech-bubble::after {
+    content: "";
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 7px solid var(--border);
+}
+
+.bubble-approve { border-color: rgba(74, 222, 128, 0.35); }
+.bubble-approve::after { border-top-color: rgba(74, 222, 128, 0.35); }
+
+.bubble-reject { border-color: rgba(248, 113, 113, 0.35); }
+.bubble-reject::after { border-top-color: rgba(248, 113, 113, 0.35); }
+
+.bubble-suspend { border-color: rgba(251, 191, 36, 0.35); }
+.bubble-suspend::after { border-top-color: rgba(251, 191, 36, 0.35); }
+
+.bubble-header {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.bubble-text {
+    color: var(--bright, #fff);
+    font-size: 13px;
+}
+
+.bubble-question {
+    color: #fbbf24;
+    font-size: 12px;
+    margin-top: 6px;
+    font-style: italic;
+}
+
+@keyframes bubbleIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 辩护意见区 ── */
+.defense-area {
+    text-align: center;
+    margin: 12px auto 0;
+    max-width: 600px;
+    padding: 12px 18px;
+    background: rgba(99, 102, 241, 0.06);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 10px;
+    animation: bubbleIn 0.3s ease-out;
+}
+
+.defense-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #818cf8;
+    margin-bottom: 6px;
+}
+
+.defense-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--bright, #fff);
+    font-style: italic;
+}
+
+/* ── 提交审议区 ── */
+.jury-submit-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.jury-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.jury-input-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+}
+
+.jury-textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 12px 14px;
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.6;
+    transition: border-color 0.2s;
+}
+
+.jury-textarea:focus {
+    border-color: var(--dim);
+}
+
+.jury-action-btn {
+    background: var(--text);
+    border: none;
+    color: var(--bg);
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s, transform 0.1s;
+}
+
+.jury-action-btn:hover {
+    opacity: 0.85;
+}
+
+.jury-action-btn:active {
+    transform: scale(0.98);
+}
+
+.jury-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.jury-submit-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--text);
+    border: none;
+    color: var(--bg);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+.jury-submit-circle:hover {
+    opacity: 0.8;
+}
+
+.jury-submit-circle:active {
+    transform: scale(0.92);
+}
+
+.jury-submit-circle:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.jury-action-btn.secondary {
+    background: var(--border);
+    color: var(--text);
+    border: 1px solid #3a3a3a;
+}
+
+.jury-action-btn.secondary:hover {
+    background: #333;
+    color: var(--bright);
+}
+
+/* ── 加载动画 ── */
+.jury-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--dim);
+    padding: 8px 0;
+}
+
+.jury-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--text);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── 悬置追问区 ── */
+.suspension-area {
+    margin-top: 20px;
+}
+
+.suspension-card {
+    background: var(--surface);
+    border: 1px solid #fbbf24;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.suspension-juror {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fbbf24;
+}
+
+.suspension-question {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+    background: rgba(251, 191, 36, 0.05);
+    border: 1px solid rgba(251, 191, 36, 0.15);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.suspension-timer-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--dim);
+}
+
+.suspension-timer-val {
+    font-weight: 700;
+    color: #fbbf24;
+    font-variant-numeric: tabular-nums;
+}
+
+.disconnect-declaration {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--dim);
+    cursor: pointer;
+    user-select: none;
+}
+
+.disconnect-declaration input[type="checkbox"] {
+    accent-color: #fbbf24;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+/* ── 判决结果区 ── */
+.verdict-area {
+    margin-top: 20px;
+}
+
+.jury-votes {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.jury-vote-card {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.jury-vote-card .vote-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.jury-vote-card .vote-reasoning {
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 1.5;
+}
+
+.verdict-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+
+.verdict-banner.outcome-pass {
+    background: rgba(74, 222, 128, 0.08);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    color: #4ade80;
+}
+
+.verdict-banner.outcome-fail {
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    color: #f87171;
+}
+
+.verdict-banner.outcome-suspend {
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+.verdict-report-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.verdict-report-box pre {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+    margin: 0;
+}
+
+.copy-msg {
+    font-size: 12px;
+    color: var(--text);
+    min-height: 20px;
+    margin-top: 6px;
+}
+
+/* ── 历史区 ── */
+.history-area {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 40px;
+}
+
+.history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.history-item .time {
+    color: var(--dim);
+}
+
+.history-item .outcome-tag {
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.history-item .outcome-tag.pass {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+}
+
+.history-item .outcome-tag.fail {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+}

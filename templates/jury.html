@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
+    <title>陪审团</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link rel="stylesheet" href="/static/jury.css">
+</head>
+
+<body>
+    <div class="header">
+        <div></div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a href="/" class="setup-btn nav-link-btn">🍅 返回 Dashboard</a>
+            <div class="jury-status-badge" id="jury-status-badge">状态：<span id="jury-status-text">加载中…</span></div>
+        </div>
+    </div>
+
+    <!-- ── 陪审员头像区 ── -->
+    <div class="jury-hero">
+        <div class="jury-hero-icon">⚖️</div>
+        <h1 class="jury-hero-title">陪审团</h1>
+        <p class="jury-hero-sub">学习成果独立评审 · 3 名陪审员并行投票</p>
+    </div>
+    <div class="jury-avatars" id="jury-avatars">
+        <div class="jury-avatar-slot placeholder"><div class="jury-avatar-circle">?</div><span>—</span></div>
+        <div class="jury-avatar-slot placeholder"><div class="jury-avatar-circle">?</div><span>—</span></div>
+        <div class="jury-avatar-slot placeholder"><div class="jury-avatar-circle">?</div><span>—</span></div>
+    </div>
+
+    <!-- ── 辩护意见展示（初始隐藏） ── -->
+    <div id="defense-area" class="defense-area" style="display:none;">
+        <div class="defense-label">🛡️ <span id="defender-name"></span> 的辩护</div>
+        <div class="defense-text" id="defense-text"></div>
+    </div>
+
+    <!-- ── 提交审议区 ── -->
+    <div class="section-label">提交审议</div>
+    <div class="jury-submit-area">
+        <div class="jury-input-group">
+            <label for="jury-question">📝 问题</label>
+            <textarea id="jury-question" class="jury-textarea" placeholder="输入你被问到的问题…" rows="4"></textarea>
+        </div>
+        <div class="jury-input-group">
+            <label for="jury-answer">📝 答案</label>
+            <textarea id="jury-answer" class="jury-textarea" placeholder="输入你的回答…" rows="4"></textarea>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button id="jury-submit-btn" class="jury-submit-circle" onclick="submitTrial()" title="提交陪审团审议">➜</button>
+            <div id="jury-loading" class="jury-loading" style="display:none;">
+                <div class="jury-spinner"></div>
+                <span>陪审团审议中，请稍候…</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 悬置追问区（初始隐藏） ── -->
+    <div id="suspension-area" class="suspension-area" style="display:none;">
+        <div class="section-label">🟡 悬置追问 <span id="suspension-progress"></span></div>
+        <div class="suspension-card">
+            <div class="suspension-juror" id="suspension-juror-name"></div>
+            <div class="suspension-question" id="suspension-question-text"></div>
+            <textarea id="suspension-reply" class="jury-textarea" placeholder="在此输入你的回答（限时2分钟）…" rows="3"></textarea>
+            <div class="suspension-timer-bar">
+                <span>⏱ 剩余时间：</span>
+                <span id="suspension-timer" class="suspension-timer-val">2:00</span>
+            </div>
+            <label class="disconnect-declaration">
+                <input type="checkbox" id="disconnect-check" onchange="toggleReplyBtn()">
+                <span>我声明回答追问期间未查阅任何外部资料</span>
+            </label>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <button id="suspension-reply-btn" class="jury-submit-circle" onclick="submitSuspensionReply()" disabled title="提交回答">➜</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 判决结果区（初始隐藏） ── -->
+    <div id="verdict-area" class="verdict-area" style="display:none;">
+        <div class="section-label">📍 审议结果</div>
+
+        <!-- 判决横幅 -->
+        <div class="verdict-banner" id="verdict-banner"></div>
+
+        <!-- 报告 -->
+        <div class="verdict-report-box">
+            <pre id="verdict-report"></pre>
+        </div>
+
+        <button class="jury-action-btn secondary" onclick="copyReport()">📋 复制报告并发送给番茄钟 AI</button>
+        <div id="copy-msg" class="copy-msg"></div>
+    </div>
+
+    <!-- ── 审议历史 ── -->
+    <div class="section-label" style="margin-top:30px;">📚 审议历史 <span id="history-count">0</span> 条</div>
+    <div id="history-area" class="history-area">
+        <p style="color:var(--dim);font-size:12px;">暂无审议记录</p>
+    </div>
+
+    <script src="/static/jury.js"></script>
+</body>
+
+</html>

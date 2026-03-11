@@ -434,6 +434,8 @@ def api_jury_status():
         "jurors": juror_info,
         "status": state.get("status", "idle"),
         "votes": state.get("votes", []),
+        "defense": state.get("defense", ""),
+        "defender": state.get("defender", ""),
         "suspension_queue": state.get("suspension_queue", []),
         "suspension_index": state.get("suspension_index", 0),
         "history_count": len(state.get("history", [])),
@@ -472,26 +474,34 @@ def api_jury_submit():
     state["current_answer"] = answer
     JURY_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 生成辩护意见（用第一个在场助手）
+    # 生成辩护意见（用第一个在场助手，Flash 模型节省成本）
     defense = ""
+    defender_name = ""
     active = _read_active_names()
     if active:
-        defender = active[0]
+        defender_name = active[0]
         try:
-            defense = _roleplay_pipeline(
-                defender,
-                f"作为{defender}，请为这位学生的回答做一个简短的辩护（100字以内）。\n\n问题：{question}\n\n学生的回答：{answer}",
-                [],
+            from jury.providers import call_gemini
+            # 加载辩护人角色资料
+            _def_profile_path = BASE / "static" / "companions" / f"{defender_name}.md"
+            _def_persona = _def_profile_path.read_text(encoding="utf-8") if _def_profile_path.exists() else ""
+            _def_prompt = (
+                f"你是「{defender_name}」。以下是你的角色资料：\n{_def_persona}\n\n"
+                f"请以你的角色语气，为这位学生的回答做一个简短的辩护（100字以内）。\n\n"
+                f"问题：{question}\n\n学生的回答：{answer}"
             )
+            defense = call_gemini(_def_prompt)  # 默认 flash
         except Exception:
             defense = ""
 
     # 执行陪审团审判
     verdict = run_jury_trial(question, answer, defense)
 
-    # 持久化投票到 state
+    # 持久化投票 + 辩护到 state
     state = json.loads(JURY_STATE_FILE.read_text(encoding="utf-8"))
     state["votes"] = [asdict(v) for v in verdict.votes]
+    state["defense"] = defense
+    state["defender"] = defender_name
 
     if verdict.outcome == "suspended":
         state["status"] = "suspended"
@@ -503,6 +513,8 @@ def api_jury_submit():
             "ok": True,
             "outcome": "suspended",
             "report": verdict.report,
+            "defense": defense,
+            "defender": defender_name,
             "suspension_queue": [
                 {"juror_name": v.juror_name, "question": v.suspension_question}
                 for v in verdict.suspension_queue
@@ -521,8 +533,11 @@ def api_jury_submit():
         "ok": True,
         "outcome": verdict.outcome,
         "report": verdict.report,
+        "defense": defense,
+        "defender": defender_name,
         "reject_count": verdict.reject_count,
         "approve_count": verdict.approve_count,
+        "votes": [asdict(v) for v in verdict.votes],
     }
     if new_health is not None:
         result["new_health"] = new_health
@@ -617,6 +632,7 @@ def api_jury_suspend_reply():
         "report": verdict.report,
         "reject_count": verdict.reject_count,
         "approve_count": verdict.approve_count,
+        "votes": [asdict(v) for v in all_votes],
     }
     if new_health is not None:
         result["new_health"] = new_health
@@ -641,8 +657,28 @@ def api_jury_report():
         "report": last.get("report", ""),
         "outcome": last.get("outcome", ""),
         "time": last.get("time", ""),
+        "votes": last.get("votes", []),
     })
 
+
+@app.route("/api/jury/send-report", methods=["POST"])
+def api_jury_send_report():
+    """复制报告到剪切板并触发 stay.applescript 发送到 AI 对话。"""
+    data = request.get_json() or {}
+    report = data.get("report", "").strip()
+    if not report:
+        return jsonify({"ok": False, "msg": "报告为空"}), 400
+
+    try:
+        # ① 写入剪切板
+        subprocess.run(["pbcopy"], input=report.encode("utf-8"),
+                       check=True, timeout=5)
+        # ② 运行 stay.applescript
+        stay_script = str(BASE / "applescript" / "stay.applescript")
+        subprocess.run(["osascript", stay_script], check=True, timeout=15)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 COMPANION_CHAT_FILE = DATA_DIR / "companion_chat.json"
 
@@ -1482,6 +1518,11 @@ def api_progress_step():
 @app.route("/")
 def index():
     return render_template("dashboard.html")
+
+
+@app.route("/jury")
+def jury_page():
+    return render_template("jury.html")
 
 
 

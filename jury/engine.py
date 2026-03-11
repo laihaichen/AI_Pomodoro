@@ -210,15 +210,18 @@ def run_jury_trial(
     order = {name: i for i, name in enumerate(jurors)}
     votes.sort(key=lambda v: order.get(v.juror_name, 99))
 
-    # 处理悬置
+    # 处理悬置（仅在悬置结果可能改变判决时才进入追问）
+    reject_count = sum(1 for v in votes if v.vote == "reject")
     suspensions = [v for v in votes if v.vote == "suspend"]
-    if suspensions:
+    if suspensions and reject_count < 2:
+        # 悬置可能改变结果 → 进入追问环节
         return JuryVerdict(
             outcome="suspended",
             votes=votes,
             suspension_queue=suspensions,
             report=_generate_report(votes, "suspended"),
         )
+    # 如果已有≥2票反对，把 suspend 视为弃权（不追问）
 
     # 统计投票
     reject_count = sum(1 for v in votes if v.vote == "reject")
