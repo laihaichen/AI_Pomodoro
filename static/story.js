@@ -52,6 +52,30 @@ function renderPanel(data) {
     // Current story
     const last = data.history && data.history.length > 0
         ? data.history[data.history.length - 1] : null;
+
+    // Foretold badge — which tier was looked up + the actual event text
+    const foretoldBadge = document.getElementById("story-foretold-badge");
+    const foretoldText = document.getElementById("story-foretold-text");
+    const ft = last ? last.fate_tier : (data.foretold || "");
+    if (ft && TIER_LABELS[ft]) {
+        // Look up the actual event text from the previous turn's registry
+        let eventText = "";
+        const hist = data.history || [];
+        if (hist.length >= 2) {
+            const prevRegistry = hist[hist.length - 2].event_registry;
+            if (prevRegistry && prevRegistry[ft]) {
+                eventText = prevRegistry[ft];
+            }
+        }
+        foretoldText.innerHTML = TIER_LABELS[ft] +
+            (eventText ? `<br><span style="color:var(--text);font-weight:400;font-size:13px;line-height:1.6;">「${escHtml(eventText)}」</span>` : "");
+        foretoldBadge.style.display = "block";
+    } else if (ft && ft.includes("第一条")) {
+        foretoldText.textContent = "首轮 — 无上一轮事件（自由发挥出生故事）";
+        foretoldBadge.style.display = "block";
+    } else {
+        foretoldBadge.style.display = "none";
+    }
     const storyArea = document.getElementById("story-text-area");
     const loadingEl = document.getElementById("story-loading");
     const rerunBtn  = document.getElementById("btn-rerun");
@@ -80,12 +104,13 @@ function renderPanel(data) {
     // Event registry
     renderEventRegistry(last ? last.event_registry : null);
 
-    // Card buttons
+    // Card buttons — disabled when no cards, no history, OR generating
     const intCount = parseInt(data.countinterventioncard || "0", 10);
     const desCount = parseInt(data.countcard || "0", 10);
     const hasHistory = data.history && data.history.length > 0;
-    document.getElementById("btn-use-intervention").disabled = intCount <= 0 || !hasHistory;
-    document.getElementById("btn-use-destiny").disabled = desCount <= 0 || !hasHistory;
+    const generating = data.generating;
+    document.getElementById("btn-use-intervention").disabled = intCount <= 0 || !hasHistory || generating;
+    document.getElementById("btn-use-destiny").disabled = desCount <= 0 || !hasHistory || generating;
 
     // Pending destiny badge
     const badge = document.getElementById("pending-destiny-badge");
@@ -135,13 +160,23 @@ function renderTimeline(history) {
         entry.className = "timeline-entry" + (i === history.length - 1 ? " open" : "");
 
         const fateClass = (t.fate_value || 0) >= 0 ? "positive" : "negative";
-        const preview = (t.story_text || "").substring(0, 40) + "…";
+
+        // 梗概：显示 fate tier 标签 + 引用的事件文本
+        let preview = "";
+        const tierLabel = TIER_LABELS[t.fate_tier] || "";
+        if (i === 0 || !tierLabel) {
+            preview = "出生";
+        } else if (i > 0) {
+            const prevReg = history[i - 1].event_registry;
+            const eventText = prevReg && prevReg[t.fate_tier] ? prevReg[t.fate_tier] : "";
+            preview = tierLabel + (eventText ? " — " + eventText : "");
+        }
 
         entry.innerHTML = `
             <div class="timeline-header" onclick="this.parentElement.classList.toggle('open')">
                 <span class="timeline-arrow">▶</span>
                 <span>${t.age}岁</span>
-                <span style="color:var(--dim);font-size:12px;">${escHtml(preview)}</span>
+                <span style="color:var(--bright);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(preview)}</span>
                 <span class="timeline-fate ${fateClass}">${t.fate_value}</span>
             </div>
             <div class="timeline-body">${escHtml(t.story_text || "")}</div>
@@ -173,44 +208,57 @@ async function rerunStory() {
     }
 }
 
-async function useIntervention() {
-    const zone = await pickZone("选择要替换的区间");
-    if (!zone) return;
-    const text = prompt("输入自定义事件文本（将替换该区间的事件）：");
-    if (!text || !text.trim()) return;
+// ── intervention card modal ─────────────────────────────────────────────────
 
-    const res = await fetch("/api/story/use-card", {
+function openInterventionModal() {
+    document.getElementById("intv-step1").style.display = "block";
+    document.getElementById("intv-step2").style.display = "none";
+    document.getElementById("intv-event-text").value = "";
+    document.getElementById("intervention-overlay").style.display = "flex";
+}
+function closeInterventionModal() {
+    document.getElementById("intervention-overlay").style.display = "none";
+}
+function intvNextStep() {
+    const sel = document.getElementById("intv-zone-select");
+    document.getElementById("intv-zone-display").textContent = sel.options[sel.selectedIndex].text;
+    document.getElementById("intv-step1").style.display = "none";
+    document.getElementById("intv-step2").style.display = "block";
+}
+function intvBackStep() {
+    document.getElementById("intv-step1").style.display = "block";
+    document.getElementById("intv-step2").style.display = "none";
+}
+async function intvSubmit() {
+    const zone = document.getElementById("intv-zone-select").value;
+    const text = document.getElementById("intv-event-text").value.trim();
+    if (!text) { alert("请输入自定义事件描述"); return; }
+    await fetch("/api/story/use-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "intervention", zone, event_text: text.trim() }),
+        body: JSON.stringify({ type: "intervention", zone, event_text: text }),
     });
-    const data = await res.json();
-    alert(data.msg || (data.ok ? "成功" : "失败"));
+    closeInterventionModal();
     pollStoryState();
 }
 
-async function useDestiny() {
-    const zone = await pickZone("选择要强制触发的区间");
-    if (!zone) return;
+// ── destiny card modal ──────────────────────────────────────────────────────
 
-    const res = await fetch("/api/story/use-card", {
+function openDestinyModal() {
+    document.getElementById("destiny-overlay").style.display = "flex";
+}
+function closeDestinyModal() {
+    document.getElementById("destiny-overlay").style.display = "none";
+}
+async function destinySubmit() {
+    const zone = document.getElementById("destiny-zone-select").value;
+    await fetch("/api/story/use-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "destiny", zone }),
     });
-    const data = await res.json();
-    alert(data.msg || (data.ok ? "成功" : "失败"));
+    closeDestinyModal();
     pollStoryState();
-}
-
-function pickZone(title) {
-    const options = ZONE_OPTIONS.map((o, i) => `${i + 1}. ${o.label}`).join("\n");
-    const choice = prompt(`${title}\n\n${options}\n\n输入编号（1-${ZONE_OPTIONS.length}）：`);
-    if (!choice) return null;
-    const idx = parseInt(choice, 10) - 1;
-    if (idx >= 0 && idx < ZONE_OPTIONS.length) return ZONE_OPTIONS[idx].key;
-    alert("无效选择");
-    return null;
 }
 
 // ── utils ───────────────────────────────────────────────────────────────────

@@ -134,7 +134,7 @@ def _run_turn_inner() -> dict:
     destiny_override = None
     if state.pending_destiny:
         if fate_value <= -90:
-            # FAIL overrides destiny card — card not consumed (already decremented)
+            # FAIL overrides destiny card
             state.pending_destiny = None
             state.save()
         else:
@@ -143,6 +143,7 @@ def _run_turn_inner() -> dict:
             if prev_registry and zone in prev_registry:
                 destiny_override = prev_registry[zone]
                 event_text = destiny_override
+                fate_tier = zone  # ← 更新 fate_tier 为宿命卡选择的区间
             state.pending_destiny = None
             state.save()
 
@@ -178,6 +179,9 @@ def _run_turn_inner() -> dict:
         return {"ok": False, "error": f"AI output validation failed: {last_error}"}
 
     # 6. Save to game_state.json
+    #    Re-load fresh state to avoid overwriting any pending_destiny
+    #    the user may have set during the AI call (race condition fix)
+    state = GameState.load()
     record = TurnRecord(
         age=age,
         fate_value=fate_value,

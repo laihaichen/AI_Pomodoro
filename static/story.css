@@ -66,6 +66,19 @@
     border-radius: 12px;
     border: 1px solid var(--border);
 }
+.story-foretold-badge {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent, #4dabf7);
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    background: rgba(77,171,247,0.08);
+    border: 1px solid rgba(77,171,247,0.2);
+    border-radius: 8px;
+}
+.story-foretold-badge span {
+    font-weight: 700;
+}
 .story-text {
     font-size: 15px;
     line-height: 1.75;
@@ -220,7 +233,7 @@
     padding: 10px 14px;
     font-size: 14px;
     line-height: 1.7;
-    color: var(--text);
+    color: var(--dim);
     background: var(--bg);
     border-top: 1px solid var(--border);
     white-space: pre-wrap;

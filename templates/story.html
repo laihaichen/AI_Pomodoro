@@ -40,6 +40,9 @@
     <!-- ── 当前故事 ── -->
     <div class="section-label">📜 当前故事</div>
     <div class="story-current-card" id="story-current-card">
+        <div id="story-foretold-badge" class="story-foretold-badge" style="display:none;">
+            📌 本轮参照上一轮事件：<span id="story-foretold-text"></span>
+        </div>
         <div id="story-text-area" class="story-text">
             <p class="placeholder-text">等待第一轮番茄钟推进后生成故事…</p>
         </div>
@@ -60,8 +63,8 @@
 
     <!-- ── 卡牌操作 ── -->
     <div class="card-actions-bar">
-        <button id="btn-use-intervention" class="story-action-btn intervention-btn" onclick="useIntervention()" disabled>🎴 使用干预卡</button>
-        <button id="btn-use-destiny" class="story-action-btn destiny-btn" onclick="useDestiny()" disabled>🃏 使用宿命卡</button>
+        <button id="btn-use-intervention" class="story-action-btn intervention-btn" onclick="openInterventionModal()" disabled>🎴 使用干预卡</button>
+        <button id="btn-use-destiny" class="story-action-btn destiny-btn" onclick="openDestinyModal()" disabled>🃏 使用宿命卡</button>
         <span id="pending-destiny-badge" class="pending-badge" style="display:none;"></span>
     </div>
 
@@ -69,6 +72,76 @@
     <div class="section-label" style="margin-top:24px;">📚 故事时间线 <span id="history-count">0</span> 轮</div>
     <div class="story-timeline" id="story-timeline">
         <p class="placeholder-text">暂无故事历史</p>
+    </div>
+
+    <!-- ── 干预卡 Modal ── -->
+    <div class="modal-overlay" id="intervention-overlay" style="display:none;" onclick="if(event.target===this)closeInterventionModal()">
+        <div class="modal" style="max-width:560px;width:95%;">
+            <button class="modal-close" onclick="closeInterventionModal()">✕</button>
+            <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--bright);">🎴 使用干预卡</h2>
+
+            <!-- Step 1: 区间选择 -->
+            <div id="intv-step1">
+                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请选择你希望修改的事件区间：</div>
+                <select id="intv-zone-select" style="width:100%;padding:10px;background:var(--surface);border:1px solid var(--border);
+                           border-radius:6px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
+                    <option value="POS_HIGH">🟣 高度正面（85~100）</option>
+                    <option value="POS_MID">🔵 中等正面（50~84）</option>
+                    <option value="POS_LOW">🟢 轻度正面（1~49）</option>
+                    <option value="NEG_LOW">🟡 轻度负面（-1~-29）</option>
+                    <option value="NEG_MID">🟠 中等负面（-30~-59）</option>
+                    <option value="NEG_HIGH">🔴 严重负面（-60~-89）</option>
+                </select>
+                <button onclick="intvNextStep()" style="margin-top:12px;width:100%;padding:9px;
+                        background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.5);
+                        border-radius:6px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;">
+                    下一步 →
+                </button>
+            </div>
+
+            <!-- Step 2: 剧情输入 -->
+            <div id="intv-step2" style="display:none;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">已选区间：<span id="intv-zone-display"
+                        style="color:#a78bfa;font-weight:700;"></span></div>
+                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请填写你放在该区间的新事件描述：</div>
+                <textarea id="intv-event-text" rows="5" placeholder="在此输入自定义事件描述…"
+                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+                           color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button onclick="intvBackStep()" style="flex:1;padding:9px;
+                            background:transparent;border:1px solid var(--border);
+                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 返回</button>
+                    <button onclick="intvSubmit()" style="flex:2;padding:9px;
+                            background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.6);
+                            border-radius:6px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;">
+                        ✨ 确认使用干预卡
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 宿命卡 Modal ── -->
+    <div class="modal-overlay" id="destiny-overlay" style="display:none;" onclick="if(event.target===this)closeDestinyModal()">
+        <div class="modal" style="max-width:480px;width:95%;">
+            <button class="modal-close" onclick="closeDestinyModal()">✕</button>
+            <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--bright);">🃏 使用宿命卡</h2>
+            <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请选择你希望在下一轮强制触发的命运值区间：</div>
+            <select id="destiny-zone-select" style="width:100%;padding:10px;background:var(--surface);border:1px solid var(--border);
+                       border-radius:6px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
+                <option value="POS_HIGH">🟣 高度正面（85~100）</option>
+                <option value="POS_MID">🔵 中等正面（50~84）</option>
+                <option value="POS_LOW">🟢 轻度正面（1~49）</option>
+                <option value="NEG_LOW">🟡 轻度负面（-1~-29）</option>
+                <option value="NEG_MID">🟠 中等负面（-30~-59）</option>
+                <option value="NEG_HIGH">🔴 严重负面（-60~-89）</option>
+            </select>
+            <button id="destiny-send-btn" onclick="destinySubmit()" style="margin-top:12px;width:100%;padding:9px;
+                    background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.5);
+                    border-radius:6px;color:#a855f7;font-size:13px;font-weight:700;cursor:pointer;">
+                确认使用 →
+            </button>
+        </div>
     </div>
 
     <script src="/static/story.js"></script>

@@ -836,6 +836,8 @@ def api_companion_chat():
 
 @app.route("/api/next-pomodoro", methods=["POST"])
 def api_next_pomodoro():
+    # 记录 move 前的条数，用于让后台线程等 move 完成
+    pre_move_count = read_snippet("current_prompt_count") or "0"
     try:
         if APP_MODE == "standalone":
             text = move_workflow.run()
@@ -850,14 +852,25 @@ def api_next_pomodoro():
             subprocess.run(["osascript", "-e", script], check=True, timeout=5)
             # 备份由 move.py 内部完成，此处无需重复
         # 自动触发叙事引擎（后台线程，不阻塞）
-        threading.Thread(target=_run_story_turn_bg, daemon=True).start()
+        threading.Thread(
+            target=_run_story_turn_bg,
+            args=(pre_move_count,),
+            daemon=True,
+        ).start()
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
-def _run_story_turn_bg():
-    """后台执行叙事引擎，结果存入 game_state.json。"""
+def _run_story_turn_bg(pre_move_count: str):
+    """后台执行叙事引擎，先等 move 完成再读 snippets。"""
+    import time
+    # 等待 move.py 写完 snippets（Alfred 模式下 move 是异步的）
+    for _ in range(30):  # 最多等 15 秒
+        current = read_snippet("current_prompt_count") or "0"
+        if current != pre_move_count:
+            break
+        time.sleep(0.5)
     try:
         from game.engine import run_turn
         run_turn()
