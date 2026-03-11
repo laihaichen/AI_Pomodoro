@@ -4,11 +4,58 @@
     "维什戴尔",
     "赫默"
   ],
-  "status": "idle",
-  "current_question": "",
-  "current_answer": "",
-  "votes": [],
-  "suspension_queue": [],
+  "status": "suspended",
+  "current_question": "什么是哈希表？",
+  "current_answer": "哈希表是一种通过哈希函数将键映射到值的数据结构，平均查找时间为O(1)",
+  "votes": [
+    {
+      "juror_name": "缪尔赛思",
+      "provider": "gemini",
+      "model": "gemini-3-flash-preview",
+      "vote": "suspend",
+      "reasoning": "定义和平均效率描述准确。但作为科研人员，我更关注系统在‘拥挤’时的稳定性。哈希表最核心的挑战在于处理映射重叠的情况，我想确认你是否理解这一关键机制。",
+      "suspension_question": "当两个不同的键映射到同一个位置时称为什么？请简述一种常见的处理方式。",
+      "error": ""
+    },
+    {
+      "juror_name": "维什戴尔",
+      "provider": "gemini",
+      "model": "gemini-3-flash-preview",
+      "vote": "approve",
+      "reasoning": "哈？哈希表？听着就让人头大。这种技术活儿我可搞不懂，我只负责把东西炸飞。不过既然那家伙说这玩意像子弹一样快，那就算你对了吧。这种无聊问题以后去问可露希尔，别来烦我！",
+      "suspension_question": "",
+      "error": ""
+    },
+    {
+      "juror_name": "赫默",
+      "provider": "gemini",
+      "model": "gemini-3-flash-preview",
+      "vote": "suspend",
+      "reasoning": "回答准确描述了哈希表的核心定义与平均效率，表现出初步的理解。但作为严谨的研究者，我认为未提及“哈希冲突”这一关键风险点，无法确认学生是否掌握其在复杂或极端情况下的运行逻辑。",
+      "suspension_question": "若两个不同的键经哈希函数计算后指向同一位置，这种现象称为什么？请简述一种处理方案。",
+      "error": ""
+    }
+  ],
+  "suspension_queue": [
+    {
+      "juror_name": "缪尔赛思",
+      "provider": "gemini",
+      "model": "gemini-3-flash-preview",
+      "vote": "suspend",
+      "reasoning": "定义和平均效率描述准确。但作为科研人员，我更关注系统在‘拥挤’时的稳定性。哈希表最核心的挑战在于处理映射重叠的情况，我想确认你是否理解这一关键机制。",
+      "suspension_question": "当两个不同的键映射到同一个位置时称为什么？请简述一种常见的处理方式。",
+      "error": ""
+    },
+    {
+      "juror_name": "赫默",
+      "provider": "gemini",
+      "model": "gemini-3-flash-preview",
+      "vote": "suspend",
+      "reasoning": "回答准确描述了哈希表的核心定义与平均效率，表现出初步的理解。但作为严谨的研究者，我认为未提及“哈希冲突”这一关键风险点，无法确认学生是否掌握其在复杂或极端情况下的运行逻辑。",
+      "suspension_question": "若两个不同的键经哈希函数计算后指向同一位置，这种现象称为什么？请简述一种处理方案。",
+      "error": ""
+    }
+  ],
   "suspension_index": 0,
   "history": []
 }

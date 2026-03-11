@@ -131,9 +131,14 @@ def _call_single_juror(
         raw = call_provider(provider, prompt, model)
         parsed = _parse_juror_response(raw)
 
-        vote = parsed.get("vote", "reject").lower().strip()
+        vote = parsed.get("vote", "approve").lower().strip()
         if vote not in ("approve", "reject", "suspend"):
-            vote = "reject"
+            vote = "approve"
+
+        sq = parsed.get("suspension_question", "").strip() if vote == "suspend" else ""
+        # 投了 suspend 但没给追问 → 视为 approve
+        if vote == "suspend" and not sq:
+            vote = "approve"
 
         return JurorVote(
             juror_name=juror_name,
@@ -141,7 +146,7 @@ def _call_single_juror(
             model=model,
             vote=vote,
             reasoning=parsed.get("reasoning", ""),
-            suspension_question=parsed.get("suspension_question", "") if vote == "suspend" else "",
+            suspension_question=sq,
         )
     except Exception as exc:
         traceback.print_exc()

@@ -408,6 +408,242 @@ def api_companion_use_skill():
     return jsonify({"ok": True, "msg": f"{skill_name} 已排队"})
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  陪审团 API
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/jury/status")
+def api_jury_status():
+    """返回陪审团当前状态。"""
+    try:
+        state = json.loads(JURY_STATE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        state = {"jurors": [], "status": "idle"}
+
+    # 读取陪审员头像 URL
+    from mod.companions import COMPANION_REGISTRY
+    juror_info = []
+    for name in state.get("jurors", []):
+        comp = COMPANION_REGISTRY.get(name)
+        juror_info.append({
+            "name": name,
+            "avatar_url": comp.avatar_url if comp else "",
+        })
+
+    return jsonify({
+        "jurors": juror_info,
+        "status": state.get("status", "idle"),
+        "votes": state.get("votes", []),
+        "suspension_queue": state.get("suspension_queue", []),
+        "suspension_index": state.get("suspension_index", 0),
+        "history_count": len(state.get("history", [])),
+    })
+
+
+@app.route("/api/jury/submit", methods=["POST"])
+def api_jury_submit():
+    """提交 question + answer，触发陪审团审议。"""
+    from mod.companions import _read_active_names
+    from jury.engine import (
+        run_jury_trial, save_trial_to_history,
+        apply_health_penalty, JurorVote,
+    )
+    from dataclasses import asdict
+
+    data = request.get_json() or {}
+    question = data.get("question", "").strip()
+    answer = data.get("answer", "").strip()
+
+    if not question or not answer:
+        return jsonify({"ok": False, "msg": "问题和答案不能为空"}), 400
+
+    # 检查陪审团是否就绪
+    try:
+        state = json.loads(JURY_STATE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return jsonify({"ok": False, "msg": "陪审团未初始化"}), 400
+
+    if not state.get("jurors"):
+        return jsonify({"ok": False, "msg": "无陪审团成员"}), 400
+
+    # 更新状态为审议中
+    state["status"] = "deliberating"
+    state["current_question"] = question
+    state["current_answer"] = answer
+    JURY_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # 生成辩护意见（用第一个在场助手）
+    defense = ""
+    active = _read_active_names()
+    if active:
+        defender = active[0]
+        try:
+            defense = _roleplay_pipeline(
+                defender,
+                f"作为{defender}，请为这位学生的回答做一个简短的辩护（100字以内）。\n\n问题：{question}\n\n学生的回答：{answer}",
+                [],
+            )
+        except Exception:
+            defense = ""
+
+    # 执行陪审团审判
+    verdict = run_jury_trial(question, answer, defense)
+
+    # 持久化投票到 state
+    state = json.loads(JURY_STATE_FILE.read_text(encoding="utf-8"))
+    state["votes"] = [asdict(v) for v in verdict.votes]
+
+    if verdict.outcome == "suspended":
+        state["status"] = "suspended"
+        state["suspension_queue"] = [asdict(v) for v in verdict.suspension_queue]
+        state["suspension_index"] = 0
+        JURY_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        return jsonify({
+            "ok": True,
+            "outcome": "suspended",
+            "report": verdict.report,
+            "suspension_queue": [
+                {"juror_name": v.juror_name, "question": v.suspension_question}
+                for v in verdict.suspension_queue
+            ],
+        })
+
+    # 非悬置：直接出判决
+    if verdict.outcome == "health_minus_1":
+        new_health = apply_health_penalty()
+    else:
+        new_health = None
+
+    save_trial_to_history(question, answer, verdict)
+
+    result = {
+        "ok": True,
+        "outcome": verdict.outcome,
+        "report": verdict.report,
+        "reject_count": verdict.reject_count,
+        "approve_count": verdict.approve_count,
+    }
+    if new_health is not None:
+        result["new_health"] = new_health
+    return jsonify(result)
+
+
+@app.route("/api/jury/suspend-reply", methods=["POST"])
+def api_jury_suspend_reply():
+    """玩家回答悬置追问。"""
+    from jury.engine import (
+        resolve_suspension, finalize_verdict,
+        save_trial_to_history, apply_health_penalty, JurorVote,
+    )
+    from dataclasses import asdict
+
+    data = request.get_json() or {}
+    reply = data.get("reply", "").strip()
+
+    try:
+        state = json.loads(JURY_STATE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return jsonify({"ok": False, "msg": "状态读取失败"}), 500
+
+    if state.get("status") != "suspended":
+        return jsonify({"ok": False, "msg": "当前没有悬置追问"}), 400
+
+    queue = state.get("suspension_queue", [])
+    idx = state.get("suspension_index", 0)
+
+    if idx >= len(queue):
+        return jsonify({"ok": False, "msg": "所有追问已回答完毕"}), 400
+
+    current = queue[idx]
+    juror_name = current["juror_name"]
+    sq = current.get("suspension_question", "")
+
+    # 调用该陪审员做最终裁决
+    new_vote = resolve_suspension(
+        juror_name=juror_name,
+        original_question=state.get("current_question", ""),
+        original_answer=state.get("current_answer", ""),
+        suspension_question=sq,
+        student_reply=reply,
+    )
+
+    # 更新该陪审员在 votes 中的投票
+    votes_data = state.get("votes", [])
+    for i, v in enumerate(votes_data):
+        if v["juror_name"] == juror_name:
+            votes_data[i] = asdict(new_vote)
+            break
+
+    state["votes"] = votes_data
+    state["suspension_index"] = idx + 1
+
+    # 检查是否还有更多追问
+    if state["suspension_index"] < len(queue):
+        # 还有追问
+        JURY_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        next_q = queue[state["suspension_index"]]
+        return jsonify({
+            "ok": True,
+            "done": False,
+            "resolved_vote": asdict(new_vote),
+            "next": {
+                "juror_name": next_q["juror_name"],
+                "question": next_q.get("suspension_question", ""),
+                "index": state["suspension_index"],
+                "total": len(queue),
+            },
+        })
+
+    # 全部追问回答完毕 → 最终判决
+    all_votes = [JurorVote(**v) for v in votes_data]
+    verdict = finalize_verdict(all_votes)
+
+    if verdict.outcome == "health_minus_1":
+        new_health = apply_health_penalty()
+    else:
+        new_health = None
+
+    save_trial_to_history(
+        state.get("current_question", ""),
+        state.get("current_answer", ""),
+        verdict,
+    )
+
+    result = {
+        "ok": True,
+        "done": True,
+        "outcome": verdict.outcome,
+        "report": verdict.report,
+        "reject_count": verdict.reject_count,
+        "approve_count": verdict.approve_count,
+    }
+    if new_health is not None:
+        result["new_health"] = new_health
+    return jsonify(result)
+
+
+@app.route("/api/jury/report")
+def api_jury_report():
+    """获取最近一次审议报告。"""
+    try:
+        state = json.loads(JURY_STATE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return jsonify({"ok": False, "report": ""}), 500
+
+    history = state.get("history", [])
+    if not history:
+        return jsonify({"ok": True, "report": "暂无审议记录。"})
+
+    last = history[-1]
+    return jsonify({
+        "ok": True,
+        "report": last.get("report", ""),
+        "outcome": last.get("outcome", ""),
+        "time": last.get("time", ""),
+    })
+
+
 COMPANION_CHAT_FILE = DATA_DIR / "companion_chat.json"
 
 
