@@ -398,14 +398,19 @@ function copyPrompt() {
 
     function afterCopy() {
         if (msg) msg.textContent = "✅ 已复制！正在发送…";
-        fetch("/api/stay-pomodoro", { method: "POST" })
+        // sandbox 模式：将 prompt 文本作为 message 发送给内置主持人
+        const isSandbox = (document.body.dataset.appMode === "sandbox");
+        const fetchOpts = isSandbox
+            ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) }
+            : { method: "POST" };
+        fetch("/api/stay-pomodoro", fetchOpts)
             .then(r => r.json())
             .then(d => {
                 if (msg) msg.textContent = d.ok ? "✅ 已复制并发送！" : "✅ 已复制（发送失败）";
                 setTimeout(() => { if (msg) msg.textContent = ""; }, 3000);
             })
             .catch(() => {
-                if (msg) msg.textContent = "✅ 已复制（AppleScript 调用失败）";
+                if (msg) msg.textContent = "✅ 已复制（发送失败）";
                 setTimeout(() => { if (msg) msg.textContent = ""; }, 3000);
             });
     }

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
+    <title>番茄钟主持人</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link rel="stylesheet" href="/static/host.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+
+<body data-app-mode="{{ app_mode }}">
+
+    <!-- Idle overlay (non-sandbox) -->
+    <div id="host-idle-overlay" class="host-idle-overlay" style="display:none;">
+        <div class="host-idle-msg">
+            <strong>主持人功能未启用</strong><br>
+            当前模式：{{ app_mode }}<br><br>
+            需要使用 <code>APP_MODE=sandbox</code> 启动才能使用内置主持人。
+        </div>
+    </div>
+
+    <div class="host-layout">
+
+        <!-- ── Left: Status Panel ── -->
+        <div class="host-status-panel">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:28px;">🍅</span>
+                <div>
+                    <div style="font-size:14px;font-weight:700;color:var(--text);">番茄钟主持人</div>
+                    <div style="font-size:10px;color:var(--dim);">Sandbox Mode</div>
+                </div>
+            </div>
+            <a href="/" class="host-control-btn" style="text-decoration:none;text-align:center;font-size:11px;">← 返回 Dashboard</a>
+
+            <div class="host-control-label">实时状态</div>
+
+            <div class="host-status-card">
+                <div class="host-status-label">当前条数 / 总条数</div>
+                <div class="host-status-value"><span id="host-val-count">—</span> / <span id="host-val-total">—</span></div>
+            </div>
+            <div class="host-status-card">
+                <div class="host-status-label">健康度</div>
+                <div class="host-status-value" id="host-val-health">—</div>
+            </div>
+            <div class="host-status-card">
+                <div class="host-status-label">时间偏移</div>
+                <div class="host-status-value" id="host-val-offset">—</div>
+            </div>
+            <div class="host-status-card">
+                <div class="host-status-label">总积分</div>
+                <div class="host-status-value" id="host-val-score">—</div>
+            </div>
+            <div class="host-status-card">
+                <div class="host-status-label">上次时间差</div>
+                <div class="host-status-value small" id="host-val-interval">—</div>
+            </div>
+            <div class="host-status-card">
+                <div class="host-status-label">累计休息时间</div>
+                <div class="host-status-value small" id="host-val-rest">—</div>
+            </div>
+            <div class="host-status-card">
+                <div class="host-status-label">阶段性节点</div>
+                <div class="host-status-value small" id="host-val-stage">—</div>
+            </div>
+            <div class="host-status-card">
+                <div class="host-status-label">Boss战状态</div>
+                <div class="host-status-value small" id="host-val-boss">—</div>
+            </div>
+            <div class="host-status-card">
+                <div class="host-status-label">游戏胜利状态</div>
+                <div class="host-status-value small" id="host-val-victory">—</div>
+            </div>
+        </div>
+
+        <!-- ── Center: Chat Area ── -->
+        <div class="host-chat-area">
+            <div class="host-chat-header">
+                🤖 番茄钟主持人
+                <span style="font-size:11px;color:var(--dim);font-weight:400;margin-left:auto;">内置 Gemini · prompt.md</span>
+            </div>
+            <div class="host-chat-messages" id="host-messages">
+                <!-- Messages rendered by JS -->
+            </div>
+            <div id="host-typing" class="host-typing">主持人正在思考...</div>
+            <div class="host-input-area">
+                <textarea id="host-input" class="host-textarea" placeholder="输入学习内容..." rows="1"></textarea>
+                <button id="host-btn-move" class="host-send-btn primary">推进番茄钟</button>
+                <button id="host-btn-stay" class="host-send-btn">不推进</button>
+            </div>
+        </div>
+
+        <!-- ── Right: Control Panel ── -->
+        <div class="host-control-panel">
+            <div class="host-control-label">休息控制</div>
+            <button id="host-btn-pause" class="host-control-btn">⏸️ 进入休息时间</button>
+            <button id="host-btn-continue" class="host-control-btn">▶️ 从休息恢复</button>
+
+            <div class="host-control-label">页面导航</div>
+            <a href="/jury" class="host-control-btn" style="text-decoration:none;text-align:center;">⚖️ 陪审团</a>
+            <a href="/story" class="host-control-btn" style="text-decoration:none;text-align:center;">📖 故事</a>
+
+            <div class="host-control-label">设置</div>
+            <button class="host-control-btn" onclick="openWizard()">📝 设置初始化 Prompt</button>
+
+            <div class="host-control-label" style="margin-top:auto;">系统</div>
+            <button id="host-btn-disable" class="host-control-btn danger">🚫 关闭主持人回应</button>
+            <button id="host-btn-reset" class="host-control-btn danger">🔄 重置所有状态</button>
+        </div>
+    </div>
+
+    <!-- Wizard modal (shared with dashboard) -->
+    <div class="modal-overlay" id="wizard-overlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closeWizard()">✕</button>
+            <div class="wizard-progress" id="wizard-progress"></div>
+            <div id="wizard-body"></div>
+        </div>
+    </div>
+
+    <script src="/static/dashboard.js"></script>
+    <script src="/static/host.js"></script>
+</body>
+
+</html>

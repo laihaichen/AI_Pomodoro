@@ -13,7 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 
-<body>
+<body data-app-mode="{{ app_mode }}">
 
     <div class="header">
         <div class="header-left">
@@ -23,12 +23,6 @@
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
-            <a href="/jury" class="setup-btn"
-                style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">⚖️
-                陪审团</a>
-            <a href="/story" class="setup-btn"
-                style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">📖
-                故事</a>
             <button class="setup-btn" onclick="openWizard()">设置初始化 Prompt</button>
             <button class="setup-btn" onclick="openTargetUrlEditor()"
                 style="background:var(--surface);color:var(--bright);border:1px solid var(--border);">🌐 AI 对话
@@ -51,6 +45,16 @@
                 <span style="font-size:11px;color:var(--dim);">条</span>
             </div>
         </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <span style="font-size:10px;font-weight:600;letter-spacing:0.12em;color:var(--dim);text-transform:uppercase;">导航到</span>
+        <a href="/jury" class="setup-btn"
+            style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">⚖️ 陪审团</a>
+        <a href="/story" class="setup-btn"
+            style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">📖 故事</a>
+        <a href="/host" class="setup-btn"
+            style="text-decoration:none;background:var(--surface);color:var(--bright);border:1px solid var(--border);">🤖 主持人</a>
     </div>
 
     <!-- ── 控制按钮 ── -->

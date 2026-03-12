@@ -33,8 +33,8 @@ from config import (  # noqa: E402
 )
 from workflow.browser import get_browser_driver  # noqa: E402
 from workflow import (  # noqa: E402
-    move_workflow, getcard_workflow, usecard_workflow,
-    getinterventioncard_workflow, pause_workflow,
+    move_workflow, usecard_workflow,
+    pause_workflow,
     continue_workflow, stay_workflow,
 )
 
@@ -842,7 +842,21 @@ def api_next_pomodoro():
     # 记录 move 前的条数，用于让后台线程等 move 完成
     pre_move_count = read_snippet("current_prompt_count") or "0"
     try:
-        if APP_MODE == "standalone":
+        if APP_MODE == "sandbox":
+            data = request.get_json(silent=True) or {}
+            user_msg = data.get("message", "")
+            text = move_workflow.run(clipboard_override=user_msg)
+            backup_prompt(text, prompt_type="move")
+            import host_ai
+            reply = host_ai.chat(text)
+            # 自动触发叙事引擎
+            threading.Thread(
+                target=_run_story_turn_bg,
+                args=(pre_move_count,),
+                daemon=True,
+            ).start()
+            return jsonify({"ok": True, "reply": reply})
+        elif APP_MODE == "standalone":
             text = move_workflow.run()
             get_browser_driver().inject_and_send(text)
         else:
@@ -853,7 +867,6 @@ def api_next_pomodoro():
                 'with argument "test"'
             )
             subprocess.run(["osascript", "-e", script], check=True, timeout=5)
-            # 备份由 move.py 内部完成，此处无需重复
         # 自动触发叙事引擎（后台线程，不阻塞）
         threading.Thread(
             target=_run_story_turn_bg,
@@ -891,7 +904,15 @@ def api_stay_pomodoro():
                 write_snippet("current_clipboard", clip[:8000])
         except Exception:
             pass
-        if APP_MODE == "standalone":
+        if APP_MODE == "sandbox":
+            data = request.get_json(silent=True) or {}
+            user_msg = data.get("message", "")
+            text = stay_workflow.run(clipboard_override=user_msg)
+            backup_prompt(text, prompt_type="stay")
+            import host_ai
+            reply = host_ai.chat(text)
+            return jsonify({"ok": True, "reply": reply})
+        elif APP_MODE == "standalone":
             text = stay_workflow.run()
             backup_prompt(text, prompt_type="stay")
             get_browser_driver().inject_and_send(text)
@@ -903,7 +924,6 @@ def api_stay_pomodoro():
                 'with argument "test"'
             )
             subprocess.run(["osascript", "-e", script], check=True, timeout=5)
-            # 备份由 stay.applescript → stay_backup.py 完成，此处无需重复
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -1511,7 +1531,7 @@ def api_progress_step():
 
 @app.route("/")
 def index():
-    return render_template("dashboard.html")
+    return render_template("dashboard.html", app_mode=APP_MODE)
 
 
 @app.route("/jury")
@@ -1522,6 +1542,24 @@ def jury_page():
 @app.route("/story")
 def story_page():
     return render_template("story.html")
+
+
+@app.route("/host")
+def host_page():
+    return render_template("host.html", app_mode=APP_MODE)
+
+
+@app.route("/api/host/history")
+def api_host_history():
+    import host_ai
+    return jsonify({"ok": True, "history": host_ai.load_history()})
+
+
+@app.route("/api/host/disable", methods=["POST"])
+def api_host_disable():
+    import host_ai
+    host_ai.set_host_disabled(True)
+    return jsonify({"ok": True})
 
 
 # ══════════════════════════════════════════════════════════════════════════════

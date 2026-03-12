@@ -270,14 +270,14 @@ def _write_alfred(key: str, value: str) -> None:
 
 def read_snippet(key: str) -> str:
     """读取 snippet 值，根据 APP_MODE 自动分流。"""
-    if APP_MODE == "standalone":
+    if APP_MODE in ("standalone", "sandbox"):
         return _read_local(key)
     return _read_alfred(key)
 
 
 def write_snippet(key: str, value: str) -> None:
     """写入 snippet 值，根据 APP_MODE 自动分流。"""
-    if APP_MODE == "standalone":
+    if APP_MODE in ("standalone", "sandbox"):
         _write_local(key, value)
     else:
         _write_alfred(key, value)

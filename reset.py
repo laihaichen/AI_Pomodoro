@@ -282,6 +282,11 @@ def main() -> int:
     milestone_flag = DATA_DIR / "milestone_reward.flag"
     milestone_flag.unlink(missing_ok=True)
 
+    host_disabled = DATA_DIR / "host_disabled.flag"
+    host_disabled.unlink(missing_ok=True)
+    host_history = DATA_DIR / "host_history.json"
+    host_history.unlink(missing_ok=True)
+
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0
 
