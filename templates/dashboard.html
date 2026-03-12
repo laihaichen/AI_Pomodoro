@@ -67,12 +67,12 @@
                 <span>不推进番茄钟记录<br>并向AI发送学习进度</span>
                 <span class="btn-sub">（请记得剪切板上有内容）</span>
             </button>
-            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerPause(this)"
+            <button id="btn-pause" class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerPause(this)"
                 title="执行 AppleScript：btn_pause">
                 进入休息时间
             </button>
-            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerContinue(this)"
-                title="执行 AppleScript：btn_continue">
+            <button id="btn-continue" class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerContinue(this)"
+                title="执行 AppleScript：btn_continue" disabled>
                 从休息时间恢复
             </button>
             <button id="btn-reset-all" onclick="triggerReset(this)" title="重置所有游戏状态（二次确认）" style="flex:1;min-width:80px;background:rgba(220,50,50,0.12);

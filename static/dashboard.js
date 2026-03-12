@@ -805,6 +805,27 @@ function refreshData() {
             }
             applyClass("val-last_rest_action", d.last_rest_is_paused ? "val-yellow" : "val-green");
 
+            // pause/continue button state machine
+            const btnPause = document.getElementById("btn-pause");
+            const btnContinue = document.getElementById("btn-continue");
+            if (btnPause && btnContinue) {
+                const totalRest = parseFloat(d.total_rest_time) || 0;
+                const maxRest = parseFloat(d.max_rest_time) || 0;
+                const quotaExhausted = maxRest > 0 && totalRest >= maxRest;
+                const isResting = !!d.last_rest_is_paused;
+
+                if (quotaExhausted) {
+                    btnPause.disabled = true;
+                    btnContinue.disabled = true;
+                } else if (isResting) {
+                    btnPause.disabled = true;
+                    btnContinue.disabled = false;
+                } else {
+                    btnPause.disabled = false;
+                    btnContinue.disabled = true;
+                }
+            }
+
             // penalty
             const hv = parseFloat(d.h_value);
             setVal("val-h_value", isNaN(hv) ? d.h_value : hv.toFixed(1) + " 分钟");
