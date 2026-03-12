@@ -450,37 +450,6 @@ function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
 function triggerGetCard(btn) { _alfredTrigger(btn, "/api/getcard"); }
 function triggerGetInterventionCard(btn) { _alfredTrigger(btn, "/api/getinterventioncard"); }
 
-function openUseCardModal() {
-    document.getElementById("usecard-overlay").style.display = "flex";
-    const btn = document.getElementById("usecard-send-btn");
-    if (btn) { btn.textContent = "确认使用 →"; btn.disabled = false; }
-}
-function closeUseCardModal() {
-    document.getElementById("usecard-overlay").style.display = "none";
-}
-function useCardSend() {
-    const zone = document.getElementById("usecard-zone").value;
-    const btn = document.getElementById("usecard-send-btn");
-    btn.textContent = "执行中…";
-    btn.disabled = true;
-    fetch("/api/usecard-zone", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ zone }),
-    })
-        .then(r => r.json())
-        .then(d => {
-            if (d.ok) {
-                btn.textContent = "✅ 已发送";
-                setTimeout(() => closeUseCardModal(), 1200);
-            } else {
-                btn.textContent = "❌ " + (d.error || "未知错误");
-                btn.disabled = false;
-            }
-        })
-        .catch(() => { btn.textContent = "确认使用 →"; btn.disabled = false; });
-}
-
 function triggerReset(btn) {
     const noArchive = document.getElementById("chk-no-archive")?.checked;
     const msg = noArchive
@@ -506,7 +475,7 @@ function triggerReset(btn) {
                     btn.innerHTML = orig;
                     btn.style.color = "#f87171";
                     btn.disabled = false;
-                    refreshData();   // 立即刷新页面数据
+                    refreshData();
                 }, 2500);
             } else {
                 btn.innerHTML = "❌ 失败";
@@ -585,7 +554,6 @@ function declareVictory() {
         .then(r => r.json())
         .then(d => {
             if (d.ok) {
-                // 即时更新 UI，无需等待下一次轮询
                 const ivEl = document.getElementById("val-is_victory");
                 const ivCard = document.getElementById("card-is-victory");
                 const ivBtn = document.getElementById("btn-declare-victory");
@@ -616,23 +584,9 @@ function declareDefeat() {
         });
 }
 
-// ── 干预卡辅助填写器 ──────────────────────────────────────────────────────────
-const DIVINE_RULE = `【关于干预卡作用的游戏规则提示】
-
-[干预卡：玩家为角色X+1岁的事件预判栏目选择一个命运值区间（高度正面85~100、中等正面50~84、轻度正面1~49、轻度负面-1~-30、中等负面-31~-60、严重负面-61~-89），并为该区间填写一个自定义的事件描述；该描述将替换AI原本生成的该区间事件内容；实际触发仍需命运值落在玩家选择的区间；⚠️ 约束：不能在负面事件里写正面情节，或在正面事件里写负面情节]
-
-干预卡：
-- 玩家选择一个命运值区间（对应JSON中的某个键，如 POS_HIGH、NEG_MID 等）
-- 玩家提供该区间的自定义事件描述
-- AI需检查玩家提供的事件描述是否符合区间性质（正面/负面），如不符则拒绝执行
-- 在本轮输出末尾的 JSON 代码块中，将玩家自定义的事件文本写入对应的槽位
-- 实际触发仍需角色X+1岁时的命运值落在玩家选择的区间`;
-
-let _divineOld = "";
-
 // ── 违规报告辅助填写器 ────────────────────────────────────────────────────────
-let _violationExpected = "";   // 由 Agent 自动写入，非用户手填
-let _violationTimer = null;  // 轮询 interval ID
+let _violationExpected = "";
+let _violationTimer = null;
 
 function openViolationModal() {
     _violationExpected = "";
@@ -674,12 +628,10 @@ function violationNext() {
     if (!v) { alert("请先填写违规描述"); return; }
     const src = document.getElementById("violation-source").value.trim();
 
-    // 显示等待界面
     document.getElementById("violation-step1").style.display = "none";
     document.getElementById("violation-step2").style.display = "";
     document.getElementById("violation-wait-msg").textContent = "请等待游戏规则调查 Agent 返还结果…";
 
-    // 后台启动：清空文件 → 写入违规 → 复制 violation_agent_prompt.txt → 触发 terminal.applescript
     fetch("/api/violation-start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -688,7 +640,6 @@ function violationNext() {
         document.getElementById("violation-wait-msg").textContent = "❌ 启动失败，请关闭重试";
     });
 
-    // 开始轮询（每 5 秒，最多 60 秒 = 12 次）
     let polls = 0;
     const MAX_POLLS = 12;
     _violationTimer = setInterval(() => {
@@ -699,7 +650,6 @@ function violationNext() {
                 if (d.ready) {
                     _clearViolationTimer();
                     _violationExpected = d.expected || "";
-                    // 进入 Step 3 预览
                     const violations = document.getElementById("violation-violations").value.trim();
                     const source = document.getElementById("violation-source").value.trim();
                     document.getElementById("violation-preview-source").textContent = source.length > 120 ? source.slice(0, 120) + "…" : source;
@@ -746,78 +696,6 @@ function violationSend() {
 }
 
 
-function openDivineModal() {
-    // 重置到第一步
-    document.getElementById("divine-step1").style.display = "";
-    document.getElementById("divine-step2").style.display = "none";
-    document.getElementById("divine-step3").style.display = "none";
-    document.getElementById("divine-new-text").value = "";
-    const btn = document.getElementById("divine-send-btn");
-    if (btn) { btn.textContent = "📋 复制并发送"; btn.disabled = false; }
-    document.getElementById("divine-overlay").style.display = "flex";
-}
-
-function closeDivineModal() {
-    document.getElementById("divine-overlay").style.display = "none";
-}
-
-function divineNext() {
-    _divineOld = document.getElementById("divine-zone-select").value;
-    document.getElementById("divine-zone-display").textContent = _divineOld;
-    document.getElementById("divine-step1").style.display = "none";
-    document.getElementById("divine-step2").style.display = "";
-    document.getElementById("divine-new-text").focus();
-}
-
-function divineBack() {
-    document.getElementById("divine-step2").style.display = "none";
-    document.getElementById("divine-step1").style.display = "";
-}
-
-function divineBack2() {
-    document.getElementById("divine-step3").style.display = "none";
-    document.getElementById("divine-step2").style.display = "";
-}
-
-function divineGenerate() {
-    const newStory = document.getElementById("divine-new-text").value.trim();
-    if (!newStory) {
-        alert("请先填写自定义事件描述");
-        return;
-    }
-    const prompt = `使用[干预卡]修改对应的区间\n\n被修改的区间：${_divineOld}\n\n修改为：${newStory}\n\n${DIVINE_RULE}`;
-    document.getElementById("divine-prompt-output").value = prompt;
-    document.getElementById("divine-step2").style.display = "none";
-    document.getElementById("divine-step3").style.display = "";
-}
-
-function divineSend() {
-    const prompt = document.getElementById("divine-prompt-output").value;
-    const btn = document.getElementById("divine-send-btn");
-    btn.textContent = "发送中…";
-    btn.disabled = true;
-    fetch("/api/divine-intervention", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-    })
-        .then(r => r.json())
-        .then(d => {
-            if (d.ok) {
-                btn.textContent = "✅ 已复制并发送";
-                setTimeout(() => closeDivineModal(), 1200);
-            } else {
-                btn.textContent = "❌ 失败：" + (d.error || "未知错误");
-                btn.disabled = false;
-            }
-        })
-        .catch(() => {
-            btn.textContent = "📋 复制并发送";
-            btn.disabled = false;
-        });
-}
-
-// ── Dashboard data refresh ───────────────────────────────────────────────────
 
 const REFRESH_MS = 1000;
 

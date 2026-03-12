@@ -10,6 +10,7 @@ Resets:
     - data/first_timestamp.txt
     - data/h_value.txt
     - data/penalized_rest_up_to.txt
+    - data/game_state.json  (narrative engine — archived then reset)
 
   Alfred snippets (DB + JSON) — all SNIPPETS with resettable=True:
     - -countcard             → "0"
@@ -231,6 +232,48 @@ def main() -> int:
         print("  ✓ story_today.txt → cleared")
     except Exception as exc:
         print(f"  ✗ story_today.txt 归档/清空失败：{exc}", file=sys.stderr)
+
+    # Archive & clear game_state.json (narrative engine state)
+    game_state_file = DATA_DIR / "game_state.json"
+    try:
+        if not no_archive and game_state_file.exists():
+            gs_text = game_state_file.read_text(encoding="utf-8").strip()
+            gs_data = json.loads(gs_text) if gs_text else {}
+            history = gs_data.get("history", [])
+            if history:
+                from datetime import date as _date2
+                date_str = _date2.today().isoformat()
+                gs_dir = BASE / "saved" / "stories"
+                gs_dir.mkdir(parents=True, exist_ok=True)
+                gs_path = gs_dir / f"{date_str}_game_state.json"
+                gs_path.write_text(
+                    json.dumps(gs_data, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                print(f"  ✓ game_state.json → 归档至 saved/stories/{date_str}_game_state.json（{len(history)} 轮）")
+            else:
+                print("  ✓ game_state.json 无故事历史，无需归档")
+        else:
+            if not no_archive:
+                print("  ✓ game_state.json 不存在，无需归档")
+            else:
+                print("  ⚡ game_state.json → 跳过归档（不保存模式）")
+        # Reset to empty defaults
+        game_state_file.write_text(
+            json.dumps({
+                "story_type": "", "character_name": "",
+                "generation": 1, "main_line_failed": False,
+                "pending_destiny": None, "history": []
+            }, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print("  ✓ game_state.json → reset to defaults")
+    except Exception as exc:
+        print(f"  ✗ game_state.json 归档/重置失败：{exc}", file=sys.stderr)
+
+    # Clean up story generating flag
+    flag_file = DATA_DIR / "story_generating.flag"
+    flag_file.unlink(missing_ok=True)
 
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0

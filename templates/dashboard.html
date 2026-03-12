@@ -75,22 +75,6 @@
                 title="执行 AppleScript：btn_continue">
                 从休息时间恢复
             </button>
-            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerGetCard(this)"
-                title="执行 AppleScript：btn_getcard">
-                获得一张宿命卡
-            </button>
-            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="openUseCardModal()"
-                title="使用一张宿命卡">
-                使用一张宿命卡
-            </button>
-            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="triggerGetInterventionCard(this)"
-                title="执行 AppleScript：btn_getinterventioncard">
-                获得一张干预卡
-            </button>
-            <button class="next-pomodoro-btn" style="flex:1;min-width:80px;" onclick="openDivineModal()"
-                title="使用一张干预卡">
-                使用一张干预卡
-            </button>
             <button id="btn-reset-all" onclick="triggerReset(this)" title="重置所有游戏状态（二次确认）" style="flex:1;min-width:80px;background:rgba(220,50,50,0.12);
                        border:1px solid rgba(220,50,50,0.4);border-radius:8px;
                        color:#f87171;font-size:12px;font-weight:600;
@@ -301,6 +285,20 @@
                 <div id="val-is_eligible_for_reward"
                     style="font-size:12px;font-weight:600;margin-top:6px;color:var(--dim);word-break:break-all;line-height:1.4;">
                     —</div>
+                <div style="display:flex;gap:6px;margin-top:8px;">
+                    <button onclick="triggerGetCard(this)" style="flex:1;padding:5px 0;font-size:11px;font-weight:600;
+                            background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);
+                            border-radius:5px;color:#a855f7;cursor:pointer;transition:background 0.15s;"
+                        onmouseover="this.style.background='rgba(168,85,247,0.25)'"
+                        onmouseout="this.style.background='rgba(168,85,247,0.12)'"
+                        title="宿命卡 +1">🃏 +1 宿命卡</button>
+                    <button onclick="triggerGetInterventionCard(this)" style="flex:1;padding:5px 0;font-size:11px;font-weight:600;
+                            background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.4);
+                            border-radius:5px;color:#a78bfa;cursor:pointer;transition:background 0.15s;"
+                        onmouseover="this.style.background='rgba(167,139,250,0.25)'"
+                        onmouseout="this.style.background='rgba(167,139,250,0.12)'"
+                        title="干预卡 +1">🎴 +1 干预卡</button>
+                </div>
             </div>
         </div>
         <div class="card">
@@ -470,92 +468,7 @@
         </div>
     </div>
 
-    <!-- ── 宿命卡使用 Modal ── -->
-    <div class="modal-overlay" id="usecard-overlay" style="display:none;">
-        <div class="modal" style="max-width:480px;width:95%;">
-            <button class="modal-close" onclick="closeUseCardModal()">✕</button>
-            <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--bright);">🃏 使用一张宿命卡</h2>
-            <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请选择你希望锁定的命运值区间：</div>
-            <select id="usecard-zone" style="width:100%;padding:10px;background:var(--surface);border:1px solid var(--border);
-                       border-radius:6px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
-                <option value="高度正面（85~100）">高度正面（85~100）</option>
-                <option value="中等正面（50~84）">中等正面（50~84）</option>
-                <option value="轻度正面（1~49）">轻度正面（1~49）</option>
-                <option value="轻度负面（-1~-30）">轻度负面（-1~-30）</option>
-                <option value="中等负面（-31~-60）">中等负面（-31~-60）</option>
-                <option value="严重负面（-61~-89）">严重负面（-61~-89）</option>
-            </select>
-            <button id="usecard-send-btn" onclick="useCardSend()" style="margin-top:12px;width:100%;padding:9px;
-                    background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.5);
-                    border-radius:6px;color:#a855f7;font-size:13px;font-weight:700;cursor:pointer;">
-                确认使用 →
-            </button>
-        </div>
-    </div>
 
-    <!-- ── 干预卡 Modal ── -->
-    <div class="modal-overlay" id="divine-overlay" style="display:none;">
-        <div class="modal" style="max-width:560px;width:95%;">
-            <button class="modal-close" onclick="closeDivineModal()">✕</button>
-            <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--bright);">✨ 干预卡辅助填写器</h2>
-
-            <!-- Step 1: 区间选择 -->
-            <div id="divine-step1">
-                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请选择你希望修改的命运值区间：</div>
-                <select id="divine-zone-select" style="width:100%;background:var(--surface);border:1px solid var(--border);
-                        border-radius:6px;color:var(--text);font-size:13px;padding:8px 10px;outline:none;">
-                    <option value="高度正面（85~100）">高度正面（85~100）</option>
-                    <option value="中等正面（50~84）">中等正面（50~84）</option>
-                    <option value="轻度正面（1~49）">轻度正面（1~49）</option>
-                    <option value="轻度负面（-1~-30）">轻度负面（-1~-30）</option>
-                    <option value="中等负面（-31~-60）">中等负面（-31~-60）</option>
-                    <option value="严重负面（-61~-89）">严重负面（-61~-89）</option>
-                </select>
-                <button onclick="divineNext()" style="margin-top:12px;width:100%;padding:9px;
-                        background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.5);
-                        border-radius:6px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;">
-                    下一步 →
-                </button>
-            </div>
-
-            <!-- Step 2: 剧情输入 -->
-            <div id="divine-step2" style="display:none;">
-                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">已选区间：<span id="divine-zone-display"
-                        style="color:#a78bfa;font-weight:700;"></span></div>
-                <div style="font-size:13px;color:var(--dim);margin-bottom:8px;">请填写你放在该区间的新剧情：</div>
-                <textarea id="divine-new-text" rows="5" placeholder="在此输入自定义事件描述…"
-                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
-                           color:var(--text);font-size:13px;padding:10px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
-                <div style="display:flex;gap:8px;margin-top:10px;">
-                    <button onclick="divineBack()" style="flex:1;padding:9px;
-                            background:transparent;border:1px solid var(--border);
-                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 返回</button>
-                    <button onclick="divineGenerate()" style="flex:2;padding:9px;
-                            background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.5);
-                            border-radius:6px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;">生成
-                        Prompt</button>
-                </div>
-            </div>
-
-            <!-- Step 3: Prompt 展示 + 发送 -->
-            <div id="divine-step3" style="display:none;">
-                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">生成的 Prompt（点击可全选）：</div>
-                <textarea id="divine-prompt-output" rows="14" readonly onclick="this.select()"
-                    style="width:100%;background:rgba(0,0,0,0.25);border:1px solid var(--border);
-                           border-radius:6px;color:var(--bright);font-size:12px;line-height:1.6;
-                           padding:10px;resize:none;outline:none;font-family:monospace;box-sizing:border-box;"></textarea>
-                <div style="display:flex;gap:8px;margin-top:10px;">
-                    <button onclick="divineBack2()" style="flex:1;padding:9px;
-                            background:transparent;border:1px solid var(--border);
-                            border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;">← 修改</button>
-                    <button id="divine-send-btn" onclick="divineSend()" style="flex:2;padding:9px;
-                            background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.6);
-                            border-radius:6px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;">📋
-                        复制并发送</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- ── 学习助手 ── -->
     <div class="section-label" style="font-size:14px;color:var(--bright);">学习助手</div>

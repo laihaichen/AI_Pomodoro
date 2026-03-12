@@ -906,37 +906,6 @@ def api_stay_pomodoro():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
-@app.route("/api/divine-intervention", methods=["POST"])
-def api_divine_intervention():
-    """Copy the divine-intervention prompt to clipboard, then trigger stay.applescript."""
-    data = request.get_json(silent=True) or {}
-    prompt_text = data.get("prompt", "")
-    try:
-        # ① 扣减干预卡数量
-        subprocess.run(
-            ["python3", str(BASE / "decrement_intervention_card_snippet.py")],
-            check=True, timeout=10,
-        )
-        if APP_MODE == "standalone":
-            # 用 stay_workflow 发送，将 prompt_text 作为 clipboard 内容
-            text = stay_workflow.run(clipboard_override=prompt_text)
-            backup_prompt(text, prompt_type="divine")
-            get_browser_driver().inject_and_send(text)
-        else:
-            # ② 写入剪切板
-            subprocess.run(["pbcopy"], input=prompt_text.encode("utf-8"),
-                           check=True, timeout=5)
-            # ③ 运行 stay.applescript
-            stay_script = str(BASE / "applescript" / "stay.applescript")
-            subprocess.run(["osascript", stay_script], check=True, timeout=10)
-            try:
-                backup_prompt(stay_workflow.run(clipboard_override=prompt_text), prompt_type="divine")
-            except Exception:
-                pass
-        return jsonify({"ok": True})
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 500
-
 
 AGENT_WORKSPACE    = BASE / "Agent_Workspace"
 COMPLAINTS_FILE    = AGENT_WORKSPACE / "complaints.txt"
@@ -1151,86 +1120,25 @@ def api_continue():
 
 @app.route("/api/getcard", methods=["POST"])
 def api_getcard():
+    """宿命卡 +1：只增加 snippet 计数器。"""
     try:
-        if APP_MODE == "standalone":
-            text = getcard_workflow.run()
-            get_browser_driver().inject_and_send(text)
-        else:
-            script = (
-                'tell application id "com.runningwithcrayons.Alfred" '
-                'to run trigger "btn_getcard" '
-                'in workflow "com.pomodoro.ai" '
-                'with argument "test"'
-            )
-            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        current = int(read_snippet("countcard") or "0")
+        write_snippet("countcard", str(current + 1))
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 @app.route("/api/getinterventioncard", methods=["POST"])
 def api_getinterventioncard():
+    """干预卡 +1：只增加 snippet 计数器。"""
     try:
-        if APP_MODE == "standalone":
-            text = getinterventioncard_workflow.run()
-            get_browser_driver().inject_and_send(text)
-        else:
-            script = (
-                'tell application id "com.runningwithcrayons.Alfred" '
-                'to run trigger "btn_getinterventioncard" '
-                'in workflow "com.pomodoro.ai" '
-                'with argument "test"'
-            )
-            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
+        current = int(read_snippet("countinterventioncard") or "0")
+        write_snippet("countinterventioncard", str(current + 1))
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
-
-@app.route("/api/usecard", methods=["POST"])
-def api_usecard():
-    try:
-        if APP_MODE == "standalone":
-            text = usecard_workflow.run()
-            get_browser_driver().inject_and_send(text)
-        else:
-            script = (
-                'tell application id "com.runningwithcrayons.Alfred" '
-                'to run trigger "btn_usecard" '
-                'in workflow "com.pomodoro.ai" '
-                'with argument "test"'
-            )
-            subprocess.run(["osascript", "-e", script], check=True, timeout=5)
-        return jsonify({"ok": True})
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 500
-
-
-@app.route("/api/usecard-zone", methods=["POST"])
-def api_usecard_zone():
-    """接收用户选择的区间 → 使用宿命卡。"""
-    data = request.get_json(silent=True) or {}
-    zone = data.get("zone", "").strip()
-    try:
-        if APP_MODE == "standalone":
-            # 将 zone 作为 clipboard_override 传入 usecard_workflow
-            text = usecard_workflow.run(clipboard_override=zone)
-            get_browser_driver().inject_and_send(text)
-        else:
-            # ① 将区间写入剪切板
-            subprocess.run(["pbcopy"], input=zone.encode("utf-8"),
-                           check=True, timeout=5)
-            # ② 扣减宿命卡数量
-            subprocess.run(
-                ["python3", str(BASE / "decrement_card_snippet.py")],
-                check=True, timeout=10,
-            )
-            # ③ 运行 usecard.applescript
-            usecard_script = str(BASE / "applescript" / "usecard.applescript")
-            subprocess.run(["osascript", usecard_script], check=True, timeout=15)
-        return jsonify({"ok": True})
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/api/prompt-backup", methods=["GET"])
