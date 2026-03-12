@@ -275,6 +275,10 @@ def main() -> int:
     flag_file = DATA_DIR / "story_generating.flag"
     flag_file.unlink(missing_ok=True)
 
+    # Clean up story disabled flag
+    disabled_flag = DATA_DIR / "story_disabled.flag"
+    disabled_flag.unlink(missing_ok=True)
+
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0
 

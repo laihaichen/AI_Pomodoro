@@ -68,6 +68,18 @@
         <span id="pending-destiny-badge" class="pending-badge" style="display:none;"></span>
     </div>
 
+    <!-- ── 叙事设置 ── -->
+    <div class="story-settings-bar" id="story-settings-bar">
+        <span style="font-size:11px;color:var(--dim);margin-right:auto;">⚙️ 叙事设置</span>
+        <button id="btn-disable-story" onclick="disableStoryGeneration(this)"
+            style="padding:5px 12px;font-size:11px;font-weight:600;
+                   background:var(--surface);border:1px solid var(--border);
+                   border-radius:5px;color:var(--dim);cursor:pointer;transition:background 0.15s;"
+            onmouseover="this.style.background='var(--border)';this.style.color='var(--bright)'"
+            onmouseout="this.style.background='var(--surface)';this.style.color='var(--dim)'"
+            title="本局游戏不生成故事（仅在reset后可恢复）">🚫 本局不生成故事</button>
+    </div>
+
     <!-- ── 故事历史时间线 ── -->
     <div class="section-label" style="margin-top:24px;">📚 故事时间线 <span id="history-count">0</span> 轮</div>
     <div class="story-timeline" id="story-timeline">

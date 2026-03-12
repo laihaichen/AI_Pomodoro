@@ -427,14 +427,15 @@ function copyPrompt() {
 }
 
 // ── Alfred triggers ──────────────────────────────────────────────────────────
-function _alfredTrigger(btn, endpoint) {
+function _alfredTrigger(btn, endpoint, onSuccess) {
     const orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = "⏳ 发送中...";
     fetch(endpoint, { method: "POST" })
         .then(r => r.json())
         .then(d => {
-            btn.innerHTML = d.ok ? "✅ 已发送！" : "❌ 失败：" + d.error;
+            btn.innerHTML = d.ok ? "✅ 完成" : "❌ 失败：" + d.error;
+            if (d.ok && typeof onSuccess === "function") onSuccess();
             setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2500);
         })
         .catch(() => {
@@ -447,8 +448,17 @@ function triggerNextPomodoro(btn) { _alfredTrigger(btn, "/api/next-pomodoro"); }
 function triggerStayPomodoro(btn) { _alfredTrigger(btn, "/api/stay-pomodoro"); }
 function triggerPause(btn) { _alfredTrigger(btn, "/api/pause"); }
 function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
-function triggerGetCard(btn) { _alfredTrigger(btn, "/api/getcard"); }
-function triggerGetInterventionCard(btn) { _alfredTrigger(btn, "/api/getinterventioncard"); }
+function triggerGetCard(btn) {
+    _alfredTrigger(btn, "/api/getcard", function () {
+        // 领卡后清除幸运奖励
+        fetch("/api/claim-lucky-card", { method: "POST" });
+    });
+}
+function triggerGetInterventionCard(btn) {
+    _alfredTrigger(btn, "/api/getinterventioncard", function () {
+        fetch("/api/claim-lucky-card", { method: "POST" });
+    });
+}
 
 function triggerReset(btn) {
     const noArchive = document.getElementById("chk-no-archive")?.checked;
@@ -863,6 +873,22 @@ function refreshData() {
                 } else if (!canExchange && existingBtn) {
                     existingBtn.remove();
                 }
+
+                // 获得卡按钮：仅在幸运系统触发且未被消耗时可点
+                const btnCard = document.getElementById("btn-get-card");
+                const btnICard = document.getElementById("btn-get-icard");
+                const scoreClaimBtn = document.getElementById(btnId);
+                const luckyClaimable = isTriggered && !scoreClaimBtn?.disabled;
+                if (btnCard) {
+                    btnCard.disabled = !luckyClaimable;
+                    btnCard.style.opacity = luckyClaimable ? "1" : "0.35";
+                    btnCard.style.cursor = luckyClaimable ? "pointer" : "not-allowed";
+                }
+                if (btnICard) {
+                    btnICard.disabled = !luckyClaimable;
+                    btnICard.style.opacity = luckyClaimable ? "1" : "0.35";
+                    btnICard.style.cursor = luckyClaimable ? "pointer" : "not-allowed";
+                }
             }
 
             // current clipboard (当前学习正文) — 纯文本显示
@@ -917,7 +943,7 @@ function refreshData() {
             // progress indicator — 当前阶段性任务进度指示
             const piEl = document.getElementById("val-current-progress-indicator");
             if (piEl) {
-                const pi = d.current_progress_indicator || "0/0 未到达进度";
+                const pi = d.current_progress_indicator || "0/1 未到达进度";
                 piEl.textContent = pi;
                 piEl.style.color = pi.startsWith("0/0") ? "var(--dim)"
                     : pi.includes("已到达") ? "var(--green, #4ade80)"

@@ -280,24 +280,26 @@
                 <div class="card-sub" style="font-size:10px;margin-top:2px;">-fortune snippet</div>
             </div>
             <!-- 幸运系统（右半） -->
-            <div style="flex:1;padding:14px 12px;display:flex;flex-direction:column;justify-content:center;">
-                <div class="card-label" style="font-size:11px;">🎁 是否触发幸运系统</div>
-                <div id="val-is_eligible_for_reward"
-                    style="font-size:12px;font-weight:600;margin-top:6px;color:var(--dim);word-break:break-all;line-height:1.4;">
-                    —</div>
-                <div style="display:flex;gap:6px;margin-top:8px;">
-                    <button onclick="triggerGetCard(this)" style="flex:1;padding:5px 0;font-size:11px;font-weight:600;
-                            background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);
-                            border-radius:5px;color:#a855f7;cursor:pointer;transition:background 0.15s;"
-                        onmouseover="this.style.background='rgba(168,85,247,0.25)'"
-                        onmouseout="this.style.background='rgba(168,85,247,0.12)'"
-                        title="宿命卡 +1">🃏 +1 宿命卡</button>
-                    <button onclick="triggerGetInterventionCard(this)" style="flex:1;padding:5px 0;font-size:11px;font-weight:600;
-                            background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.4);
-                            border-radius:5px;color:#a78bfa;cursor:pointer;transition:background 0.15s;"
-                        onmouseover="this.style.background='rgba(167,139,250,0.25)'"
-                        onmouseout="this.style.background='rgba(167,139,250,0.12)'"
-                        title="干预卡 +1">🎴 +1 干预卡</button>
+            <div style="flex:1;padding:14px 12px;display:flex;align-items:center;gap:10px;">
+                <div style="flex:1;min-width:0;">
+                    <div class="card-label" style="font-size:11px;">🎁 是否触发幸运系统</div>
+                    <div id="val-is_eligible_for_reward"
+                        style="font-size:12px;font-weight:600;margin-top:6px;color:var(--dim);word-break:break-all;line-height:1.4;">
+                        —</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+                    <button id="btn-get-card" onclick="triggerGetCard(this)" style="padding:6px 10px;font-size:10px;font-weight:600;
+                            background:var(--surface);border:1px solid var(--border);
+                            border-radius:5px;color:var(--dim);cursor:pointer;transition:background 0.15s;white-space:nowrap;"
+                        onmouseover="this.style.background='var(--border)';this.style.color='var(--bright)'"
+                        onmouseout="this.style.background='var(--surface)';this.style.color='var(--dim)'"
+                        title="宿命卡 +1">获得一张宿命卡</button>
+                    <button id="btn-get-icard" onclick="triggerGetInterventionCard(this)" style="padding:6px 10px;font-size:10px;font-weight:600;
+                            background:var(--surface);border:1px solid var(--border);
+                            border-radius:5px;color:var(--dim);cursor:pointer;transition:background 0.15s;white-space:nowrap;"
+                        onmouseover="this.style.background='var(--border)';this.style.color='var(--bright)'"
+                        onmouseout="this.style.background='var(--surface)';this.style.color='var(--dim)'"
+                        title="干预卡 +1">获得一张干预卡</button>
                 </div>
             </div>
         </div>

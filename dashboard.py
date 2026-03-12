@@ -208,7 +208,8 @@ def collect_state() -> dict:
         # 当前槽位的分母（count=0 时也用 hour3 的分母）
         _goal_key = current_key or "hour3"
         _goal_val = _goals.get(_goal_key, 0)
-        _denominator = int(_goal_val.get("denom", 0)) if isinstance(_goal_val, dict) else int(_goal_val)
+        _denominator = int(_goal_val.get("denom", 1)) if isinstance(_goal_val, dict) else int(_goal_val)
+        _denominator = max(1, _denominator)
         # 读取当前 snippet 值，解析分子（格式：「N/M ...」）
         _cur_indicator = read_snippet("current_progress_indicator")
         try:
@@ -234,7 +235,7 @@ def collect_state() -> dict:
                 _label = "未到达进度"
             _progress_str = f"{_numerator}/{_denominator} {_label}"
         else:
-            _progress_str = SNIPPETS["current_progress_indicator"].default  # "0/0 未到达进度"
+            _progress_str = SNIPPETS["current_progress_indicator"].default  # "0/1 未到达进度"
         write_snippet("current_progress_indicator", _progress_str)
         state["current_progress_indicator"] = _progress_str
         state["current_milestone_denominator"] = _denominator
@@ -446,7 +447,7 @@ def api_jury_status():
 def _advance_progress():
     """陪审团通过时自动推进进度指示器 +1。"""
     try:
-        cur = read_snippet("current_progress_indicator") or "0/0 未到达进度"
+        cur = read_snippet("current_progress_indicator") or "0/1 未到达进度"
         parts = cur.split("/")
         numerator = int(parts[0].strip())
         denominator = int(parts[1].strip().split()[0])
@@ -1225,16 +1226,16 @@ def api_setup():
         denominators = data.get("denominators", [])  # 与 milestones[] 等长的整数列表
         jury_flags   = data.get("jury_flags", [])    # 与 milestones[] 等长的布尔列表
         goals: dict[str, dict] = {
-            "hour3":  {"denom": 0, "jury": False},
-            "hour6":  {"denom": 0, "jury": False},
-            "hour9":  {"denom": 0, "jury": False},
-            "hour12": {"denom": 0, "jury": False},
+            "hour3":  {"denom": 1, "jury": False},
+            "hour6":  {"denom": 1, "jury": False},
+            "hour9":  {"denom": 1, "jury": False},
+            "hour12": {"denom": 1, "jury": False},
         }
         for i, key in enumerate(applicable_keys):
             denom = 0
             if i < len(denominators):
                 try:
-                    denom = max(0, int(denominators[i]))
+                    denom = max(1, int(denominators[i]))
                 except (ValueError, TypeError):
                     pass
             jury = jury_flags[i] if i < len(jury_flags) else False
@@ -1245,11 +1246,11 @@ def api_setup():
         )
         # 同步重置 -current-progress-indicator（分子清零）
         _init_goal = goals.get("hour3", {})
-        _init_denom = _init_goal.get("denom", 0) if isinstance(_init_goal, dict) else 0
+        _init_denom = _init_goal.get("denom", 1) if isinstance(_init_goal, dict) else 1
+        _init_denom = max(1, _init_denom)
         write_snippet(
             "current_progress_indicator",
-            f"0/{_init_denom} 未到达进度" if _init_denom > 0
-            else SNIPPETS["current_progress_indicator"].default
+            f"0/{_init_denom} 未到达进度"
         )
 
         # ── 学习记录总条数 ───────────────────────────────────────────────────
@@ -1417,6 +1418,18 @@ def api_claim_lucky_score():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/claim-lucky-card", methods=["POST"])
+def api_claim_lucky_card():
+    """玩家领卡后清除幸运奖励状态（不加积分）。"""
+    try:
+        cur = read_snippet("is_eligible_for_reward")
+        if "幸运系统已触发" not in cur:
+            return jsonify({"ok": False, "error": "幸运系统未触发"}), 400
+        write_snippet("is_eligible_for_reward", SNIPPETS["is_eligible_for_reward"].default)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
 @app.route("/api/reset", methods=["POST"])
 
 
@@ -1462,7 +1475,7 @@ def api_progress_step():
     except Exception:
         pass
     try:
-        cur = read_snippet("current_progress_indicator") or "0/0 未到达进度"
+        cur = read_snippet("current_progress_indicator") or "0/1 未到达进度"
 
         # Parse "N/M ..." format
         parts = cur.split("/")
@@ -1525,6 +1538,13 @@ def api_story_use_card():
     result = use_card(card_type, zone, event_text)
     return jsonify(result), 200 if result.get("ok") else 400
 
+
+@app.route("/api/story/disable", methods=["POST"])
+def api_story_disable():
+    """本局关闭故事生成（仅 reset 可恢复）。"""
+    from game.engine import set_story_disabled
+    set_story_disabled(True)
+    return jsonify({"ok": True})
 
 
 # ── HTML / CSS / JS → 已拆分到独立文件 ─────────────────────────────────────

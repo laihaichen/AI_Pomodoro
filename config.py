@@ -133,7 +133,7 @@ SNIPPETS: dict[str, Snippet] = {
     # ── 阶段性任务 ────────────────────────────────────────────────────────────
     "current_task":           Snippet("-current-task",           "无",
                                       panel_label="当前正在进行的阶段性任务"),
-    "current_progress_indicator": Snippet("-current-progress-indicator", "0/0 未到达进度",
+    "current_progress_indicator": Snippet("-current-progress-indicator", "0/1 未到达进度",
                                           panel_label="当前阶段性任务进度情况"),
     "stage":                  Snippet("-stage",                  "当前没有达到阶段性节点",
                                       panel_label="当前是否达到阶段性节点？"),

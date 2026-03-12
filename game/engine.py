@@ -31,6 +31,21 @@ def is_generating() -> bool:
     return _GENERATING_FLAG_FILE.exists()
 
 
+# ── story disabled flag (user can disable for testing) ───────────────────────
+_STORY_DISABLED_FILE = _BASE / "data" / "story_disabled.flag"
+
+
+def is_story_disabled() -> bool:
+    return _STORY_DISABLED_FILE.exists()
+
+
+def set_story_disabled(on: bool) -> None:
+    if on:
+        _STORY_DISABLED_FILE.write_text("1", encoding="utf-8")
+    else:
+        _STORY_DISABLED_FILE.unlink(missing_ok=True)
+
+
 def _load_api_config() -> dict:
     try:
         return json.loads(API_CONFIG_FILE.read_text(encoding="utf-8"))
@@ -96,6 +111,8 @@ def run_turn() -> dict:
 
     Returns dict with {ok, age, fate_value, fate_tier, story_text, event_registry}
     """
+    if is_story_disabled():
+        return {"ok": True, "skipped": True, "msg": "故事生成已关闭"}
     _set_generating(True)
     try:
         return _run_turn_inner()
@@ -316,6 +333,7 @@ def get_story_state() -> dict:
         "countcard": countcard,
         "countinterventioncard": countinterventioncard,
         "pending_destiny": state.pending_destiny,
+        "story_disabled": is_story_disabled(),
     }
 
 

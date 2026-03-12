@@ -49,6 +49,19 @@ function renderPanel(data) {
     document.getElementById("s-intervention").textContent = data.countinterventioncard || "0";
     document.getElementById("s-destiny").textContent = data.countcard || "0";
 
+    // Story disabled state
+    const disableBtn = document.getElementById("btn-disable-story");
+    if (disableBtn) {
+        if (data.story_disabled) {
+            disableBtn.textContent = "🚫 故事生成已关闭";
+            disableBtn.disabled = true;
+            disableBtn.style.opacity = "0.5";
+            disableBtn.style.cursor = "not-allowed";
+            disableBtn.style.borderColor = "rgba(220,50,50,0.4)";
+            disableBtn.style.color = "#f87171";
+        }
+    }
+
     // Current story
     const last = data.history && data.history.length > 0
         ? data.history[data.history.length - 1] : null;
@@ -259,6 +272,29 @@ async function destinySubmit() {
     });
     closeDestinyModal();
     pollStoryState();
+}
+
+// ── disable story ───────────────────────────────────────────────────────────
+
+function disableStoryGeneration(btn) {
+    if (!confirm("⚠️ 确认关闭本局故事生成？\n\n关闭后番茄钟推进不再生成故事，仅可通过「重置所有状态」恢复。")) return;
+    btn.disabled = true;
+    btn.textContent = "⏳ 写入中...";
+    fetch("/api/story/disable", { method: "POST" })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                btn.textContent = "🚫 故事生成已关闭";
+                btn.style.opacity = "0.5";
+                btn.style.cursor = "not-allowed";
+                btn.style.borderColor = "rgba(220,50,50,0.4)";
+                btn.style.color = "#f87171";
+            } else {
+                btn.textContent = "❌ 失败";
+                btn.disabled = false;
+            }
+        })
+        .catch(() => { btn.textContent = "❌ 网络错误"; btn.disabled = false; });
 }
 
 // ── utils ───────────────────────────────────────────────────────────────────
