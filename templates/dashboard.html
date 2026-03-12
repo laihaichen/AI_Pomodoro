@@ -151,7 +151,11 @@
         <div class="card">
             <div class="card-label">时间偏移量</div>
             <div class="card-value" id="val-offset">—</div>
-            <div class="card-sub">偏移量 &gt; 60 → 判负</div>
+            <div class="card-sub">偏移量 &gt; 60 → 每次推进健康度 -1</div>
+            <div id="offset-warning" style="display:none;margin-top:6px;padding:5px 8px;font-size:10px;font-weight:600;
+                 color:#f87171;background:rgba(220,50,50,0.1);border:1px solid rgba(220,50,50,0.25);border-radius:5px;line-height:1.4;">
+                ⚠️ 时间偏移超过60，持续降低健康度，番茄钟推进不宜过快
+            </div>
         </div>
     </div>
 

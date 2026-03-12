@@ -120,14 +120,11 @@ def _compute_and_write_offset(new_count: int) -> str:
         write_snippet("offset", f"{offset:.1f}")
         if offset > 60:
             try:
-                write_snippet("is_victory", "已失败，失败来源：时间偏移量超限")
-                print(f"⚠️  offset={offset:.1f} > 60，游戏失败：is_victory → 已失败")
-                _cur = int(read_snippet("total_score") or "0")
-                _new = round(_cur * 0.9)
-                write_snippet("total_score", str(_new))
-                print(f"  总积分 ×0.9 → {_new}")
+                from update_stage import adjust_health
+                new_health = adjust_health(-1)
+                print(f"⚠️  offset={offset:.1f} > 60，健康度 -1 → {new_health}")
             except Exception as exc:
-                print(f"offset 惩罚写入失败: {exc}", file=sys.stderr)
+                print(f"offset 健康度扣除失败: {exc}", file=sys.stderr)
         return f"-offset = {offset:.1f} 分钟（期望 {expect_total:.1f} - 真实 {real_total:.1f}）"
     except Exception as exc:
         return f"(offset 计算异常: {exc})"

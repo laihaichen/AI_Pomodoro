@@ -792,6 +792,8 @@ function refreshData() {
             applyClass("val-offset",
                 isNaN(off) ? null : off > 60 ? "val-red" : off > 40 ? "val-yellow" : "val-green"
             );
+            const offWarn = document.getElementById("offset-warning");
+            if (offWarn) offWarn.style.display = (!isNaN(off) && off > 60) ? "block" : "none";
 
             // rest
             setVal("val-max_rest_time", d.max_rest_time);
@@ -813,8 +815,9 @@ function refreshData() {
                 const maxRest = parseFloat(d.max_rest_time) || 0;
                 const quotaExhausted = maxRest > 0 && totalRest >= maxRest;
                 const isResting = !!d.last_rest_is_paused;
+                const bossActive = (d.bossfight_stage || "").includes("已经达到boss战节点");
 
-                if (quotaExhausted) {
+                if (quotaExhausted || bossActive) {
                     btnPause.disabled = true;
                     btnContinue.disabled = true;
                 } else if (isResting) {
