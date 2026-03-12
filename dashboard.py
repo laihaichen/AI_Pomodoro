@@ -156,6 +156,10 @@ def collect_state() -> dict:
             state.setdefault(key, "DB error")
         state["db_error"] = str(exc)
 
+    # ── 阶段性奖励待领取标记 ─────────────────────────────────────────────────
+    from update_stage import is_milestone_reward_pending
+    state["milestone_reward_pending"] = is_milestone_reward_pending()
+
     # ── 里程碑阶段计算 ───────────────────────────────────────────────────────
     # 1-18 → hour3，19-36 → hour6，37-54 → hour9，55-72 → hour12
     _MILESTONE_SLOTS = [
@@ -1427,6 +1431,20 @@ def api_claim_lucky_card():
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/claim-milestone-card", methods=["POST"])
+def api_claim_milestone_card():
+    """玩家领卡后清除阶段性奖励状态。"""
+    try:
+        from update_stage import is_milestone_reward_pending, set_milestone_reward
+        if not is_milestone_reward_pending():
+            return jsonify({"ok": False, "error": "无阶段性奖励待领取"}), 400
+        set_milestone_reward(False)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
 
 @app.route("/api/reset", methods=["POST"])
 

@@ -279,6 +279,9 @@ def main() -> int:
     disabled_flag = DATA_DIR / "story_disabled.flag"
     disabled_flag.unlink(missing_ok=True)
 
+    milestone_flag = DATA_DIR / "milestone_reward.flag"
+    milestone_flag.unlink(missing_ok=True)
+
     print("\n✅ 全部重置完成。可以开始新的一天了。")
     return 0
 

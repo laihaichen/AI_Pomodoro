@@ -11,9 +11,25 @@ Usage:
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
-sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import HEALTH_FILE, SNIPPETS, read_snippet, write_snippet  # noqa: E402
+
+_BASE = Path(__file__).resolve().parent
+MILESTONE_REWARD_FLAG = _BASE / "data" / "milestone_reward.flag"
+
+
+def is_milestone_reward_pending() -> bool:
+    return MILESTONE_REWARD_FLAG.exists()
+
+
+def set_milestone_reward(on: bool) -> None:
+    if on:
+        MILESTONE_REWARD_FLAG.parent.mkdir(parents=True, exist_ok=True)
+        MILESTONE_REWARD_FLAG.write_text("1", encoding="utf-8")
+    else:
+        MILESTONE_REWARD_FLAG.unlink(missing_ok=True)
 
 # ── stage strings ───────────────────────────────────────────────────────────
 
@@ -21,21 +37,7 @@ STAGE_DEFAULT        = SNIPPETS["stage"].default
 STAGE_NOT_APPLICABLE = "当前难度不适用"
 
 
-_REWARD_LIST = (
-    "阶段性奖励列表\n"
-    "\n"
-    "- [干预卡count + 1：玩家获得1张干预卡，可在之后任意时机使用]\n"
-    "\n"
-    "- [宿命卡count + 1：玩家获得1张宿命卡，可在之后任意年龄使用]\n"
-)
-
-STAGE_MILESTONE_SUCCESS = (
-    "阶段性节点已达到，进度已达成！\n"
-    "\n"
-    "请发放奖励，要求玩家从奖励列表中选择一项\n"
-    "\n"
-    + _REWARD_LIST
-)
+STAGE_MILESTONE_SUCCESS = "阶段性节点已达到，进度已达成！"
 
 STAGE_MILESTONE_FAIL = (
     "阶段性节点已达到，但进度未达成\n"
@@ -103,6 +105,7 @@ def check_and_set_milestone() -> None:
     indicator = read_progress_indicator()
     if is_progress_reached(indicator):
         _write_stage(STAGE_MILESTONE_SUCCESS)
+        set_milestone_reward(True)  # 标记阶段性奖励待领取
         # 积分奖励 +200
         try:
             current = int(read_snippet("total_score") or "0")

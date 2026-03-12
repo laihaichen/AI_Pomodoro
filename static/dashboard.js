@@ -448,16 +448,25 @@ function triggerNextPomodoro(btn) { _alfredTrigger(btn, "/api/next-pomodoro"); }
 function triggerStayPomodoro(btn) { _alfredTrigger(btn, "/api/stay-pomodoro"); }
 function triggerPause(btn) { _alfredTrigger(btn, "/api/pause"); }
 function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
+function _claimCardRewardSource() {
+    // 消耗奖励源：阶段性奖励优先，其次幸运系统
+    fetch("/api/claim-milestone-card", { method: "POST" })
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) {
+                // 阶段性奖励不可用，尝试消耗幸运系统
+                fetch("/api/claim-lucky-card", { method: "POST" });
+            }
+        })
+        .catch(() => {
+            fetch("/api/claim-lucky-card", { method: "POST" });
+        });
+}
 function triggerGetCard(btn) {
-    _alfredTrigger(btn, "/api/getcard", function () {
-        // 领卡后清除幸运奖励
-        fetch("/api/claim-lucky-card", { method: "POST" });
-    });
+    _alfredTrigger(btn, "/api/getcard", _claimCardRewardSource);
 }
 function triggerGetInterventionCard(btn) {
-    _alfredTrigger(btn, "/api/getinterventioncard", function () {
-        fetch("/api/claim-lucky-card", { method: "POST" });
-    });
+    _alfredTrigger(btn, "/api/getinterventioncard", _claimCardRewardSource);
 }
 
 function triggerReset(btn) {
@@ -899,20 +908,22 @@ function refreshData() {
                     existingBtn.remove();
                 }
 
-                // 获得卡按钮：仅在幸运系统触发且未被消耗时可点
+                // 获得卡按钮：幸运系统触发 OR 阶段性奖励待领取时可点
                 const btnCard = document.getElementById("btn-get-card");
                 const btnICard = document.getElementById("btn-get-icard");
                 const scoreClaimBtn = document.getElementById(btnId);
                 const luckyClaimable = isTriggered && !scoreClaimBtn?.disabled;
+                const milestoneClaimable = !!d.milestone_reward_pending;
+                const cardClaimable = luckyClaimable || milestoneClaimable;
                 if (btnCard) {
-                    btnCard.disabled = !luckyClaimable;
-                    btnCard.style.opacity = luckyClaimable ? "1" : "0.35";
-                    btnCard.style.cursor = luckyClaimable ? "pointer" : "not-allowed";
+                    btnCard.disabled = !cardClaimable;
+                    btnCard.style.opacity = cardClaimable ? "1" : "0.35";
+                    btnCard.style.cursor = cardClaimable ? "pointer" : "not-allowed";
                 }
                 if (btnICard) {
-                    btnICard.disabled = !luckyClaimable;
-                    btnICard.style.opacity = luckyClaimable ? "1" : "0.35";
-                    btnICard.style.cursor = luckyClaimable ? "pointer" : "not-allowed";
+                    btnICard.disabled = !cardClaimable;
+                    btnICard.style.opacity = cardClaimable ? "1" : "0.35";
+                    btnICard.style.cursor = cardClaimable ? "pointer" : "not-allowed";
                 }
             }
 
