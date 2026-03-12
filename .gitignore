@@ -9,3 +9,4 @@ saved/saves.jsonl
 saved/prompt_backup/
 saved/stories/
 *.scpt
+data/snippets_local.tmp

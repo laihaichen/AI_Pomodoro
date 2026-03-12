@@ -228,15 +228,17 @@ def _read_local(key: str) -> str:
 
 
 def _write_local(key: str, value: str) -> None:
-    """写入本地 JSON。"""
+    """写入本地 JSON（原子写入：先写临时文件再重命名，防止 kill -9 导致数据丢失）。"""
     try:
         data = json.loads(LOCAL_SNIPPETS_FILE.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         data = {k: s.default for k, s in SNIPPETS.items()}
     data[key] = value
-    LOCAL_SNIPPETS_FILE.write_text(
+    tmp = LOCAL_SNIPPETS_FILE.with_suffix(".tmp")
+    tmp.write_text(
         json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    tmp.rename(LOCAL_SNIPPETS_FILE)  # POSIX 原子操作
 
 
 def _read_alfred(key: str) -> str:

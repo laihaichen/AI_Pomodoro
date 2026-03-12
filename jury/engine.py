@@ -322,7 +322,7 @@ def _generate_report(votes: list[JurorVote], outcome: str) -> str:
     for v in votes:
         emoji = _vote_emoji(v.vote)
         status = {"approve": "赞成", "reject": "反对", "suspend": "悬置"}.get(v.vote, v.vote)
-        lines.append(f"{emoji} {v.juror_name}（{v.provider}/{v.model}）：{status}")
+        lines.append(f"{emoji} {v.juror_name}：{status}")
         if v.reasoning:
             lines.append(f"   理由：{v.reasoning}")
         if v.suspension_question:
