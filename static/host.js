@@ -178,14 +178,18 @@
     const btnReset = document.getElementById("host-btn-reset");
     if (btnReset) {
         btnReset.addEventListener("click", function () {
-            if (!confirm("⚠️ 确定要重置所有状态？\n\n这将清空所有番茄钟记录和对话历史，操作无法撤销。")) return;
+            const noArchive = document.getElementById("chk-no-archive")?.checked;
+            const msg = noArchive
+                ? "⚠️ 你确定要重置所有状态吗？\n\n⚡ 已勾选「不保存」：将直接清空，不归档任何数据。"
+                : "⚠️ 你确定要重置所有状态吗？\n\n这将清空所有番茄钟记录和对话历史，操作无法撤销。";
+            if (!confirm(msg)) return;
             const orig = this.textContent;
             this.disabled = true;
             this.textContent = "⏳ 重置中...";
             fetch("/api/reset", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ no_archive: !!noArchive }),
             })
                 .then(r => r.json())
                 .then(data => {
