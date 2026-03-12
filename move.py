@@ -233,7 +233,7 @@ def main() -> int:
     time_limit_str = (
         "未到15分钟，合规"
         if is_first or interval_minutes < 15
-        else "超出15分钟，系统自动判断为凶"
+        else "超出15分钟，触发严厉监督"
     )
     foretold_val = SNIPPETS["foretold"].default if is_first else fate_category(final_fate)
     try:

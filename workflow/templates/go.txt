@@ -1,24 +1,16 @@
 游戏状态面板：
 本条时间：{snippet:-current-time}
+时间差：{snippet:-interval}
+时间差是否合规的状态： {snippet:-is-time-difference-within-the-limit}
 当前学习记录条数：{snippet:-current_prompt_count}
 学习记录总条数：{snippet:-total-count}
 健康度：{snippet:-healthy}
-吉凶结果：{snippet:-fortune-and-misfortune}
-原始随机数：{snippet:-random-num}
-超时惩罚随机数：{snippet:-overtime-penalty-random-num}
-最终命运值：{snippet:-final-fate-value}
-是否应该触发幸运系统：{snippet:-is-eligible-for-reward}
-应该加载的预设事件，上一轮的：{snippet:-foretold}
-时间差：{snippet:-interval}
-时间差是否合规的状态： {snippet:-is-time-difference-within-the-limit}
-当前时间偏移值(超过正60直接判负)：{snippet:-offset}
+当前时间偏移值：{snippet:-offset}
 当前正在进行的阶段性任务：{snippet:-current-task}
 当前阶段性任务进度情况：{snippet:-current-progress-indicator}
 当前是否达到阶段性节点？： {snippet:-stage}
 当前是否进入boss战节点？:{snippet:-bossfight-stage}
 累计休息时间：{snippet:-total_rest_time}
-当前宿命卡持有数：{snippet:-countcard}
-当前干预卡持有数：{snippet:-countinterventioncard}
 当前总积分：{snippet:-total-score}
 游戏胜利状态：{snippet:-is-victory}
 人工智能当前违规次数：{snippet:-violationcount}
