@@ -209,7 +209,14 @@ def _run_turn_inner() -> dict:
     )
     state.append_turn(record)
 
-    # 7. Append to story_today.txt
+    # 7. Check for character death (FAIL)
+    if fate_tier == "FAIL":
+        state.main_line_failed = True
+        state.save()
+        set_story_disabled(True)
+        print("💀 角色死亡（FAIL），故事生成已永久关闭")
+
+    # 8. Append to story_today.txt
     try:
         with open(STORY_TODAY_FILE, "a", encoding="utf-8") as f:
             f.write(f"\n--- {age}岁 ---\n{data['story_text']}\n")

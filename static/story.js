@@ -114,8 +114,25 @@ function renderPanel(data) {
         }
     }
 
-    // Event registry
-    renderEventRegistry(last ? last.event_registry : null);
+    // Death state — character died (FAIL)
+    let deathBanner = document.getElementById("story-death-banner");
+    if (data.main_line_failed) {
+        if (!deathBanner) {
+            deathBanner = document.createElement("div");
+            deathBanner.id = "story-death-banner";
+            deathBanner.style.cssText = "margin-top:12px;padding:10px 14px;font-size:13px;font-weight:700;" +
+                "color:#f87171;background:rgba(220,50,50,0.1);border:1px solid rgba(220,50,50,0.3);" +
+                "border-radius:8px;text-align:center;line-height:1.5;";
+            deathBanner.textContent = "💀 角色已死亡 — 故事完结";
+            storyArea.parentElement.appendChild(deathBanner);
+        }
+        rerunBtn.style.display = "none";
+    } else if (deathBanner) {
+        deathBanner.remove();
+    }
+
+    // Event registry (hidden after death)
+    renderEventRegistry(data.main_line_failed ? null : (last ? last.event_registry : null));
 
     // Card buttons — disabled when no cards, no history, OR generating
     const intCount = parseInt(data.countinterventioncard || "0", 10);
