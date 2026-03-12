@@ -4,24 +4,21 @@
 
 > [!WARNING]
 > **运行环境要求**
-> - 🍎 Alfred / Standalone 模式 **仅支持 macOS**（依赖 AppleScript 进行浏览器自动化）
-> - 🌍 **Sandbox 模式支持全平台**（Windows / macOS / Linux），无需浏览器自动化
-> - 🔑 **Gemini API Key**：Sandbox 模式及 AI 助手功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
+> - Alfred / Standalone模式 **仅支持 macOS**（依赖 AppleScript 进行浏览器自动化）
+> - （其中，Alfred模式需要Alfred工作流，而Standalone模式则不需要Alfred工作流。）
+> - **Sandbox 模式支持全平台**（Windows / macOS / Linux），无需浏览器自动化。
+> - （Sandbox 模式将番茄钟对话框内置，而Standalone模式和Alfred模式一样，使用外部网页端对话框执行番茄钟。）
+> - **Gemini API Key**：Sandbox 模式及 AI 助手功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
 
 ---
 
-## ✨ 功能概览
+##  功能概览
 
-| 模块 | 说明 |
-|---|---|
-| **番茄钟追踪** | 精确记录每条学习的时间戳、间隔、暂停/继续，自动计算进度偏移量 |
-| **命运值系统** | 6 级命运值区间（高度正面 → 失败事件），基于概率、健康度衰减、超时惩罚的多维状态机 |
-| **幸运系统** | 干预卡 / 宿命卡双卡储蓄机制，命运值 ≥ 90 时触发 |
-| **里程碑任务** | 阶段性进度目标与难度分级（探索者 / 平衡 / 硬核） |
-| **AI 助手** | 基于 Gemini API 的角色扮演对话，角色性格由 Markdown 档案定义，实时注入游戏状态上下文 |
-| **陪审团** | 3名不在场助手组成独立评审团，并行投票判定学习成果，管控健康度与进度指示器 |
-| **实时仪表盘** | Web Dashboard（`localhost:5050`），轮询刷新 20+ 项状态指标 |
-| **违规检测** | AI 审计系统，自动检测游戏规则违规并存档 |
+关于番茄钟对话框的功能描述，应该见prompt.md
+
+关于叙事面板的功能描述，应该见stroy_rule.md
+
+（待发展）为学习助手添加游戏规则询问功能以及调查整个项目并且回答用户咨询的agent能力。
 
 ---
 
@@ -54,11 +51,11 @@
 | 存储 | 本地 JSON | 本地 JSON | Alfred SQLite + JSON 双写 |
 | AI 对话方式 | **内置 Gemini 对话引擎**（对话框输入） | 浏览器注入（剪贴板组装） | Alfred trigger（剪贴板组装） |
 | 信息输入方式 | 在主持人页面对话框中直接输入 | 复制到剪贴板后点击按钮 | 复制到剪贴板后点击按钮 |
-| 需要 macOS | ❌ 跨平台 | ✅ 需要 | ✅ 需要 |
+| 平台 | 跨平台(windows, macOS) | 仅支持macOS | 仅支持macOS |
 | 需要 Chrome | ❌ 不需要 | ✅ 需要 | ✅ 需要 |
 | 需要 Alfred | ❌ 不需要 | ❌ 不需要 | ✅ 需要 |
-| 需要 API Key | ✅ 必需 | ❌ 可选 | ❌ 可选 |
-| 推荐场景 | **跨平台 / Windows / 新用户** | macOS 无 Alfred 用户 | 已有 Alfred 用户 |
+| 需要gemini API Key | ✅ 必需 | ✅ 必需 | ✅ 必需 |
+| 场景 | **跨平台 / Windows ** | macOS 无 Alfred 用户 | 已有 Alfred 用户 |
 
 > [!TIP]
 > **Sandbox 模式**不使用剪贴板组装 prompt 的方式，而是通过内置的主持人页面（`/host`）直接在对话框中输入学习内容。系统自动将输入内容与 20+ 项游戏状态组装后发送给内置 Gemini 引擎，AI 回复直接在页面内渲染（支持 Markdown + 语法高亮），无需外部浏览器和 AppleScript。
@@ -129,7 +126,7 @@ Prompt/
 | **macOS** | 需要 AppleScript 进行浏览器自动化 |
 | **Python 3.10+** | 后端运行时 |
 | **Google Chrome** | 自动化目标浏览器 |
-| **Gemini API Key**（可选） | AI 助手功能需要 |
+| **Gemini API Key** | 所有内置的角色互动行为和故事叙述全部需要 |
 
 ### Alfred 模式（进阶）
 
@@ -157,7 +154,7 @@ bash install.sh
 - 初始化 `data/` 目录和 `snippets_local.json`
 - 创建 `api_config.json` 模板
 
-### 2.（可选）配置 Gemini API
+### 2.（可选，但最好有）配置 Gemini API
 
 编辑 `api_config.json`，填入 API Key：
 
@@ -172,8 +169,6 @@ bash install.sh
     ]
 }
 ```
-
-> 不配置 API Key 也可以使用核心功能（番茄钟、命运值系统），仅 AI 助手对话功能需要。
 
 ### 3. 配置 AI 对话页面
 
@@ -213,7 +208,7 @@ lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 1. **初始化** → 每天首次使用时，点击 Dashboard 上的「设置初始化 prompt」按钮，设置当天的难度、里程碑任务等参数
 2. **开始学习** → 输入学习内容（Sandbox：在对话框输入；Standalone/Alfred：复制到剪贴板），点击「番茄钟」按钮
 3. **系统自动** → 计算命运值、组装 prompt、发送给 AI（Sandbox：内置引擎；其他模式：浏览器注入）
-4. **AI 生成事件** → AI 根据命运值区间生成本轮故事事件
+4. **AI 生成事件** → AI 根据命运值区间生成本轮故事事件。（在故事面板中可见）
 5. **查看面板** → Dashboard 自动刷新显示最新状态
 
 ### Dashboard 按钮
@@ -275,21 +270,6 @@ lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 | `static/companions/*.md` | 角色档案（性格、背景、语气范例） |
 | `mod/skills.py` | 技能定义（触发条件、效果、持续时间） |
 
----
-
-## ⚠️ 已知限制 & 改进方向
-
-| 限制 | 说明 | 状态 |
-|---|---|---|
-| ~~Snippet UID 硬编码~~ | ~~`config.py` 中所有 snippet 的 UUID 是写死的~~ | ✅ 已解决：启动时自动扫描 |
-| ~~文件路径硬编码~~ | ~~`BASE` 路径固定~~ | ✅ 已解决：使用 `Path(__file__).parent` |
-| ~~必须安装 Alfred~~ | ~~强依赖 Alfred Powerpack~~ | ✅ 已解决：Standalone 模式 |
-| ~~仅支持 macOS~~ | ~~浏览器自动化依赖 AppleScript~~ | ✅ 已解决：Sandbox 模式（全平台） |
-| ~~仅支持 Chrome~~ | ~~AppleScript 中写死 Google Chrome~~ | ✅ 已解决：Sandbox 模式（内置对话引擎） |
-| ~~AI 对话仅支持 Gemini~~ | ~~浏览器注入目标 URL 硬编码~~ | ✅ 已解决：Dashboard 可自定义 URL（仅 Gemini / AI Studio 稳定） |
-| **助手 API 仅支持 Gemini** | `_roleplay_pipeline` 硬编码 `google-generativeai` | 可抽象为多后端（OpenAI、Anthropic 等） |
-
----
 
 ## 📄 License
 
