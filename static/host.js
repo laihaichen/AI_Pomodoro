@@ -232,6 +232,8 @@
     }
 
     // ── Status panel polling ────────────────────────────────────────────────
+    let hostTsRaw = null;
+
     function pollState() {
         fetch("/api/state")
             .then(r => r.json())
@@ -246,6 +248,7 @@
                 setText("host-val-rest", d.total_rest_time);
                 setText("host-val-victory", d.is_victory);
                 setText("host-val-interval", d.interval);
+                hostTsRaw = d.curr_ts_raw || null;
             })
             .catch(() => {});
     }
@@ -257,5 +260,23 @@
 
     pollState();
     setInterval(pollState, 2000);
+
+    // ── Tomato timer (1-second tick) ────────────────────────────────────────
+    setInterval(() => {
+        if (!hostTsRaw) return;
+        const startDt = new Date(hostTsRaw);
+        const nowDt = new Date();
+        const diffSecs = Math.floor((nowDt - startDt) / 1000);
+        const timerEl = document.getElementById("host-tomato-timer");
+        if (diffSecs >= 0 && timerEl) {
+            if (diffSecs < 60) {
+                timerEl.textContent = `${diffSecs}秒`;
+            } else {
+                const m = Math.floor(diffSecs / 60);
+                const s = diffSecs % 60;
+                timerEl.textContent = `${m}分钟${s}秒`;
+            }
+        }
+    }, 1000);
 
 })();

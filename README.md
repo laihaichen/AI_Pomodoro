@@ -4,10 +4,9 @@
 
 > [!WARNING]
 > **运行环境要求**
-> - 🍎 **仅支持 macOS**（依赖 AppleScript 进行浏览器自动化）
-> - 🌐 **仅支持 Google Chrome**（AppleScript 自动化目标）
-> - 🤖 **AI 对话界面**：默认支持 [Gemini](https://gemini.google.com) 和 [AI Studio](https://aistudio.google.com)，可在 Dashboard 中自定义其他 URL
-> - 🔑 **Gemini API Key**（可选）：AI 助手功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
+> - 🍎 Alfred / Standalone 模式 **仅支持 macOS**（依赖 AppleScript 进行浏览器自动化）
+> - 🌍 **Sandbox 模式支持全平台**（Windows / macOS / Linux），无需浏览器自动化
+> - 🔑 **Gemini API Key**：Sandbox 模式及 AI 助手功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
 
 ---
 
@@ -31,7 +30,7 @@
 ### 数据流管线
 
 ```
-后端状态计算 → 持久化（JSON / SQLite） → prompt 模板展开 → 浏览器注入 → AI 对话会话
+后端状态计算 → 持久化（JSON / SQLite） → prompt 模板展开 → AI 对话引擎（沙盒内置 / 浏览器注入）
 ```
 
 ### 技术栈
@@ -40,22 +39,29 @@
 |---|---|
 | 后端 | Python 3 / Flask |
 | 前端 | 原生 JavaScript（无框架），HTML/CSS |
-| 持久化 | 本地 JSON（standalone）/ SQLite + JSON 双写（Alfred 模式） |
+| 持久化 | 本地 JSON（standalone / sandbox）/ SQLite + JSON 双写（Alfred 模式） |
 | AI | Google Gemini API（`google-generativeai` SDK） |
-| 桌面自动化 | macOS AppleScript（Chrome 注入） |
-| AI 前端 | Google Chrome（Gemini Web） |
+| 桌面自动化 | macOS AppleScript（Chrome 注入）— Alfred / Standalone 模式 |
+| 内置 AI 主持人 | Gemini 多轮对话引擎 + Markdown 实时渲染 — Sandbox 模式 |
 
 ### 运行模式
 
-系统支持两种运行模式，通过环境变量 `APP_MODE` 切换：
+系统支持三种运行模式，通过环境变量 `APP_MODE` 切换：
 
-| | Standalone 模式 | Alfred 模式 |
-|---|---|---|
-| 环境变量 | `APP_MODE=standalone` | `APP_MODE=alfred`（默认） |
-| 存储 | 本地 JSON（`data/snippets_local.json`） | Alfred SQLite + JSON 双写 |
-| 触发方式 | Dashboard 按钮 → Python workflow 引擎 → 浏览器注入 | Dashboard 按钮 → Alfred trigger |
-| 需要 Alfred | ❌ 不需要 | ✅ 需要安装 Alfred Powerpack |
-| 推荐场景 | **新用户 / 无 Alfred** | 已有 Alfred 的用户 |
+| | Sandbox 模式 | Standalone 模式 | Alfred 模式 |
+|---|---|---|---|
+| 环境变量 | `APP_MODE=sandbox` | `APP_MODE=standalone` | `APP_MODE=alfred`（默认） |
+| 存储 | 本地 JSON | 本地 JSON | Alfred SQLite + JSON 双写 |
+| AI 对话方式 | **内置 Gemini 对话引擎**（对话框输入） | 浏览器注入（剪贴板组装） | Alfred trigger（剪贴板组装） |
+| 信息输入方式 | 在主持人页面对话框中直接输入 | 复制到剪贴板后点击按钮 | 复制到剪贴板后点击按钮 |
+| 需要 macOS | ❌ 跨平台 | ✅ 需要 | ✅ 需要 |
+| 需要 Chrome | ❌ 不需要 | ✅ 需要 | ✅ 需要 |
+| 需要 Alfred | ❌ 不需要 | ❌ 不需要 | ✅ 需要 |
+| 需要 API Key | ✅ 必需 | ❌ 可选 | ❌ 可选 |
+| 推荐场景 | **跨平台 / Windows / 新用户** | macOS 无 Alfred 用户 | 已有 Alfred 用户 |
+
+> [!TIP]
+> **Sandbox 模式**不使用剪贴板组装 prompt 的方式，而是通过内置的主持人页面（`/host`）直接在对话框中输入学习内容。系统自动将输入内容与 20+ 项游戏状态组装后发送给内置 Gemini 引擎，AI 回复直接在页面内渲染（支持 Markdown + 语法高亮），无需外部浏览器和 AppleScript。
 
 ### 项目结构
 
@@ -63,6 +69,7 @@
 Prompt/
 ├── config.py                          # 全局配置：路径、snippet 注册表
 ├── dashboard.py                       # Flask Web 仪表盘（主入口）
+├── host_ai.py                         # Sandbox 内置 Gemini 对话引擎
 ├── move.py                            # 番茄钟核心：提交记录、命运值计算、幸运系统
 ├── pause.py / continue.py             # 暂停 / 继续
 ├── update_h.py                        # 超时惩罚计算
@@ -85,9 +92,12 @@ Prompt/
 │   └── effects.py                     # 技能效果
 │
 ├── applescript/                       # macOS 自动化脚本（Alfred 模式使用）
-├── templates/dashboard.html           # 仪表盘页面
+├── templates/                         # HTML 页面模板
+│   ├── dashboard.html                 # 仪表盘页面
+│   └── host.html                      # Sandbox 主持人页面
 ├── static/                            # 前端资源
 │   ├── dashboard.js / dashboard.css
+│   ├── host.js / host.css             # 主持人页面（Sandbox 模式）
 │   └── companions/                    # 角色档案 + 头像
 │
 ├── data/                              # 运行时数据
@@ -103,14 +113,23 @@ Prompt/
 
 ## 📋 前置条件
 
-### Standalone 模式（推荐新用户）
+### Sandbox 模式（推荐新用户 / 跨平台）
+
+| 依赖 | 说明 |
+|---|---|
+| **Python 3.10+** | 后端运行时 |
+| **Gemini API Key** | **必需**，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取 |
+
+> 无需 macOS、无需 Chrome、无需 Alfred。Windows / macOS / Linux 均可运行。
+
+### Standalone 模式
 
 | 依赖 | 说明 |
 |---|---|
 | **macOS** | 需要 AppleScript 进行浏览器自动化 |
 | **Python 3.10+** | 后端运行时 |
 | **Google Chrome** | 自动化目标浏览器 |
-| **Gemini API Key**（可选） | AI 助手功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 获取 |
+| **Gemini API Key**（可选） | AI 助手功能需要 |
 
 ### Alfred 模式（进阶）
 
@@ -118,7 +137,7 @@ Prompt/
 
 | 依赖 | 说明 |
 |---|---|
-| **Alfred Powerpack** ⚠️ | **付费软件**（[alfredapp.com](https://www.alfredapp.com)），需购买 Powerpack  |
+| **Alfred Powerpack** ⚠️ | **付费软件**（[alfredapp.com](https://www.alfredapp.com)），需购买 Powerpack |
 
 ---
 
@@ -171,14 +190,19 @@ bash install.sh
 ### 4. 启动
 
 ```bash
-# Standalone 模式（无需 Alfred）
+# Sandbox 模式（跨平台，推荐）
+lsof -ti :5050 | xargs kill -9 2>/dev/null; APP_MODE=sandbox python3 dashboard.py
+
+# Standalone 模式（macOS，无需 Alfred）
 lsof -ti :5050 | xargs kill -9 2>/dev/null; APP_MODE=standalone python3 dashboard.py
 
-# Alfred 模式（需要 Alfred Powerpack）
+# Alfred 模式（macOS，需要 Alfred Powerpack）
 lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 ```
 
 打开浏览器访问 **http://localhost:5050** 🎉
+
+> Sandbox 模式下，点击 Dashboard 导航栏中的「主持人」或访问 `http://localhost:5050/host` 进入内置 AI 主持人页面。
 
 ---
 
@@ -187,15 +211,17 @@ lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 ### 基本循环
 
 1. **初始化** → 每天首次使用时，点击 Dashboard 上的「设置初始化 prompt」按钮，设置当天的难度、里程碑任务等参数
-2. **开始学习** → 复制学习内容到剪贴板，点击「番茄钟」按钮
-3. **系统自动** → 计算命运值、组装 prompt、注入浏览器并发送给 AI
+2. **开始学习** → 输入学习内容（Sandbox：在对话框输入；Standalone/Alfred：复制到剪贴板），点击「番茄钟」按钮
+3. **系统自动** → 计算命运值、组装 prompt、发送给 AI（Sandbox：内置引擎；其他模式：浏览器注入）
 4. **AI 生成事件** → AI 根据命运值区间生成本轮故事事件
 5. **查看面板** → Dashboard 自动刷新显示最新状态
 
 ### Dashboard 按钮
 
 > [!IMPORTANT]
-> **操作前请先复制学习内容到剪贴板。** 系统会读取剪贴板中的文本作为「当前学习正文」嵌入发送给 AI 的 prompt 中。点击按钮前，请先选中你正在学习的内容（笔记、代码、文档等）并 `⌘C` 复制。
+> **Standalone / Alfred 模式**：操作前请先复制学习内容到剪贴板（`⌘C`），系统会读取剪贴板中的文本作为「当前学习正文」嵌入 prompt。
+>
+> **Sandbox 模式**：直接在主持人页面（`/host`）的对话框中输入学习内容，无需使用剪贴板。
 
 | 按钮 | 说明 |
 |---|---|
@@ -258,8 +284,8 @@ lsof -ti :5050 | xargs kill -9 2>/dev/null; python3 dashboard.py
 | ~~Snippet UID 硬编码~~ | ~~`config.py` 中所有 snippet 的 UUID 是写死的~~ | ✅ 已解决：启动时自动扫描 |
 | ~~文件路径硬编码~~ | ~~`BASE` 路径固定~~ | ✅ 已解决：使用 `Path(__file__).parent` |
 | ~~必须安装 Alfred~~ | ~~强依赖 Alfred Powerpack~~ | ✅ 已解决：Standalone 模式 |
-| **仅支持 macOS** | 浏览器自动化依赖 AppleScript | 可通过 Selenium/Playwright 扩展 |
-| **仅支持 Chrome** | AppleScript 中写死 Google Chrome | 可扩展支持其他浏览器 |
+| ~~仅支持 macOS~~ | ~~浏览器自动化依赖 AppleScript~~ | ✅ 已解决：Sandbox 模式（全平台） |
+| ~~仅支持 Chrome~~ | ~~AppleScript 中写死 Google Chrome~~ | ✅ 已解决：Sandbox 模式（内置对话引擎） |
 | ~~AI 对话仅支持 Gemini~~ | ~~浏览器注入目标 URL 硬编码~~ | ✅ 已解决：Dashboard 可自定义 URL（仅 Gemini / AI Studio 稳定） |
 | **助手 API 仅支持 Gemini** | `_roleplay_pipeline` 硬编码 `google-generativeai` | 可抽象为多后端（OpenAI、Anthropic 等） |
 
