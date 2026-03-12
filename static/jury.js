@@ -366,27 +366,24 @@ function showVerdictReport(report, outcome) {
 
 
 
-// ── 复制并发送报告 ──
+// ── 复制报告到剪贴板 ──
 async function copyReport() {
     const report = document.getElementById("verdict-report").textContent;
     const msg = document.getElementById("copy-msg");
     if (!report) { msg.textContent = "报告为空"; return; }
 
-    msg.textContent = "正在发送…";
     try {
-        const r = await fetch("/api/jury/send-report", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({report}),
-        });
-        const d = await r.json();
-        if (d.ok) {
-            msg.textContent = "✓ 已复制到剪贴板并发送到 AI 对话";
-        } else {
-            msg.textContent = "发送失败：" + (d.error || d.msg || "未知错误");
-        }
+        await navigator.clipboard.writeText(report);
+        msg.textContent = "✅ 已复制到剪贴板";
     } catch (e) {
-        msg.textContent = "网络错误：" + e.message;
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = report;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        msg.textContent = "✅ 已复制到剪贴板";
     }
-    setTimeout(() => { msg.textContent = ""; }, 5000);
+    setTimeout(() => { msg.textContent = ""; }, 3000);
 }
