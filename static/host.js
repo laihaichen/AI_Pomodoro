@@ -26,11 +26,32 @@
     let lastHistoryLen = 0;
     let sending = false;
 
+    // ── Markdown rendering config ────────────────────────────────────────
+    if (typeof marked !== "undefined") {
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            highlight: function (code, lang) {
+                if (typeof hljs !== "undefined") {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                }
+                return code;
+            },
+        });
+    }
+
     // ── Chat rendering ─────────────────────────────────────────────────────
     function renderMessage(role, text) {
         const div = document.createElement("div");
         div.className = "host-msg " + role;
-        div.textContent = text;
+        if (role === "model" && typeof marked !== "undefined") {
+            div.innerHTML = marked.parse(text);
+        } else {
+            div.textContent = text;
+        }
         messagesEl.appendChild(div);
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
