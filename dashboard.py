@@ -75,8 +75,6 @@ def generate_launch_prompt(
             label, record = milestone_defs[i]
             lines.append(f"{label} ({record}) 最低完成指标：{task}")
         lines.append("全天将是 " + " + ".join(milestones))
-    lines.append(f"\n今天的模拟人生游戏故事主题：{theme}")
-    lines.append("规则提醒：模拟人生故事从角色1岁开始叙述")
     return "\n".join(lines)
 
 

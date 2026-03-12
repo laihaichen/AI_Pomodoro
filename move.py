@@ -241,7 +241,9 @@ def main() -> int:
     foretold_val = SNIPPETS["foretold"].default if is_first else fate_category(final_fate)
     try:
         if not is_first:
-            write_snippet("interval", f"{interval_minutes:.1f}")
+            _mins = int(interval_minutes)
+            _secs = int((interval_minutes - _mins) * 60)
+            write_snippet("interval", f"{_mins}分{_secs:02d}秒")
         write_snippet("is_time_within_limit",   time_limit_str)
         write_snippet("current_time",           now.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
         write_snippet("random_num",             str(rand_num))

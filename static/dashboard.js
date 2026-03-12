@@ -770,12 +770,13 @@ function refreshData() {
                         : "var(--dim)";
             }
 
-            // interval — color by >15
-            const ivl = parseFloat(d.interval);
-            setVal("val-interval", isNaN(ivl) ? d.interval : ivl.toFixed(1) + " 分钟");
-            const ivlCard = document.querySelector(".card.accent-peach");
-            if (!isNaN(ivl)) {
-                applyClass("val-interval", ivl > 15 ? "val-red" : "val-green");
+            // interval — parse "X分Y秒" format, color by >15分
+            const ivlRaw = d.interval || "0";
+            setVal("val-interval", ivlRaw);
+            const ivlMatch = ivlRaw.match(/(\d+)分/);
+            const ivlMins = ivlMatch ? parseInt(ivlMatch[1]) : parseFloat(ivlRaw);
+            if (!isNaN(ivlMins)) {
+                applyClass("val-interval", ivlMins >= 15 ? "val-red" : "val-green");
             }
 
             // fortune (is_time_within_limit)
