@@ -1683,6 +1683,7 @@ def api_setup_config():
             pass
 
     existing["gemini_api_key"] = api_key
+    existing["app_mode"] = app_mode          # ← 持久化运行模式
     # 设置默认模型（如果没有）
     existing.setdefault("gemini_model", "gemini-2.5-flash-preview-05-20")
     existing.setdefault("gemini_model_lite", "gemini-2.0-flash")

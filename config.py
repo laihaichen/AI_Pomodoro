@@ -12,11 +12,6 @@ import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# ── 运行模式 ─────────────────────────────────────────────────────────────────
-# "alfred"     → 读写 Alfred SQLite（默认，需要安装 Alfred）
-# "standalone" → 读写本地 JSON（无需 Alfred）
-APP_MODE = os.environ.get("APP_MODE", "alfred")
-
 # ── base paths ───────────────────────────────────────────────────────────────
 # PyInstaller 打包后 sys._MEIPASS 指向临时解压目录（只读资源）
 import sys as _sys
@@ -35,6 +30,31 @@ else:
 DATA_DIR = DATA_ROOT / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 LOCAL_SNIPPETS_FILE = DATA_DIR / "snippets_local.json"    # standalone 模式存储
+
+# ── 运行模式 ─────────────────────────────────────────────────────────────────
+# 优先级：环境变量 > api_config.json 中保存的模式 > 默认值
+# "alfred"     → 读写 Alfred SQLite（macOS 默认）
+# "standalone" → 读写本地 JSON + 浏览器自动化（macOS）
+# "sandbox"    → 内置 AI 对话（全平台，打包默认）
+def _resolve_app_mode() -> str:
+    """确定运行模式：env > api_config.json > default。"""
+    env_mode = os.environ.get("APP_MODE")
+    if env_mode:
+        return env_mode
+    # 从 api_config.json 读取 setup 向导保存的模式
+    cfg_path = DATA_ROOT / "api_config.json"
+    if cfg_path.exists():
+        try:
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+            saved = cfg.get("app_mode", "").strip()
+            if saved:
+                return saved
+        except Exception:
+            pass
+    # 打包模式默认 sandbox，开发模式默认 alfred
+    return "sandbox" if FROZEN else "alfred"
+
+APP_MODE = _resolve_app_mode()
 
 _ALFRED = Path.home() / "Library" / "Application Support" / "Alfred"
 DB_FILE      = _ALFRED / "Databases" / "snippets.alfdb"
