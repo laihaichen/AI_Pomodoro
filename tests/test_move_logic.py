@@ -14,7 +14,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from move import fate_category, probability_check, read_health  # noqa: E402
+from actions.move import fate_category, probability_check, read_health  # noqa: E402
 import config as _cfg  # noqa: E402
 
 
@@ -89,7 +89,7 @@ class TestReadHealth:
     @pytest.fixture(autouse=True)
     def isolated_health(self, tmp_path, monkeypatch):
         self.health_file = tmp_path / "health.txt"
-        monkeypatch.setattr("move.HEALTH_FILE", self.health_file)
+        monkeypatch.setattr("actions.move.HEALTH_FILE", self.health_file)
         yield
 
     def test_missing_file_returns_9(self):

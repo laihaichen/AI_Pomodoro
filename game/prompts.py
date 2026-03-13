@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 _BASE = Path(__file__).resolve().parent.parent
-_GAME_PROMPT_FILE = _BASE / "game_prompt.md"
+_GAME_PROMPT_FILE = _BASE / "docs" / "game_prompt.md"
 
 
 def load_system_prompt() -> str:

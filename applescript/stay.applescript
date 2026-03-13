@@ -13,7 +13,7 @@ set projectRoot to do shell script "dirname " & quoted form of scriptPath & " | 
 
 -- 备份 stay prompt（确保无论从 Dashboard 还是 Alfred 快捷键触发都会备份）
 try
-    do shell script "python3 " & quoted form of (projectRoot & "/stay_backup.py")
+    do shell script "python3 " & quoted form of (projectRoot & "/actions/stay_backup.py")
 end try
 
 set targetURLs to paragraphs of (do shell script "python3 " & quoted form of (projectRoot & "/applescript/read_target_urls.py") & " " & quoted form of (projectRoot & "/api_config.json"))

@@ -35,6 +35,7 @@
     // ── State ───────────────────────────────────────────────────────────────
     let lastHistoryLen = 0;
     let sending = false;
+    let hostInitialized = false;
 
     // ── Markdown rendering config ────────────────────────────────────────
     if (typeof marked !== "undefined") {
@@ -98,6 +99,18 @@
     function sendToHost(endpoint) {
         const msg = (textareaEl.value || "").trim();
         if (sending) return;
+
+        // 初始化守卫
+        if (!hostInitialized) {
+            const old = document.querySelector(".init-toast");
+            if (old) old.remove();
+            const toast = document.createElement("div");
+            toast.className = "init-toast";
+            toast.textContent = "⚠️ 请先点击右侧「📝 设置初始化 Prompt」完成初始化";
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+            return;
+        }
 
         if (msg) {
             // 对话框有内容 → 直接发送
@@ -294,6 +307,14 @@
                 setText("host-val-victory", d.is_victory);
                 setText("host-val-interval", d.interval);
                 hostTsRaw = d.curr_ts_raw || null;
+                // 初始化守卫
+                const tc = parseInt(d.total_count) || 0;
+                hostInitialized = tc > 0;
+                if (textareaEl && !hostInitialized) {
+                    textareaEl.placeholder = "⚠️ 请先点击右侧「📝 设置初始化 Prompt」...";
+                } else if (textareaEl && hostInitialized && textareaEl.placeholder.startsWith("⚠️")) {
+                    textareaEl.placeholder = "输入学习内容...";
+                }
             })
             .catch(() => {});
     }

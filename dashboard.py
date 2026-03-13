@@ -988,7 +988,7 @@ def _investigate_violation(complaints_text: str, prompt_md_text: str) -> str:
 def _violation_agent_background(complaints_text: str):
     """后台线程：调用 Gemini API → 写入 complaint_logic.txt → 调用 complaint_manage.py 存档。"""
     try:
-        prompt_md_path = BASE / "prompt.md"
+        prompt_md_path = BASE / "docs" / "prompt.md"
         prompt_md = prompt_md_path.read_text(encoding="utf-8") if prompt_md_path.exists() else ""
 
         result = _investigate_violation(complaints_text, prompt_md)
@@ -1062,7 +1062,7 @@ def api_violation_report():
     source     = data.get("source", "").strip()
     expected   = data.get("expected", "").strip()
     try:
-        prompt_md_path = BASE / "prompt.md"
+        prompt_md_path = BASE / "docs" / "prompt.md"
         prompt_md = prompt_md_path.read_text(encoding="utf-8") \
                     if prompt_md_path.exists() else "（prompt.md 文件不存在）"
 
@@ -1082,10 +1082,9 @@ def api_violation_report():
 
         subprocess.run(["pbcopy"], input=full_prompt.encode("utf-8"),
                        check=True, timeout=5)
-        subprocess.run(
-            ["python3", str(BASE / "increment_violation_count_snippet.py")],
-            check=True, timeout=10,
-        )
+        # violationcount += 1（原 increment_violation_count_snippet.py 内联）
+        cur_viol = int(read_snippet("violationcount") or "0")
+        write_snippet("violationcount", str(cur_viol + 1))
         if APP_MODE == "standalone":
             # standalone: 用 stay_workflow 发送，full_prompt 作为 clipboard 内容
             text = stay_workflow.run(clipboard_override=full_prompt)
@@ -1477,7 +1476,7 @@ def api_reset():
     try:
         import subprocess as _sp
         data = request.get_json(silent=True) or {}
-        cmd = ["python3", str(BASE / "reset.py")]
+        cmd = ["python3", str(BASE / "actions" / "reset.py")]
         if data.get("no_archive"):
             cmd.append("--no-archive")
         result = _sp.run(

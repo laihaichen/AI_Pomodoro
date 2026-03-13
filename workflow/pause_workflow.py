@@ -22,7 +22,7 @@ def run(clipboard_override: str | None = None) -> str:
     return run_workflow(
         template_name="pause",
         pre_action=lambda: subprocess.run(
-            [sys.executable, str(_PROJECT_ROOT / "pause.py")],
+            [sys.executable, str(_PROJECT_ROOT / "actions" / "pause.py")],
             cwd=str(_PROJECT_ROOT),
         ),
         clipboard_override=clipboard_override,

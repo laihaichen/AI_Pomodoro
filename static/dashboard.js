@@ -449,8 +449,31 @@ function _alfredTrigger(btn, endpoint, onSuccess) {
         });
 }
 
-function triggerNextPomodoro(btn) { _alfredTrigger(btn, "/api/next-pomodoro"); }
-function triggerStayPomodoro(btn) { _alfredTrigger(btn, "/api/stay-pomodoro"); }
+// ── 初始化守卫 ──────────────────────────────────────────────────────────────
+let _systemInitialized = false;
+function _showInitToast() {
+    // 移除旧 toast
+    const old = document.querySelector(".init-toast");
+    if (old) old.remove();
+    const toast = document.createElement("div");
+    toast.className = "init-toast";
+    toast.textContent = "⚠️ 请先点击「📝 设置初始化 Prompt」完成初始化";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+function _checkInit(btn) {
+    if (_systemInitialized) return true;
+    _showInitToast();
+    // 高亮初始化按钮
+    const setupBtn = document.getElementById("btn-setup-wizard");
+    if (setupBtn) {
+        setupBtn.classList.add("init-pulse");
+        setTimeout(() => setupBtn.classList.remove("init-pulse"), 4000);
+    }
+    return false;
+}
+function triggerNextPomodoro(btn) { if (_checkInit(btn)) _alfredTrigger(btn, "/api/next-pomodoro"); }
+function triggerStayPomodoro(btn) { if (_checkInit(btn)) _alfredTrigger(btn, "/api/stay-pomodoro"); }
 function triggerPause(btn) { _alfredTrigger(btn, "/api/pause"); }
 function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
 function _claimCardRewardSource() {
@@ -769,6 +792,18 @@ function refreshData() {
                 const tot = parseInt(tc) || 0;
                 tcHeaderEl.style.color = (tot > 0 && cur >= tot)
                     ? "var(--green, #4ade80)" : "var(--dim)";
+            }
+
+            // ── 初始化守卫状态更新 ──────────────────────────────────────────
+            const totalCount = parseInt(d.total_count) || 0;
+            _systemInitialized = totalCount > 0;
+            const setupBtn = document.getElementById("btn-setup-wizard");
+            if (setupBtn) {
+                if (!_systemInitialized) {
+                    setupBtn.classList.add("init-highlight");
+                } else {
+                    setupBtn.classList.remove("init-highlight", "init-pulse");
+                }
             }
 
             // difficulty — now in 阶段性节点 section

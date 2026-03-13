@@ -13,7 +13,7 @@ from pathlib import Path
 _BASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_BASE))
 
-PROMPT_FILE = _BASE / "prompt.md"
+PROMPT_FILE = _BASE / "docs" / "prompt.md"
 HOST_HISTORY_FILE = _BASE / "data" / "host_history.json"
 HOST_DISABLED_FLAG = _BASE / "data" / "host_disabled.flag"
 API_CONFIG_FILE = _BASE / "api_config.json"
