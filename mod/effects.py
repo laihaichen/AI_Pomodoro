@@ -13,10 +13,14 @@ Effect 代表"技能触发后对游戏状态产生什么变化"。
 """
 
 from __future__ import annotations
+import sys
 from pathlib import Path
 from typing import Any
 
-_HEALTH_FILE = Path(__file__).parent.parent / "data" / "health.txt"
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+from config import HEALTH_FILE as _HEALTH_FILE  # noqa: E402
 
 
 class BaseEffect:

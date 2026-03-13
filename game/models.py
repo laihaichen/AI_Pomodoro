@@ -4,7 +4,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
+import sys
 from typing import Optional
+_BASE = Path(__file__).resolve().parent.parent
+if str(_BASE) not in sys.path:
+    sys.path.insert(0, str(_BASE))
+from config import DATA_DIR  # noqa: E402
 
 # 7 fixed tier keys — order matches fate_category() in move.py
 TIER_KEYS = [
@@ -12,7 +17,6 @@ TIER_KEYS = [
     "POS_LOW", "POS_MID", "POS_HIGH",
 ]
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 GAME_STATE_FILE = DATA_DIR / "game_state.json"
 
 

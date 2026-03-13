@@ -33,7 +33,12 @@ if TYPE_CHECKING:
     from mod.conditions import BaseCondition
     from mod.effects import BaseEffect
 
-_DATA = Path(__file__).parent.parent / "data"
+import sys
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+from config import DATA_DIR as _DATA  # noqa: E402
+
 _USED_SKILLS_FILE    = _DATA / "used_skills.json"
 _COOLDOWNS_FILE      = _DATA / "skill_cooldowns.json"
 _EFFECTS_FILE        = _DATA / "skill_effects.json"

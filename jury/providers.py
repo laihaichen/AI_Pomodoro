@@ -8,10 +8,16 @@ API key 统一从 api_config.json 读取。
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
-_CONFIG_FILE = Path(__file__).parent.parent / "api_config.json"
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+from config import DATA_ROOT  # noqa: E402
+
+_CONFIG_FILE = DATA_ROOT / "api_config.json"
 
 # ── 陪审员模型配置 ────────────────────────────────────────────────────────────
 # 索引与 jurors[] 顺序对应：juror[0] → Gemini, juror[1] → Claude, juror[2] → OpenAI

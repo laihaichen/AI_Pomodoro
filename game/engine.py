@@ -9,15 +9,15 @@ from pathlib import Path
 _BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_BASE))
 
-from config import read_snippet, write_snippet, SNIPPETS, THEME_FILE  # noqa: E402
+from config import read_snippet, write_snippet, SNIPPETS, THEME_FILE, DATA_ROOT  # noqa: E402
 from game.models import GameState, TurnRecord, TIER_KEYS, GAME_STATE_FILE  # noqa: E402
 from game.prompts import load_system_prompt, build_user_message  # noqa: E402
 
-STORY_TODAY_FILE = _BASE / "data" / "story_today.txt"
-API_CONFIG_FILE = _BASE / "api_config.json"
+STORY_TODAY_FILE = DATA_ROOT / "data" / "story_today.txt"
+API_CONFIG_FILE = DATA_ROOT / "api_config.json"
 
 # ── generating flag (polled by frontend) ─────────────────────────────────────
-_GENERATING_FLAG_FILE = _BASE / "data" / "story_generating.flag"
+_GENERATING_FLAG_FILE = DATA_ROOT / "data" / "story_generating.flag"
 
 
 def _set_generating(on: bool) -> None:
@@ -32,7 +32,7 @@ def is_generating() -> bool:
 
 
 # ── story disabled flag (user can disable for testing) ───────────────────────
-_STORY_DISABLED_FILE = _BASE / "data" / "story_disabled.flag"
+_STORY_DISABLED_FILE = DATA_ROOT / "data" / "story_disabled.flag"
 
 
 def is_story_disabled() -> bool:

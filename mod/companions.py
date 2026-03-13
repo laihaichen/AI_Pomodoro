@@ -15,12 +15,16 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+import sys
 from typing import Any, TYPE_CHECKING
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+from config import DATA_DIR as _DATA_DIR  # noqa: E402
 
 if TYPE_CHECKING:
     from mod.skills import Skill, TriggerEvent
 
-_DATA_DIR = Path(__file__).parent.parent / "data"
 _ACTIVE_FILE    = _DATA_DIR / "active_companions.json"
 _PENDING_FILE   = _DATA_DIR / "pending_active_skills.json"
 _LOCKED_FILE    = _DATA_DIR / "companions_locked.txt"
