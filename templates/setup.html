@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
+    <title>初始设置 — 番茄钟学习管理系统</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+        }
+
+        .setup-card {
+            width: 100%;
+            max-width: 480px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px 32px;
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .setup-header .emoji {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .setup-header h1 {
+            font-size: 20px;
+            color: var(--bright);
+            margin: 0 0 6px;
+        }
+
+        .setup-header p {
+            font-size: 13px;
+            color: var(--dim);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .form-group .hint {
+            font-size: 11px;
+            color: var(--dim);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+
+        .form-group .hint a {
+            color: var(--accent, #4dabf7);
+            text-decoration: none;
+        }
+
+        .form-group .hint a:hover {
+            text-decoration: underline;
+        }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 40px 10px 12px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrap input:focus {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .input-wrap input.error {
+            border-color: #f87171;
+        }
+
+        .toggle-vis {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--dim);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+        }
+
+        .toggle-vis:hover {
+            color: var(--text);
+        }
+
+        .mode-options {
+            display: flex;
+            gap: 10px;
+        }
+
+        .mode-option {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .mode-option:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .mode-option.selected {
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .mode-option .mode-emoji {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .mode-option .mode-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .mode-option .mode-desc {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .mode-option .mode-badge {
+            display: inline-block;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 6px;
+        }
+
+        .mode-badge.cross-platform {
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+        }
+
+        .mode-badge.macos-only {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--dim);
+        }
+
+        .setup-submit {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: var(--bright);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            margin-top: 8px;
+        }
+
+        .setup-submit:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.35);
+        }
+
+        .setup-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .setup-error {
+            color: #f87171;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 12px;
+            min-height: 18px;
+        }
+
+        .setup-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 11px;
+            color: var(--dim);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="setup-card">
+        <div class="setup-header">
+            <span class="emoji">🍅</span>
+            <h1>番茄钟学习管理系统</h1>
+            <p>首次使用需要完成初始设置</p>
+        </div>
+
+        <form id="setup-form" onsubmit="return submitSetup(event)">
+            <!-- API Key -->
+            <div class="form-group">
+                <label>Gemini API Key</label>
+                <div class="input-wrap">
+                    <input type="password" id="api-key" placeholder="AIzaSy..." autocomplete="off" required>
+                    <button type="button" class="toggle-vis" onclick="toggleKeyVisibility()">👁</button>
+                </div>
+                <div class="hint">
+                    前往 <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>
+                    免费获取 API Key
+                </div>
+            </div>
+
+            <!-- Mode -->
+            <div class="form-group">
+                <label>运行模式</label>
+                <div class="mode-options">
+                    <div class="mode-option selected" onclick="selectMode('sandbox')" id="mode-sandbox">
+                        <span class="mode-emoji">🧪</span>
+                        <span class="mode-label">Sandbox</span>
+                        <span class="mode-desc">内置 AI 对话<br>无需外部浏览器</span>
+                        <span class="mode-badge cross-platform">Windows / Mac</span>
+                    </div>
+                    <div class="mode-option" onclick="selectMode('standalone')" id="mode-standalone">
+                        <span class="mode-emoji">🖥️</span>
+                        <span class="mode-label">Standalone</span>
+                        <span class="mode-desc">自动操作浏览器<br>需 Chrome + macOS</span>
+                        <span class="mode-badge macos-only">仅 macOS</span>
+                    </div>
+                    <div class="mode-option" onclick="selectMode('alfred')" id="mode-alfred">
+                        <span class="mode-emoji">🎩</span>
+                        <span class="mode-label">Alfred</span>
+                        <span class="mode-desc">Alfred Workflow<br>需 Alfred Powerpack</span>
+                        <span class="mode-badge macos-only">仅 macOS</span>
+                    </div>
+                </div>
+                <input type="hidden" id="app-mode" value="sandbox">
+            </div>
+
+            <button type="submit" class="setup-submit" id="submit-btn">🚀 开始使用</button>
+            <div class="setup-error" id="setup-error"></div>
+        </form>
+
+        <div class="setup-footer">
+            Pomodoro AI Learning RPG · v1.0
+        </div>
+    </div>
+
+    <script>
+        function toggleKeyVisibility() {
+            const inp = document.getElementById("api-key");
+            const btn = inp.nextElementSibling;
+            if (inp.type === "password") {
+                inp.type = "text";
+                btn.textContent = "🙈";
+            } else {
+                inp.type = "password";
+                btn.textContent = "👁";
+            }
+        }
+
+        function selectMode(mode) {
+            document.getElementById("app-mode").value = mode;
+            document.querySelectorAll(".mode-option").forEach(el => el.classList.remove("selected"));
+            document.getElementById("mode-" + mode).classList.add("selected");
+        }
+
+        function submitSetup(e) {
+            e.preventDefault();
+            const key = document.getElementById("api-key").value.trim();
+            const mode = document.getElementById("app-mode").value;
+            const errEl = document.getElementById("setup-error");
+            const btn = document.getElementById("submit-btn");
+
+            if (!key) {
+                errEl.textContent = "请输入 API Key";
+                document.getElementById("api-key").classList.add("error");
+                return false;
+            }
+            if (!key.startsWith("AIza")) {
+                errEl.textContent = "API Key 格式不正确（应以 AIza 开头）";
+                document.getElementById("api-key").classList.add("error");
+                return false;
+            }
+
+            document.getElementById("api-key").classList.remove("error");
+            errEl.textContent = "";
+            btn.disabled = true;
+            btn.textContent = "⏳ 配置中...";
+
+            fetch("/api/setup-config", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ api_key: key, app_mode: mode })
+            })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        btn.textContent = "✅ 配置完成，正在跳转...";
+                        setTimeout(() => { window.location.href = "/"; }, 800);
+                    } else {
+                        errEl.textContent = d.error || "配置失败";
+                        btn.disabled = false;
+                        btn.textContent = "🚀 开始使用";
+                    }
+                })
+                .catch(() => {
+                    errEl.textContent = "网络错误";
+                    btn.disabled = false;
+                    btn.textContent = "🚀 开始使用";
+                });
+
+            return false;
+        }
+    </script>
+</body>
+
+</html>

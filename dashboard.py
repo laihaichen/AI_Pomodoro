@@ -10,6 +10,7 @@ Auto-refreshes every 5 seconds via AJAX polling.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -38,7 +39,7 @@ from workflow import (  # noqa: E402
     continue_workflow, stay_workflow,
 )
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request
 
 app = Flask(__name__)
 
@@ -1615,6 +1616,77 @@ def api_story_disable():
 # static/dashboard.js       — 交互逻辑
 
 
+# ── 首次启动向导 ─────────────────────────────────────────────────────────────
+
+def _needs_setup() -> bool:
+    """检测是否需要首次设置（api_config.json 不存在或缺少 key）。"""
+    cfg_path = BASE / "api_config.json"
+    if not cfg_path.exists():
+        return True
+    try:
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        return not cfg.get("gemini_api_key", "").strip()
+    except Exception:
+        return True
+
+
+@app.before_request
+def check_setup():
+    """如果尚未完成初始配置 → 重定向到 /setup。"""
+    if _needs_setup():
+        # 放行 setup 相关路由和静态资源
+        allowed = ("/setup", "/api/setup-config", "/static/")
+        if not any(request.path.startswith(p) for p in allowed):
+            return redirect("/setup")
+
+
+@app.route("/setup")
+def setup_page():
+    """首次启动向导页面。"""
+    if not _needs_setup():
+        return redirect("/")
+    return render_template("setup.html")
+
+
+@app.route("/api/setup-config", methods=["POST"])
+def api_setup_config():
+    """保存首次配置（API Key + 运行模式）。"""
+    global APP_MODE
+    data = request.get_json()
+    api_key = (data.get("api_key") or "").strip()
+    app_mode = data.get("app_mode", "sandbox").strip()
+
+    if not api_key:
+        return jsonify({"ok": False, "error": "API Key 不能为空"}), 400
+
+    cfg_path = BASE / "api_config.json"
+    # 读取现有配置（如果有），保留其他字段
+    existing = {}
+    if cfg_path.exists():
+        try:
+            existing = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    existing["gemini_api_key"] = api_key
+    # 设置默认模型（如果没有）
+    existing.setdefault("gemini_model", "gemini-2.5-flash-preview-05-20")
+    existing.setdefault("gemini_model_lite", "gemini-2.0-flash")
+    existing.setdefault("target_urls", ["gemini.google.com", "aistudio"])
+
+    cfg_path.write_text(
+        json.dumps(existing, ensure_ascii=False, indent=4),
+        encoding="utf-8",
+    )
+
+    # 运行时更新 APP_MODE
+    import config as _cfg_mod
+    _cfg_mod.APP_MODE = app_mode
+    APP_MODE = app_mode
+    os.environ["APP_MODE"] = app_mode
+
+    return jsonify({"ok": True})
+
 
 # ── entry point ──────────────────────────────────────────────────────────────
 
@@ -1624,3 +1696,4 @@ if __name__ == "__main__":
     print(f"   请在浏览器打开 http://localhost:{port}")
     print(f"   按 Ctrl+C 停止\n")
     app.run(host="127.0.0.1", port=port, debug=False)
+
