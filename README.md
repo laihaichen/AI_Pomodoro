@@ -10,20 +10,6 @@
 > - （Sandbox 模式将番茄钟对话框内置，而Standalone模式和Alfred模式一样，使用外部网页端对话框执行番茄钟。）
 > - **Gemini API Key**：Sandbox 模式及 AI 助手功能需要，从 [Google AI Studio](https://aistudio.google.com/apikey) 免费获取
 
-## 📥 下载
-
-| 平台 | 下载 | 说明 |
-|---|---|---|
-| Windows | [📥 下载最新版 (.exe)](https://github.com/laihaichen/AI_Pomodoro/releases/latest/download/PomodoroRPG.exe) | 双击运行，无需安装 |
-
-**首次使用**：
-1. 双击 `PomodoroRPG.exe`
-2. 浏览器自动打开设置页面
-3. 填入 [Gemini API Key](https://aistudio.google.com/apikey)（免费获取）
-4. 选择运行模式 → 点击"开始使用"
-
-> [!NOTE]
-> Windows Defender 可能会弹出安全提示（因为 exe 未签名），点击「更多信息」→「仍要运行」即可。
 
 ---
 
