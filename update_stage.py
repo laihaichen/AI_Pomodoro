@@ -14,10 +14,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from config import HEALTH_FILE, SNIPPETS, read_snippet, write_snippet  # noqa: E402
+from config import HEALTH_FILE, SNIPPETS, DATA_DIR, read_snippet, write_snippet  # noqa: E402
 
-_BASE = Path(__file__).resolve().parent
-MILESTONE_REWARD_FLAG = _BASE / "data" / "milestone_reward.flag"
+MILESTONE_REWARD_FLAG = DATA_DIR / "milestone_reward.flag"
 
 
 def is_milestone_reward_pending() -> bool:

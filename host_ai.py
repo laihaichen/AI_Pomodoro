@@ -13,10 +13,12 @@ from pathlib import Path
 _BASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_BASE))
 
-PROMPT_FILE = _BASE / "docs" / "prompt.md"
-HOST_HISTORY_FILE = _BASE / "data" / "host_history.json"
-HOST_DISABLED_FLAG = _BASE / "data" / "host_disabled.flag"
-API_CONFIG_FILE = _BASE / "api_config.json"
+from config import BASE, DATA_ROOT  # noqa: E402
+
+PROMPT_FILE = BASE / "docs" / "prompt.md"             # 只读资源
+HOST_HISTORY_FILE = DATA_ROOT / "data" / "host_history.json"   # 可写数据
+HOST_DISABLED_FLAG = DATA_ROOT / "data" / "host_disabled.flag" # 可写 flag
+API_CONFIG_FILE = DATA_ROOT / "api_config.json"                # 可写配置
 
 
 # ── disabled flag ────────────────────────────────────────────────────────────
