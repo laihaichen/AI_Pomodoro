@@ -1,5 +1,26 @@
 /* ── story panel styles ─────────────────────────────────────────────────── */
 
+/* ── disabled overlay ───────────────────────────────────────────────── */
+.story-disabled-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+.story-disabled-msg {
+    text-align: center;
+    color: var(--dim);
+    font-size: 16px;
+    line-height: 2;
+}
+.story-disabled-msg strong {
+    color: var(--text);
+    font-size: 18px;
+}
+
 .story-hero {
     text-align: center;
     padding: 28px 16px 18px;
@@ -146,10 +167,19 @@
 
 .card-actions-bar {
     display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 18px;
+    margin-bottom: 12px;
+}
+.card-btn-row {
+    display: flex;
     align-items: center;
     gap: 10px;
-    padding: 0 18px;
-    margin-bottom: 16px;
+}
+.get-card-btn {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 .story-settings-bar {
     display: flex;
@@ -258,3 +288,54 @@
 }
 .timeline-fate.positive { background: rgba(64,192,87,0.15); color: #40c057; }
 .timeline-fate.negative { background: rgba(224,49,49,0.15); color: #e03131; }
+
+/* ── lucky system bar ───────────────────────────────────────────────── */
+
+.story-lucky-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 18px;
+    margin: 0 16px 12px;
+    background: var(--card);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+.lucky-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--dim);
+    white-space: nowrap;
+}
+.lucky-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dim);
+    flex: 1;
+    min-width: 0;
+}
+.lucky-value.triggered {
+    color: #f5c842;
+    font-weight: 700;
+}
+.lucky-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.lucky-btn {
+    padding: 5px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--dim);
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+.lucky-btn:hover {
+    background: var(--border);
+    color: var(--bright);
+}

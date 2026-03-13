@@ -844,8 +844,10 @@ def api_next_pomodoro():
     try:
         if APP_MODE == "sandbox":
             data = request.get_json(silent=True) or {}
-            user_msg = data.get("message", "")
-            text = move_workflow.run(clipboard_override=user_msg)
+            # host 页面传 message；Dashboard 按钮不传 → 读系统剪贴板
+            user_msg = data.get("message")          # None if from Dashboard
+            clip_override = user_msg if user_msg else None
+            text = move_workflow.run(clipboard_override=clip_override)
             backup_prompt(text, prompt_type="move")
             import host_ai
             reply = host_ai.chat(text)
@@ -906,8 +908,9 @@ def api_stay_pomodoro():
             pass
         if APP_MODE == "sandbox":
             data = request.get_json(silent=True) or {}
-            user_msg = data.get("message", "")
-            text = stay_workflow.run(clipboard_override=user_msg)
+            user_msg = data.get("message")          # None if from Dashboard
+            clip_override = user_msg if user_msg else None
+            text = stay_workflow.run(clipboard_override=clip_override)
             backup_prompt(text, prompt_type="stay")
             import host_ai
             reply = host_ai.chat(text)
@@ -1560,6 +1563,12 @@ def api_host_disable():
     import host_ai
     host_ai.set_host_disabled(True)
     return jsonify({"ok": True})
+
+
+@app.route("/api/host/status")
+def api_host_status():
+    import host_ai
+    return jsonify({"disabled": host_ai.is_host_disabled()})
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -12,10 +12,21 @@
 </head>
 
 <body>
+    <!-- Disabled overlay (story shut down) -->
+    <div id="story-disabled-overlay" class="story-disabled-overlay" style="display:none;">
+        <div class="story-disabled-msg">
+            <span style="font-size:48px;">🚫</span><br>
+            <strong>叙事面板已关闭</strong><br>
+            <span style="color:var(--dim);">故事生成已关闭，需要重置所有状态才能重新启用。</span><br><br>
+            <a href="/" style="color:var(--accent);text-decoration:none;font-size:14px;">← 返回 Dashboard</a>
+        </div>
+    </div>
+
     <div class="header">
         <div></div>
         <div style="display:flex;align-items:center;gap:12px;">
             <a href="/" class="setup-btn nav-link-btn">🍅 返回 Dashboard</a>
+            <a href="/host" class="setup-btn nav-link-btn">🎙️ 番茄钟主持人</a>
             <a href="/jury" class="setup-btn nav-link-btn">⚖️ 陪审团</a>
         </div>
     </div>
@@ -63,9 +74,22 @@
 
     <!-- ── 卡牌操作 ── -->
     <div class="card-actions-bar">
-        <button id="btn-use-intervention" class="story-action-btn intervention-btn" onclick="openInterventionModal()" disabled>🎴 使用干预卡</button>
-        <button id="btn-use-destiny" class="story-action-btn destiny-btn" onclick="openDestinyModal()" disabled>🃏 使用宿命卡</button>
-        <span id="pending-destiny-badge" class="pending-badge" style="display:none;"></span>
+        <div class="card-btn-row">
+            <button id="btn-use-intervention" class="story-action-btn intervention-btn" onclick="openInterventionModal()" disabled>🎴 使用干预卡</button>
+            <button id="btn-use-destiny" class="story-action-btn destiny-btn" onclick="openDestinyModal()" disabled>🃏 使用宿命卡</button>
+            <span id="pending-destiny-badge" class="pending-badge" style="display:none;"></span>
+        </div>
+        <div class="card-btn-row">
+            <button id="story-btn-get-icard" onclick="storyGetInterventionCard(this)" class="story-action-btn get-card-btn" title="干预卡 +1" disabled>🎴 获得一张干预卡</button>
+            <button id="story-btn-get-card" onclick="storyGetCard(this)" class="story-action-btn get-card-btn" title="宿命卡 +1" disabled>🃏 获得一张宿命卡</button>
+        </div>
+    </div>
+
+    <!-- ── 幸运系统状态 ── -->
+    <div class="story-lucky-bar">
+        <span class="lucky-label">🎁 是否触发幸运系统</span>
+        <span id="story-lucky-text" class="lucky-value">—</span>
+        <div class="lucky-actions"></div>
     </div>
 
     <!-- ── 叙事设置 ── -->

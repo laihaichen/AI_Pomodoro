@@ -318,6 +318,14 @@ def get_story_state() -> dict:
     countcard = read_snippet("countcard") or "0"
     countinterventioncard = read_snippet("countinterventioncard") or "0"
     fortune = read_snippet("fortune_and_misfortune") or ""
+    is_eligible_for_reward = read_snippet("is_eligible_for_reward") or ""
+
+    # Milestone reward pending?
+    try:
+        from update_stage import is_milestone_reward_pending
+        milestone_reward_pending = is_milestone_reward_pending()
+    except Exception:
+        milestone_reward_pending = False
 
     # Theme from file
     theme = ""
@@ -341,6 +349,8 @@ def get_story_state() -> dict:
         "countinterventioncard": countinterventioncard,
         "pending_destiny": state.pending_destiny,
         "story_disabled": is_story_disabled(),
+        "is_eligible_for_reward": is_eligible_for_reward,
+        "milestone_reward_pending": milestone_reward_pending,
     }
 
 

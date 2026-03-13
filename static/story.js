@@ -49,17 +49,10 @@ function renderPanel(data) {
     document.getElementById("s-intervention").textContent = data.countinterventioncard || "0";
     document.getElementById("s-destiny").textContent = data.countcard || "0";
 
-    // Story disabled state
-    const disableBtn = document.getElementById("btn-disable-story");
-    if (disableBtn) {
-        if (data.story_disabled) {
-            disableBtn.textContent = "🚫 故事生成已关闭";
-            disableBtn.disabled = true;
-            disableBtn.style.opacity = "0.5";
-            disableBtn.style.cursor = "not-allowed";
-            disableBtn.style.borderColor = "rgba(220,50,50,0.4)";
-            disableBtn.style.color = "#f87171";
-        }
+    // Story disabled state → show full-page overlay
+    if (data.story_disabled) {
+        const overlay = document.getElementById("story-disabled-overlay");
+        if (overlay) overlay.style.display = "flex";
     }
 
     // Current story
@@ -149,6 +142,55 @@ function renderPanel(data) {
         badge.style.display = "inline";
     } else {
         badge.style.display = "none";
+    }
+
+    // Lucky system — mirror dashboard.js logic exactly
+    const luckyEl = document.getElementById("story-lucky-text");
+    if (luckyEl) {
+        const reward = data.is_eligible_for_reward || "—";
+        const isTriggered = reward.includes("幸运系统已触发");
+        const canExchange = reward.includes("[SCORE_EXCHANGE_AVAILABLE]");
+        const milestoneClaimable = !!data.milestone_reward_pending;
+
+        // 显示文本（去掉内部标记）
+        const displayText = reward.replace("[SCORE_EXCHANGE_AVAILABLE]", "").trim();
+        luckyEl.textContent = displayText;
+        luckyEl.className = "lucky-value" + (isTriggered ? " triggered" : "");
+
+        // 换分按钮（动态创建/移除）
+        const scoreBtnId = "story-btn-claim-lucky-score";
+        let existingScoreBtn = document.getElementById(scoreBtnId);
+        if (canExchange && !existingScoreBtn) {
+            const btn = document.createElement("button");
+            btn.id = scoreBtnId;
+            btn.className = "lucky-btn";
+            btn.style.color = "#f5c842";
+            btn.style.borderColor = "rgba(245,200,66,0.4)";
+            btn.textContent = "换取5积分";
+            btn.title = "消耗本次幸运奖励换取5积分";
+            btn.onclick = function() { storyClaimScore(this); };
+            const actionsDiv = document.querySelector(".lucky-actions");
+            if (actionsDiv) actionsDiv.appendChild(btn);
+        } else if (!canExchange && existingScoreBtn) {
+            existingScoreBtn.remove();
+        }
+
+        // 获得卡按钮：只有 幸运系统触发 或 阶段性奖励待领取 时可点
+        const scoreClaimBtn = document.getElementById(scoreBtnId);
+        const luckyClaimable = isTriggered && !scoreClaimBtn?.disabled;
+        const cardClaimable = luckyClaimable || milestoneClaimable;
+        const btnCard = document.getElementById("story-btn-get-card");
+        const btnICard = document.getElementById("story-btn-get-icard");
+        if (btnCard) {
+            btnCard.disabled = !cardClaimable;
+            btnCard.style.opacity = cardClaimable ? "1" : "0.35";
+            btnCard.style.cursor = cardClaimable ? "pointer" : "not-allowed";
+        }
+        if (btnICard) {
+            btnICard.disabled = !cardClaimable;
+            btnICard.style.opacity = cardClaimable ? "1" : "0.35";
+            btnICard.style.cursor = cardClaimable ? "pointer" : "not-allowed";
+        }
     }
 
     // Timeline
@@ -301,11 +343,8 @@ function disableStoryGeneration(btn) {
         .then(r => r.json())
         .then(d => {
             if (d.ok) {
-                btn.textContent = "🚫 故事生成已关闭";
-                btn.style.opacity = "0.5";
-                btn.style.cursor = "not-allowed";
-                btn.style.borderColor = "rgba(220,50,50,0.4)";
-                btn.style.color = "#f87171";
+                const overlay = document.getElementById("story-disabled-overlay");
+                if (overlay) overlay.style.display = "flex";
             } else {
                 btn.textContent = "❌ 失败";
                 btn.disabled = false;
@@ -320,4 +359,55 @@ function escHtml(s) {
     const d = document.createElement("div");
     d.textContent = s;
     return d.innerHTML;
+}
+
+// ── Lucky system card buttons ───────────────────────────────────────────────
+
+function _storyCardAction(btn, url) {
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "⏳…";
+    fetch(url, { method: "POST" })
+        .then(r => r.json())
+        .then(d => {
+            btn.textContent = d.ok ? "✅" : "❌";
+            // Try to consume reward source
+            fetch("/api/milestone-reward", { method: "POST" })
+                .then(r => r.json())
+                .then(mr => {
+                    if (!mr.ok) {
+                        fetch("/api/claim-lucky-card", { method: "POST" });
+                    }
+                })
+                .catch(() => {
+                    fetch("/api/claim-lucky-card", { method: "POST" });
+                });
+            setTimeout(() => { btn.textContent = orig; btn.disabled = false; pollStoryState(); }, 1500);
+        })
+        .catch(() => {
+            btn.textContent = "❌";
+            setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+        });
+}
+
+function storyGetCard(btn) {
+    _storyCardAction(btn, "/api/getcard");
+}
+function storyGetInterventionCard(btn) {
+    _storyCardAction(btn, "/api/getinterventioncard");
+}
+function storyClaimScore(btn) {
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "⏳…";
+    fetch("/api/claim-lucky-score", { method: "POST" })
+        .then(r => r.json())
+        .then(d => {
+            btn.textContent = d.ok ? "✅ +5分" : "❌";
+            setTimeout(() => { btn.textContent = orig; btn.disabled = false; pollStoryState(); }, 1500);
+        })
+        .catch(() => {
+            btn.textContent = "❌";
+            setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+        });
 }

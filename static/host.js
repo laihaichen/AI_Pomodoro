@@ -13,6 +13,7 @@
     const btnMove      = document.getElementById("host-btn-move");
     const btnStay      = document.getElementById("host-btn-stay");
     const idleOverlay  = document.getElementById("host-idle-overlay");
+    const disabledOverlay = document.getElementById("host-disabled-overlay");
 
     // ── Idle mode ───────────────────────────────────────────────────────────
     if (!isSandbox) {
@@ -21,6 +22,15 @@
     } else {
         if (idleOverlay) idleOverlay.style.display = "none";
     }
+
+    // ── Check if host is disabled → show shutdown overlay ────────────────
+    function showDisabledOverlay() {
+        if (disabledOverlay) disabledOverlay.style.display = "flex";
+    }
+    fetch("/api/host/status")
+        .then(r => r.json())
+        .then(d => { if (d.disabled) showDisabledOverlay(); })
+        .catch(() => {});
 
     // ── State ───────────────────────────────────────────────────────────────
     let lastHistoryLen = 0;
@@ -87,22 +97,42 @@
     // ── Send logic ─────────────────────────────────────────────────────────
     function sendToHost(endpoint) {
         const msg = (textareaEl.value || "").trim();
-        if (!msg || sending) return;
+        if (sending) return;
 
+        if (msg) {
+            // 对话框有内容 → 直接发送
+            _doSend(endpoint, msg, { message: msg });
+        } else {
+            // 对话框为空 → 读剪贴板后发送
+            navigator.clipboard.readText()
+                .then(clip => {
+                    const clipText = (clip || "").trim();
+                    const displayMsg = clipText
+                        ? "📋 " + clipText
+                        : "📋 (剪贴板为空)";
+                    _doSend(endpoint, displayMsg, {});
+                })
+                .catch(() => {
+                    // 剪贴板权限被拒 → 仍然发送，后端用 pbpaste 读
+                    _doSend(endpoint, "📋 (读取剪贴板中…)", {});
+                });
+        }
+    }
+
+    function _doSend(endpoint, displayMsg, body) {
         sending = true;
         btnMove.disabled = true;
         btnStay.disabled = true;
         typingEl.classList.add("active");
 
-        // Show user message immediately
-        renderMessage("user", msg);
+        renderMessage("user", displayMsg);
         textareaEl.value = "";
         textareaEl.style.height = "42px";
 
         fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: msg }),
+            body: JSON.stringify(body),
         })
             .then(r => r.json())
             .then(data => {
@@ -191,7 +221,22 @@
     if (btnDisable) {
         btnDisable.addEventListener("click", function () {
             if (!confirm("确定关闭主持人回应？关闭后需要重置才能恢复。")) return;
-            hostControlAction("/api/host/disable", this);
+            btnDisable.disabled = true;
+            btnDisable.textContent = "⏳ ...";
+            fetch("/api/host/disable", { method: "POST" })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok) {
+                        showDisabledOverlay();
+                    } else {
+                        btnDisable.textContent = "❌ " + (data.error || "失败");
+                        setTimeout(() => { btnDisable.textContent = "🚫 关闭主持人回应"; btnDisable.disabled = false; }, 2000);
+                    }
+                })
+                .catch(() => {
+                    btnDisable.textContent = "❌ 网络错误";
+                    setTimeout(() => { btnDisable.textContent = "🚫 关闭主持人回应"; btnDisable.disabled = false; }, 2000);
+                });
         });
     }
 
