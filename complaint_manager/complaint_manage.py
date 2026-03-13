@@ -14,7 +14,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-HISTORY_FILE = Path(__file__).parent / "complaints_history.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from config import DATA_ROOT  # noqa: E402
+
+HISTORY_FILE = DATA_ROOT / "complaint_manager" / "complaints_history.json"
 
 
 def load_history() -> list[dict]:

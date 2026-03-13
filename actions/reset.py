@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
-from config import DATA_DIR, BASE, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, PROMPT_BACKUP_FILE, JURY_STATE_FILE, JURY_QUESTION_FILE, JURY_ANSWER_FILE, write_snippet  # noqa: E402
+from config import DATA_DIR, DATA_ROOT, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, PROMPT_BACKUP_FILE, JURY_STATE_FILE, JURY_QUESTION_FILE, JURY_ANSWER_FILE, write_snippet  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────
 DATA_FILES_TO_CLEAR = [
@@ -187,7 +187,7 @@ def main() -> int:
                 except (KeyError, IndexError, TypeError):
                     from datetime import date
                     date_str = date.today().isoformat()
-                archive_dir = BASE / "saved" / "prompt_backup"
+                archive_dir = DATA_ROOT / "saved" / "prompt_backup"
                 archive_dir.mkdir(parents=True, exist_ok=True)
                 archive_path = archive_dir / f"{date_str}.json"
                 if archive_path.exists():
@@ -210,14 +210,14 @@ def main() -> int:
     except Exception as exc:
         print(f"  ✗ prompt_backup.json 归档/清空失败：{exc}", file=sys.stderr)
     # Archive & clear story_today.txt
-    story_file = BASE / "data" / "story_today.txt"
+    story_file = DATA_ROOT / "data" / "story_today.txt"
     try:
         if not no_archive:
             story_text = story_file.read_text(encoding="utf-8").strip()
             if story_text:
                 from datetime import date as _date
                 date_str = _date.today().isoformat()
-                story_dir = BASE / "saved" / "stories"
+                story_dir = DATA_ROOT / "saved" / "stories"
                 story_dir.mkdir(parents=True, exist_ok=True)
                 story_path = story_dir / f"{date_str}.txt"
                 if story_path.exists():
@@ -243,7 +243,7 @@ def main() -> int:
             if history:
                 from datetime import date as _date2
                 date_str = _date2.today().isoformat()
-                gs_dir = BASE / "saved" / "stories"
+                gs_dir = DATA_ROOT / "saved" / "stories"
                 gs_dir.mkdir(parents=True, exist_ok=True)
                 gs_path = gs_dir / f"{date_str}_game_state.json"
                 gs_path.write_text(

@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-import subprocess
+
 import sys
 from pathlib import Path
 
@@ -19,12 +19,10 @@ from workflow.engine import run_workflow  # noqa: E402
 
 def run(clipboard_override: str | None = None) -> str:
     """执行 pause workflow，返回展开后的完整 prompt。"""
+    from actions.pause import main as _pause_main
     return run_workflow(
         template_name="pause",
-        pre_action=lambda: subprocess.run(
-            [sys.executable, str(_PROJECT_ROOT / "actions" / "pause.py")],
-            cwd=str(_PROJECT_ROOT),
-        ),
+        pre_action=lambda: _pause_main(),
         clipboard_override=clipboard_override,
     )
 

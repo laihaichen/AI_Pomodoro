@@ -904,13 +904,14 @@ def _run_story_turn_bg(pre_move_count: str):
 @app.route("/api/stay-pomodoro", methods=["POST"])
 def api_stay_pomodoro():
     try:
-        # 刷新「当前学习正文」（与 move.py 逻辑一致）
-        try:
-            clip = subprocess.run(["pbpaste"], capture_output=True, text=True, timeout=3).stdout.strip()
-            if clip:
-                write_snippet("current_clipboard", clip[:8000])
-        except Exception:
-            pass
+        # 刷新「当前学习正文」— 仅非 sandbox 模式使用系统剪贴板
+        if APP_MODE != "sandbox":
+            try:
+                clip = subprocess.run(["pbpaste"], capture_output=True, text=True, timeout=3).stdout.strip()
+                if clip:
+                    write_snippet("current_clipboard", clip[:8000])
+            except Exception:
+                pass
         if APP_MODE == "sandbox":
             data = request.get_json(silent=True) or {}
             user_msg = data.get("message")          # None if from Dashboard
@@ -1007,12 +1008,16 @@ def _violation_agent_background(complaints_text: str):
         rules_summary = result.split("【结论】")[0].split("【违反规则条文】")[-1].strip() \
             if "【违反规则条文】" in result else "见 complaint_logic.txt"
 
-        subprocess.run(
-            ["python3", str(BASE / "complaint_manager" / "complaint_manage.py"),
-             "--violation_behavior", behavior_summary[:500],
-             "--violated_rules", rules_summary[:500]],
-            check=True, timeout=15,
-        )
+        from complaint_manager.complaint_manage import load_history, save_history
+        from datetime import datetime as _dt
+        record = {
+            "timestamp": _dt.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "violation_behavior": behavior_summary[:500],
+            "violated_rules": rules_summary[:500],
+        }
+        history = load_history()
+        history.append(record)
+        save_history(history)
     except Exception as exc:
         # 将错误写入 complaint_logic.txt 以便前端轮询发现
         COMPLAINT_LOGIC.write_text(f"❌ 调查失败：{exc}", encoding="utf-8")
@@ -1480,18 +1485,22 @@ def api_claim_milestone_card():
 def api_reset():
     """Run reset.py to wipe all game state back to Day-0 defaults."""
     try:
-        import subprocess as _sp
         data = request.get_json(silent=True) or {}
-        cmd = ["python3", str(BASE / "actions" / "reset.py")]
+        # 直接调用 reset.main() — 打包后 subprocess 不可用
+        from actions.reset import main as _reset_main
+        import io, contextlib
+        # 传递 --no-archive 参数
+        _saved_argv = sys.argv[:]
         if data.get("no_archive"):
-            cmd.append("--no-archive")
-        result = _sp.run(
-            cmd,
-            capture_output=True, text=True, timeout=15
-        )
-        output = result.stdout + result.stderr
-        ok = result.returncode == 0
-        return jsonify({"ok": ok, "output": output})
+            sys.argv = ["reset.py", "--no-archive"]
+        else:
+            sys.argv = ["reset.py"]
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            rc = _reset_main()
+        sys.argv = _saved_argv
+        output = buf.getvalue()
+        return jsonify({"ok": rc == 0, "output": output})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
