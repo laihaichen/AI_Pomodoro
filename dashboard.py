@@ -1309,6 +1309,27 @@ def api_setup():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/send-init", methods=["POST"])
+def api_send_init():
+    """Sandbox 模式：将初始化 prompt 发送给内置主持人。"""
+    data = request.get_json(silent=True) or {}
+    message = (data.get("message") or "").strip()
+    if not message:
+        return jsonify({"ok": False, "error": "消息为空"}), 400
+    try:
+        if APP_MODE == "sandbox":
+            import host_ai
+            reply = host_ai.chat(message)
+            return jsonify({"ok": True, "reply": reply})
+        else:
+            # 非 sandbox 走 stay 流程
+            text = stay_workflow.run(clipboard_override=message)
+            backup_prompt(text, prompt_type="init")
+            return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/health-adjust", methods=["POST"])
 def api_health_adjust():
     """Decrease (or increase) health by delta, clamped to [0, 10]."""
