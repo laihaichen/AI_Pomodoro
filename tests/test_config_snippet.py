@@ -102,21 +102,21 @@ class TestCorruptionRecovery:
 
 class TestAtomicWrite:
     def test_write_uses_rename_not_direct_write(self, isolated_snippets, monkeypatch):
-        """验证 _write_local 使用 tmp → rename 模式。"""
-        rename_calls = []
-        original_rename = Path.rename
+        """验证 _write_local 使用 tmp → replace 模式。"""
+        replace_calls = []
+        original_replace = Path.replace
 
-        def spy_rename(self, target):
-            rename_calls.append((str(self), str(target)))
-            return original_rename(self, target)
+        def spy_replace(self, target):
+            replace_calls.append((str(self), str(target)))
+            return original_replace(self, target)
 
-        monkeypatch.setattr(Path, "rename", spy_rename)
+        monkeypatch.setattr(Path, "replace", spy_replace)
 
         _write_local("total_score", "42")
 
-        # 应该有一次 rename 调用，且源文件是 .tmp
-        assert len(rename_calls) == 1
-        src, dst = rename_calls[0]
+        # 应该有一次 replace 调用，且源文件是 .tmp
+        assert len(replace_calls) == 1
+        src, dst = replace_calls[0]
         assert src.endswith(".tmp")
         assert dst == str(isolated_snippets)
 

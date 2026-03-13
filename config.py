@@ -272,7 +272,7 @@ def _write_local(key: str, value: str) -> None:
     tmp.write_text(
         json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    tmp.rename(LOCAL_SNIPPETS_FILE)  # POSIX 原子操作
+    tmp.replace(LOCAL_SNIPPETS_FILE)  # replace() 跨平台安全（Windows rename 不允许覆盖）
 
 
 def _read_alfred(key: str) -> str:
