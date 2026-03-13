@@ -26,7 +26,7 @@ from config import (  # noqa: E402
     DB_FILE, SNIPPETS, MILESTONE_GOALS_FILE,
     HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE,
     BOSSFIGHT_ACTIVE_TEXT,
-    BASE,
+    BASE, DATA_ROOT, FROZEN,
     DATA_DIR,
     APP_MODE,
     JURY_STATE_FILE, JURY_QUESTION_FILE, JURY_ANSWER_FILE, JURY_SIZE,
@@ -41,7 +41,11 @@ from workflow import (  # noqa: E402
 
 from flask import Flask, jsonify, redirect, render_template, request
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=str(BASE / "templates"),
+    static_folder=str(BASE / "static"),
+)
 
 # ── Boss战触发文本（模块级常量，供 collect_state 与 api_setup 共享）────────────
 _BOSSFIGHT_ACTIVE_TEXT = BOSSFIGHT_ACTIVE_TEXT  # re-exported from config
@@ -934,10 +938,11 @@ def api_stay_pomodoro():
 
 
 
-AGENT_WORKSPACE    = BASE / "Agent_Workspace"
+AGENT_WORKSPACE    = DATA_ROOT / "Agent_Workspace"
+AGENT_WORKSPACE.mkdir(parents=True, exist_ok=True)
 COMPLAINTS_FILE    = AGENT_WORKSPACE / "complaints.txt"
 COMPLAINT_LOGIC    = AGENT_WORKSPACE / "complaint_logic.txt"
-API_CONFIG_FILE    = BASE / "api_config.json"
+API_CONFIG_FILE    = DATA_ROOT / "api_config.json"
 
 
 def _load_api_config() -> dict:
@@ -1620,7 +1625,7 @@ def api_story_disable():
 
 def _needs_setup() -> bool:
     """检测是否需要首次设置（api_config.json 不存在或缺少 key）。"""
-    cfg_path = BASE / "api_config.json"
+    cfg_path = DATA_ROOT / "api_config.json"
     if not cfg_path.exists():
         return True
     try:
@@ -1659,7 +1664,7 @@ def api_setup_config():
     if not api_key:
         return jsonify({"ok": False, "error": "API Key 不能为空"}), 400
 
-    cfg_path = BASE / "api_config.json"
+    cfg_path = DATA_ROOT / "api_config.json"
     # 读取现有配置（如果有），保留其他字段
     existing = {}
     if cfg_path.exists():
@@ -1695,5 +1700,9 @@ if __name__ == "__main__":
     print(f"🍅 Dashboard 启动中...")
     print(f"   请在浏览器打开 http://localhost:{port}")
     print(f"   按 Ctrl+C 停止\n")
+    # 打包模式下自动打开浏览器
+    if FROZEN:
+        import webbrowser
+        threading.Timer(1.0, lambda: webbrowser.open(f"http://localhost:{port}")).start()
     app.run(host="127.0.0.1", port=port, debug=False)
 

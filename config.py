@@ -18,8 +18,22 @@ from pathlib import Path
 APP_MODE = os.environ.get("APP_MODE", "alfred")
 
 # ── base paths ───────────────────────────────────────────────────────────────
-BASE     = Path(__file__).resolve().parent
-DATA_DIR = BASE / "data"
+# PyInstaller 打包后 sys._MEIPASS 指向临时解压目录（只读资源）
+import sys as _sys
+FROZEN = getattr(_sys, "frozen", False)
+
+if FROZEN:
+    # 打包模式：资源在 _MEIPASS，可写数据在用户目录
+    BASE = Path(_sys._MEIPASS)
+    DATA_ROOT = Path.home() / ".pomodoro_rpg"
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
+else:
+    # 开发模式：一切在项目目录
+    BASE = Path(__file__).resolve().parent
+    DATA_ROOT = BASE
+
+DATA_DIR = DATA_ROOT / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 LOCAL_SNIPPETS_FILE = DATA_DIR / "snippets_local.json"    # standalone 模式存储
 
 _ALFRED = Path.home() / "Library" / "Application Support" / "Alfred"
@@ -27,7 +41,7 @@ DB_FILE      = _ALFRED / "Databases" / "snippets.alfdb"
 SNIPPETS_DIR = _ALFRED / "Alfred.alfredpreferences" / "snippets" / "学习时间追踪系统"
 
 # ── 目标 AI 对话 URL（从 api_config.json 读取，两种模式共用）────────────────
-API_CONFIG_FILE = BASE / "api_config.json"
+API_CONFIG_FILE = DATA_ROOT / "api_config.json"
 
 def _load_target_urls() -> list[str]:
     """从 api_config.json 读取 target_urls，不存在则默认 gemini.google.com。"""
