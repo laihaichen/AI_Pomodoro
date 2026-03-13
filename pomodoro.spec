@@ -55,7 +55,7 @@ a = Analysis(
         "mod.skills",
         "complaint_manager.complaint_manage",
     ],
-    hookspath=[],
+    hookspath=[str(ROOT / "hooks")],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
