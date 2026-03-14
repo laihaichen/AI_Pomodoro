@@ -342,6 +342,10 @@ async function showVerdict(data) {
 
     showVerdictReport(data.report, data.outcome);
     loadJuryStatus();
+
+    // 清除提问和回答文本框，为下次提交做准备
+    document.getElementById("jury-question").value = "";
+    document.getElementById("jury-answer").value = "";
 }
 
 function showVerdictReport(report, outcome) {
