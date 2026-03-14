@@ -161,10 +161,6 @@ def collect_state() -> dict:
             state.setdefault(key, "DB error")
         state["db_error"] = str(exc)
 
-    # ── 阶段性奖励待领取标记 ─────────────────────────────────────────────────
-    from update_stage import is_milestone_reward_pending
-    state["milestone_reward_pending"] = is_milestone_reward_pending()
-
     # ── 幸运充能池 ─────────────────────────────────────────────────────────
     from config import read_lucky_charges
     state["lucky_charges"] = read_lucky_charges()
@@ -1186,17 +1182,10 @@ def api_getinterventioncard():
 
 
 def _consume_card_reward_source() -> str | None:
-    """尝试消耗一个卡牌奖励源。返回来源名称，无可用源返回 None。
+    """尝试消耗一个卡牌奖励源（幸运充能池）。返回来源名称，无可用源返回 None。
 
-    优先级：阶段性奖励 > 幸运充能池
+    阶段性奖励和幸运事件都统一进入充能池，此函数只需 charges -= 1。
     """
-    # 1. 阶段性奖励
-    from update_stage import is_milestone_reward_pending, set_milestone_reward
-    if is_milestone_reward_pending():
-        set_milestone_reward(False)
-        return "milestone"
-
-    # 2. 幸运充能池
     from config import read_lucky_charges, write_lucky_charges
     charges = read_lucky_charges()
     if charges > 0:

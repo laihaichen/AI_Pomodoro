@@ -948,20 +948,18 @@ function refreshData() {
                     existingBtn.remove();
                 }
 
-                // 获得卡按钮：幸运充能 > 0 OR 阶段性奖励待领取时可点
+                // 获得卡按钮：幸运充能 > 0 时可点
                 const btnCard = document.getElementById("btn-get-card");
                 const btnICard = document.getElementById("btn-get-icard");
-                const milestoneClaimable = !!d.milestone_reward_pending;
-                const cardClaimable = hasCharges || milestoneClaimable;
                 if (btnCard) {
-                    btnCard.disabled = !cardClaimable;
-                    btnCard.style.opacity = cardClaimable ? "1" : "0.35";
-                    btnCard.style.cursor = cardClaimable ? "pointer" : "not-allowed";
+                    btnCard.disabled = !hasCharges;
+                    btnCard.style.opacity = hasCharges ? "1" : "0.35";
+                    btnCard.style.cursor = hasCharges ? "pointer" : "not-allowed";
                 }
                 if (btnICard) {
-                    btnICard.disabled = !cardClaimable;
-                    btnICard.style.opacity = cardClaimable ? "1" : "0.35";
-                    btnICard.style.cursor = cardClaimable ? "pointer" : "not-allowed";
+                    btnICard.disabled = !hasCharges;
+                    btnICard.style.opacity = hasCharges ? "1" : "0.35";
+                    btnICard.style.cursor = hasCharges ? "pointer" : "not-allowed";
                 }
             }
 

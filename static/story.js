@@ -150,7 +150,6 @@ function renderPanel(data) {
         const charges = data.lucky_charges || 0;
         const hasCharges = charges > 0;
         const canExchange = (data.is_eligible_for_reward || "").includes("[SCORE_EXCHANGE_AVAILABLE]");
-        const milestoneClaimable = !!data.milestone_reward_pending;
 
         // 显示文本
         const displayText = hasCharges ? `幸运充能 ×${charges}` : "当前无充能";
@@ -173,8 +172,8 @@ function renderPanel(data) {
             existingScoreBtn.remove();
         }
 
-        // 获得卡按钮：幸运充能 > 0 或 阶段性奖励待领取 时可点
-        const cardClaimable = hasCharges || milestoneClaimable;
+        // 获得卡按钮：幸运充能 > 0 时可点
+        const cardClaimable = hasCharges;
         const btnCard = document.getElementById("story-btn-get-card");
         const btnICard = document.getElementById("story-btn-get-icard");
         if (btnCard) {

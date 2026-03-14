@@ -104,7 +104,9 @@ def check_and_set_milestone() -> None:
     indicator = read_progress_indicator()
     if is_progress_reached(indicator):
         _write_stage(STAGE_MILESTONE_SUCCESS)
-        set_milestone_reward(True)  # 标记阶段性奖励待领取
+        # 阶段性奖励 → 充能池 +1
+        from config import read_lucky_charges, write_lucky_charges
+        write_lucky_charges(read_lucky_charges() + 1)
         # 积分奖励 +200
         try:
             current = int(read_snippet("total_score") or "0")
