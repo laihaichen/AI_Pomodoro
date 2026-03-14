@@ -490,25 +490,11 @@ function triggerNextPomodoro(btn) { if (_checkInit(btn)) _alfredTrigger(btn, "/a
 function triggerStayPomodoro(btn) { if (_checkInit(btn)) _alfredTrigger(btn, "/api/stay-pomodoro"); }
 function triggerPause(btn) { _alfredTrigger(btn, "/api/pause"); }
 function triggerContinue(btn) { _alfredTrigger(btn, "/api/continue"); }
-function _claimCardRewardSource() {
-    // 消耗奖励源：阶段性奖励优先，其次幸运系统
-    fetch("/api/claim-milestone-card", { method: "POST" })
-        .then(r => r.json())
-        .then(res => {
-            if (!res.ok) {
-                // 阶段性奖励不可用，尝试消耗幸运系统
-                fetch("/api/claim-lucky-card", { method: "POST" });
-            }
-        })
-        .catch(() => {
-            fetch("/api/claim-lucky-card", { method: "POST" });
-        });
-}
 function triggerGetCard(btn) {
-    _alfredTrigger(btn, "/api/getcard", _claimCardRewardSource);
+    _alfredTrigger(btn, "/api/getcard");
 }
 function triggerGetInterventionCard(btn) {
-    _alfredTrigger(btn, "/api/getinterventioncard", _claimCardRewardSource);
+    _alfredTrigger(btn, "/api/getinterventioncard");
 }
 
 function triggerReset(btn) {

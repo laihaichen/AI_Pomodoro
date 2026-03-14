@@ -1156,23 +1156,50 @@ def api_continue():
 
 @app.route("/api/getcard", methods=["POST"])
 def api_getcard():
-    """宿命卡 +1：只增加 snippet 计数器。"""
+    """宿命卡 +1：必须有可消耗的奖励源（阶段性奖励 > 幸运系统）。"""
     try:
+        # 检查并消耗奖励源
+        source = _consume_card_reward_source()
+        if not source:
+            return jsonify({"ok": False, "error": "没有可用的奖励源（需阶段性奖励或幸运系统触发）"}), 400
         current = int(read_snippet("countcard") or "0")
         write_snippet("countcard", str(current + 1))
-        return jsonify({"ok": True})
+        return jsonify({"ok": True, "source": source})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 @app.route("/api/getinterventioncard", methods=["POST"])
 def api_getinterventioncard():
-    """干预卡 +1：只增加 snippet 计数器。"""
+    """干预卡 +1：必须有可消耗的奖励源（阶段性奖励 > 幸运系统）。"""
     try:
+        source = _consume_card_reward_source()
+        if not source:
+            return jsonify({"ok": False, "error": "没有可用的奖励源（需阶段性奖励或幸运系统触发）"}), 400
         current = int(read_snippet("countinterventioncard") or "0")
         write_snippet("countinterventioncard", str(current + 1))
-        return jsonify({"ok": True})
+        return jsonify({"ok": True, "source": source})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+def _consume_card_reward_source() -> str | None:
+    """尝试消耗一个卡牌奖励源。返回来源名称，无可用源返回 None。
+
+    优先级：阶段性奖励 > 幸运系统
+    """
+    # 1. 阶段性奖励
+    from update_stage import is_milestone_reward_pending, set_milestone_reward
+    if is_milestone_reward_pending():
+        set_milestone_reward(False)
+        return "milestone"
+
+    # 2. 幸运系统
+    cur = read_snippet("is_eligible_for_reward")
+    if "幸运系统已触发" in cur:
+        write_snippet("is_eligible_for_reward", SNIPPETS["is_eligible_for_reward"].default)
+        return "lucky"
+
+    return None
 
 
 
