@@ -371,17 +371,6 @@ function _storyCardAction(btn, url) {
         .then(r => r.json())
         .then(d => {
             btn.textContent = d.ok ? "✅" : "❌";
-            // Try to consume reward source
-            fetch("/api/milestone-reward", { method: "POST" })
-                .then(r => r.json())
-                .then(mr => {
-                    if (!mr.ok) {
-                        fetch("/api/claim-lucky-card", { method: "POST" });
-                    }
-                })
-                .catch(() => {
-                    fetch("/api/claim-lucky-card", { method: "POST" });
-                });
             setTimeout(() => { btn.textContent = orig; btn.disabled = false; pollStoryState(); }, 1500);
         })
         .catch(() => {
