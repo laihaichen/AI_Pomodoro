@@ -1612,9 +1612,29 @@ def api_host_status():
 
 @app.route("/api/story/state")
 def api_story_state():
-    """Return current story state for the narrative panel."""
-    from game.engine import get_story_state
-    return jsonify(get_story_state())
+    """Return current story state for the narrative panel.
+    
+    自动触发：如果检测到有新 move（prompt_count > 已有故事数）且故事引擎未运行，
+    自动在后台触发叙事生成。这样 Alfred 快捷键绕过 dashboard 的 move 也能生成故事。
+    """
+    from game.engine import get_story_state, is_generating
+    state = get_story_state()
+
+    # ── 自动触发叙事 ─────────────────────────────────────────────────────
+    current_age = int(state.get("age") or "0")
+    history_len = len(state.get("history") or [])
+    story_disabled = state.get("story_disabled", False)
+    generating = state.get("generating", False)
+
+    if current_age > 0 and current_age > history_len and not generating and not story_disabled:
+        # 有新 move 但没有对应故事 → 自动触发
+        threading.Thread(
+            target=_run_story_turn_bg,
+            args=(str(current_age - 1),),  # pre_move_count = 上一次的值
+            daemon=True,
+        ).start()
+
+    return jsonify(state)
 
 
 @app.route("/api/story/rerun", methods=["POST"])

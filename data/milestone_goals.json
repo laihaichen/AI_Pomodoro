@@ -8,8 +8,8 @@
     "jury": false
   },
   "hour9": {
-    "denom": 3,
-    "jury": true
+    "denom": 1,
+    "jury": false
   },
   "hour12": {
     "denom": 1,
