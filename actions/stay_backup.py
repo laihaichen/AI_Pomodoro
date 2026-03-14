@@ -7,7 +7,7 @@ stay 的 prompt 都会被写入 prompt_backup.json。
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config import backup_prompt
 from workflow.engine import load_template, expand_template

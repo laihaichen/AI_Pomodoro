@@ -30,7 +30,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent))
 from config import DATA_DIR, DATA_ROOT, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, PROMPT_BACKUP_FILE, JURY_STATE_FILE, JURY_QUESTION_FILE, JURY_ANSWER_FILE, write_snippet  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────

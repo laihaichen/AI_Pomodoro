@@ -1,4 +1,4 @@
-# 运行
+# Alfred 模式 运行
 lsof -ti :5050 | xargs kill -9 && APP_MODE=alfred python3 dashboard.py
 
 # 以non-Alfred模式运行
