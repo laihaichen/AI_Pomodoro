@@ -144,18 +144,18 @@ function renderPanel(data) {
         badge.style.display = "none";
     }
 
-    // Lucky system — mirror dashboard.js logic exactly
+    // 幸运充能池
     const luckyEl = document.getElementById("story-lucky-text");
     if (luckyEl) {
-        const reward = data.is_eligible_for_reward || "—";
-        const isTriggered = reward.includes("幸运系统已触发");
-        const canExchange = reward.includes("[SCORE_EXCHANGE_AVAILABLE]");
+        const charges = data.lucky_charges || 0;
+        const hasCharges = charges > 0;
+        const canExchange = (data.is_eligible_for_reward || "").includes("[SCORE_EXCHANGE_AVAILABLE]");
         const milestoneClaimable = !!data.milestone_reward_pending;
 
-        // 显示文本（去掉内部标记）
-        const displayText = reward.replace("[SCORE_EXCHANGE_AVAILABLE]", "").trim();
+        // 显示文本
+        const displayText = hasCharges ? `幸运充能 ×${charges}` : "当前无充能";
         luckyEl.textContent = displayText;
-        luckyEl.className = "lucky-value" + (isTriggered ? " triggered" : "");
+        luckyEl.className = "lucky-value" + (hasCharges ? " triggered" : "");
 
         // 换分按钮（动态创建/移除）
         const scoreBtnId = "story-btn-claim-lucky-score";
@@ -164,10 +164,8 @@ function renderPanel(data) {
             const btn = document.createElement("button");
             btn.id = scoreBtnId;
             btn.className = "lucky-btn";
-            btn.style.color = "#f5c842";
-            btn.style.borderColor = "rgba(245,200,66,0.4)";
             btn.textContent = "换取5积分";
-            btn.title = "消耗本次幸运奖励换取5积分";
+            btn.title = "消耗 1 个幸运充能换取5积分";
             btn.onclick = function() { storyClaimScore(this); };
             const actionsDiv = document.querySelector(".lucky-actions");
             if (actionsDiv) actionsDiv.appendChild(btn);
@@ -175,10 +173,8 @@ function renderPanel(data) {
             existingScoreBtn.remove();
         }
 
-        // 获得卡按钮：只有 幸运系统触发 或 阶段性奖励待领取 时可点
-        const scoreClaimBtn = document.getElementById(scoreBtnId);
-        const luckyClaimable = isTriggered && !scoreClaimBtn?.disabled;
-        const cardClaimable = luckyClaimable || milestoneClaimable;
+        // 获得卡按钮：幸运充能 > 0 或 阶段性奖励待领取 时可点
+        const cardClaimable = hasCharges || milestoneClaimable;
         const btnCard = document.getElementById("story-btn-get-card");
         const btnICard = document.getElementById("story-btn-get-icard");
         if (btnCard) {

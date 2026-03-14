@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent))
-from config import DATA_DIR, DATA_ROOT, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, BOSS_DEFEATED_FILE, THEME_FILE, PROMPT_BACKUP_FILE, JURY_STATE_FILE, JURY_QUESTION_FILE, JURY_ANSWER_FILE, write_snippet  # noqa: E402
+from config import DATA_DIR, DATA_ROOT, SNIPPETS, MILESTONE_GOALS_FILE, HEALTH_FILE, FINAL_FATE_FILE, LUCKY_CHARGES_FILE, BOSS_DEFEATED_FILE, THEME_FILE, PROMPT_BACKUP_FILE, JURY_STATE_FILE, JURY_QUESTION_FILE, JURY_ANSWER_FILE, write_snippet  # noqa: E402
 
 # ── data files to clear on reset ─────────────────────────────────────────────
 DATA_FILES_TO_CLEAR = [
@@ -145,6 +145,13 @@ def main() -> int:
         print("  ✓ final_fate.txt → cleared")
     except Exception as exc:
         print(f"  ✗ final_fate.txt 清空失败：{exc}", file=sys.stderr)
+
+    # Clear lucky_charges.txt
+    try:
+        LUCKY_CHARGES_FILE.unlink(missing_ok=True)
+        print("  ✓ lucky_charges.txt → cleared")
+    except Exception as exc:
+        print(f"  ✗ lucky_charges.txt 清空失败：{exc}", file=sys.stderr)
 
     # Reset is_boss_defeated.txt → none
     try:

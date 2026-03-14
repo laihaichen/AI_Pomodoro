@@ -87,6 +87,7 @@ PENALIZED_REST_FILE = DATA_DIR / "penalized_rest_up_to.txt"
 MILESTONE_GOALS_FILE = DATA_DIR / "milestone_goals.json"   # 各阶段进度条分母
 HEALTH_FILE          = DATA_DIR / "health.txt"              # 健康度（初始9，只减不加）
 FINAL_FATE_FILE      = DATA_DIR / "final_fate.txt"          # 最终命运值
+LUCKY_CHARGES_FILE   = DATA_DIR / "lucky_charges.txt"       # 幸运充能池（整数）
 BOSS_DEFEATED_FILE   = DATA_DIR / "is_boss_defeated.txt"    # Boss战结果（none/true/false）
 THEME_FILE           = DATA_DIR / "theme.txt"               # 今日模拟人生故事主题
 # ── 陪审团系统 ─────────────────────────────────────────────────────────────
@@ -336,6 +337,22 @@ def update_total_score(delta: int = 0, factor: float = 1.0) -> int:
         new_val = after_delta
     write_snippet("total_score", str(new_val))
     return new_val
+
+
+# ── 幸运充能池 ────────────────────────────────────────────────────────────────
+
+def read_lucky_charges() -> int:
+    """读取幸运充能池的当前充能数。"""
+    try:
+        return int(LUCKY_CHARGES_FILE.read_text(encoding="utf-8").strip())
+    except (FileNotFoundError, ValueError):
+        return 0
+
+
+def write_lucky_charges(value: int) -> None:
+    """写入幸运充能池。"""
+    LUCKY_CHARGES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    LUCKY_CHARGES_FILE.write_text(str(max(0, value)), encoding="utf-8")
 
 
 # ── prompt 备份 ──────────────────────────────────────────────────────────────

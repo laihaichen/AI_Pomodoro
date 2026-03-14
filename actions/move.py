@@ -21,6 +21,7 @@ from config import (  # noqa: E402
     CONT_TS_FILE, CURR_TS_FILE, FINAL_FATE_FILE, FIRST_TS_FILE,
     HEALTH_FILE, PAUSE_TS_FILE, PREV_TS_FILE, SNIPPETS,
     read_snippet, write_snippet, update_total_score,
+    read_lucky_charges, write_lucky_charges,
 )
 import update_h     # noqa: E402
 import update_stage # noqa: E402
@@ -254,22 +255,25 @@ def main() -> int:
         print(f"snippet write failed: {exc}", file=sys.stderr)
         return 1
 
-    # ── 6. 幸运系统 ──────────────────────────────────────────────────────────
-    _LUCKY_MSG = "幸运系统已触发"
+    # ── 6. 幸运充能池 ─────────────────────────────────────────────────────────
     try:
-        _DEFAULT = SNIPPETS["is_eligible_for_reward"].default
         if final_fate >= 90:
-            # 检查是否满足换分门槛：宿命卡≥5 且 干预卡≥2
+            charges = read_lucky_charges() + 1
+            write_lucky_charges(charges)
+            print(f"  幸运充能 +1 → 当前充能 ×{charges}")
+        # 更新显示文本（反映当前充能数）
+        charges = read_lucky_charges()
+        if charges > 0:
+            _msg = f"幸运充能 ×{charges}"
             _fate_cards = int(read_snippet("countcard") or 0)
             _intv_cards = int(read_snippet("countinterventioncard") or 0)
             if _fate_cards >= 5 and _intv_cards >= 2:
-                _LUCKY_MSG += "\n\n[SCORE_EXCHANGE_AVAILABLE]"
-            write_snippet("is_eligible_for_reward", _LUCKY_MSG)
+                _msg += "\n\n[SCORE_EXCHANGE_AVAILABLE]"
+            write_snippet("is_eligible_for_reward", _msg)
         else:
-            if read_snippet("is_eligible_for_reward").strip() != _DEFAULT:
-                write_snippet("is_eligible_for_reward", _DEFAULT)
+            write_snippet("is_eligible_for_reward", SNIPPETS["is_eligible_for_reward"].default)
     except Exception as exc:
-        print(f"is_eligible_for_reward update failed: {exc}", file=sys.stderr)
+        print(f"lucky charges update failed: {exc}", file=sys.stderr)
 
     # ── 7. 积分 ──────────────────────────────────────────────────────────────
     new_score = None

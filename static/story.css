@@ -325,13 +325,13 @@
     flex-basis: 100%;
 }
 .lucky-btn {
-    padding: 5px 10px;
-    font-size: 10px;
-    font-weight: 600;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    color: var(--dim);
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(245, 200, 66, 0.1);
+    border: 1px solid rgba(245, 200, 66, 0.4);
+    border-radius: 6px;
+    color: #f5c842;
     cursor: pointer;
     transition: background 0.15s;
     white-space: nowrap;

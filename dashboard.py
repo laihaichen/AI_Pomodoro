@@ -165,6 +165,10 @@ def collect_state() -> dict:
     from update_stage import is_milestone_reward_pending
     state["milestone_reward_pending"] = is_milestone_reward_pending()
 
+    # ── 幸运充能池 ─────────────────────────────────────────────────────────
+    from config import read_lucky_charges
+    state["lucky_charges"] = read_lucky_charges()
+
     # ── 里程碑阶段计算 ───────────────────────────────────────────────────────
     # 1-18 → hour3，19-36 → hour6，37-54 → hour9，55-72 → hour12
     _MILESTONE_SLOTS = [
@@ -1184,7 +1188,7 @@ def api_getinterventioncard():
 def _consume_card_reward_source() -> str | None:
     """尝试消耗一个卡牌奖励源。返回来源名称，无可用源返回 None。
 
-    优先级：阶段性奖励 > 幸运系统
+    优先级：阶段性奖励 > 幸运充能池
     """
     # 1. 阶段性奖励
     from update_stage import is_milestone_reward_pending, set_milestone_reward
@@ -1192,10 +1196,22 @@ def _consume_card_reward_source() -> str | None:
         set_milestone_reward(False)
         return "milestone"
 
-    # 2. 幸运系统
-    cur = read_snippet("is_eligible_for_reward")
-    if "幸运系统已触发" in cur:
-        write_snippet("is_eligible_for_reward", SNIPPETS["is_eligible_for_reward"].default)
+    # 2. 幸运充能池
+    from config import read_lucky_charges, write_lucky_charges
+    charges = read_lucky_charges()
+    if charges > 0:
+        write_lucky_charges(charges - 1)
+        # 更新显示文本
+        new_charges = charges - 1
+        if new_charges > 0:
+            _msg = f"幸运充能 ×{new_charges}"
+            _fate_cards = int(read_snippet("countcard") or 0)
+            _intv_cards = int(read_snippet("countinterventioncard") or 0)
+            if _fate_cards >= 5 and _intv_cards >= 2:
+                _msg += "\n\n[SCORE_EXCHANGE_AVAILABLE]"
+            write_snippet("is_eligible_for_reward", _msg)
+        else:
+            write_snippet("is_eligible_for_reward", SNIPPETS["is_eligible_for_reward"].default)
         return "lucky"
 
     return None
@@ -1481,19 +1497,32 @@ def api_declare_defeat():
 
 @app.route("/api/claim-lucky-score", methods=["POST"])
 def api_claim_lucky_score():
-    """Exchange lucky reward for +5 score (instead of drawing a card)."""
+    """消耗 1 个幸运充能换取 +5 积分。"""
     try:
-        cur = read_snippet("is_eligible_for_reward")
-        if "[SCORE_EXCHANGE_AVAILABLE]" not in cur:
-            return jsonify({"ok": False, "error": "换分条件不满足"}), 400
+        from config import read_lucky_charges, write_lucky_charges
+        charges = read_lucky_charges()
+        if charges <= 0:
+            return jsonify({"ok": False, "error": "无幸运充能可用"}), 400
+
+        # 检查换分门槛
+        _fate_cards = int(read_snippet("countcard") or 0)
+        _intv_cards = int(read_snippet("countinterventioncard") or 0)
+        if _fate_cards < 5 or _intv_cards < 2:
+            return jsonify({"ok": False, "error": "换分需要宿命卡≥5 且 干预卡≥2"}), 400
 
         # +5 积分
         score_raw = read_snippet("total_score") or "0"
         new_score = int(score_raw) + 5
         write_snippet("total_score", str(new_score))
 
-        # 清除幸运奖励状态
-        write_snippet("is_eligible_for_reward", SNIPPETS["is_eligible_for_reward"].default)
+        # 消耗 1 充能
+        write_lucky_charges(charges - 1)
+        # 更新显示文本
+        new_charges = charges - 1
+        if new_charges > 0:
+            write_snippet("is_eligible_for_reward", f"幸运充能 ×{new_charges}\n\n[SCORE_EXCHANGE_AVAILABLE]")
+        else:
+            write_snippet("is_eligible_for_reward", SNIPPETS["is_eligible_for_reward"].default)
 
         return jsonify({"ok": True, "new_score": new_score})
     except Exception as exc:

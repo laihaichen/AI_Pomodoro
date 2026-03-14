@@ -904,18 +904,18 @@ function refreshData() {
                 fam.includes("凶") ? "val-red" : fam.includes("吉") ? "val-green" : null
             );
 
-            // 是否触发幸运系统
+            // 幸运充能池
             const rewardEl = document.getElementById("val-is_eligible_for_reward");
             if (rewardEl) {
-                const reward = d.is_eligible_for_reward || "—";
-                const isTriggered = reward.includes("幸运系统已触发");
-                const canExchange = reward.includes("[SCORE_EXCHANGE_AVAILABLE]");
+                const charges = d.lucky_charges || 0;
+                const hasCharges = charges > 0;
+                const canExchange = (d.is_eligible_for_reward || "").includes("[SCORE_EXCHANGE_AVAILABLE]");
 
-                // 显示文本（去掉内部标记）
-                const displayText = reward.replace("[SCORE_EXCHANGE_AVAILABLE]", "").trim();
+                // 显示文本
+                const displayText = hasCharges ? `幸运充能 ×${charges}` : "当前无充能";
                 rewardEl.textContent = displayText;
-                rewardEl.style.color = isTriggered ? "#f5c842" : "var(--dim)";
-                rewardEl.style.fontWeight = isTriggered ? "700" : "600";
+                rewardEl.style.color = hasCharges ? "#f5c842" : "var(--dim)";
+                rewardEl.style.fontWeight = hasCharges ? "700" : "600";
 
                 // 换分按钮
                 const btnId = "btn-claim-lucky-score";
@@ -948,13 +948,11 @@ function refreshData() {
                     existingBtn.remove();
                 }
 
-                // 获得卡按钮：幸运系统触发 OR 阶段性奖励待领取时可点
+                // 获得卡按钮：幸运充能 > 0 OR 阶段性奖励待领取时可点
                 const btnCard = document.getElementById("btn-get-card");
                 const btnICard = document.getElementById("btn-get-icard");
-                const scoreClaimBtn = document.getElementById(btnId);
-                const luckyClaimable = isTriggered && !scoreClaimBtn?.disabled;
                 const milestoneClaimable = !!d.milestone_reward_pending;
-                const cardClaimable = luckyClaimable || milestoneClaimable;
+                const cardClaimable = hasCharges || milestoneClaimable;
                 if (btnCard) {
                     btnCard.disabled = !cardClaimable;
                     btnCard.style.opacity = cardClaimable ? "1" : "0.35";
